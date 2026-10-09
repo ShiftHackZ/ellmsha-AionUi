@@ -2,10 +2,9 @@
  * Prepare aioncore binary for packaging.
  *
  * Resolution order:
- *  1. GitHub Actions artifact download when AIONUI_BACKEND_RUN_ID is set
- *  2. GitHub release download (requires version or defaults to "latest")
- *  3. Complete local bundle from AIONUI_BACKEND_LOCAL_BUNDLE_DIR
- *  4. Local binary fallback from AIONUI_BACKEND_LOCAL_BINARY
+ *  1. Explicit local bundle or binary (fork builds must never be replaced by upstream)
+ *  2. GitHub Actions artifact download when AIONUI_BACKEND_RUN_ID is set
+ *  3. GitHub release download (requires version or defaults to "latest")
  *
  * Output: {projectRoot}/resources/bundled-aioncore/{platform}-{arch}/
  *   - aioncore[.exe]
@@ -444,11 +443,16 @@ function prepareAioncore(options) {
   const { projectRoot, platform, arch, version = 'latest' } = options;
   const runtimeKey = `${platform}-${arch}`;
   const actionsRunId = (process.env.AIONUI_BACKEND_RUN_ID || '').trim();
+  const localBundleDir = (process.env.AIONUI_BACKEND_LOCAL_BUNDLE_DIR || '').trim();
+  const localBinary = (process.env.AIONUI_BACKEND_LOCAL_BINARY || '').trim();
+  if (localBinary && (!fs.existsSync(localBinary) || !fs.statSync(localBinary).isFile())) {
+    throw new Error(`Local aioncore binary not found: ${localBinary}`);
+  }
 
   let tag = null;
   if (!actionsRunId) {
     // Resolve the actual version tag — release asset filenames include the tag.
-    if (version === 'latest') {
+    if (version === 'latest' && !localBundleDir && !localBinary) {
       const resolved = resolveLatestTag();
       if (!resolved) {
         throw new Error('Failed to resolve latest aioncore release tag from GitHub API');
@@ -471,7 +475,6 @@ function prepareAioncore(options) {
   removeDirectorySafe(targetDir);
   ensureDirectory(targetDir);
 
-  const localBundleDir = (process.env.AIONUI_BACKEND_LOCAL_BUNDLE_DIR || '').trim();
   if (localBundleDir) {
     const resolvedLocalBundleDir = path.resolve(localBundleDir);
     const localBinaryPath = path.join(resolvedLocalBundleDir, binaryName);
@@ -498,7 +501,7 @@ function prepareAioncore(options) {
       console.log(`  Using local aioncore bundle: ${resolvedLocalBundleDir}`);
       return { prepared: true, dir: targetDir, sourceType: 'local-bundle' };
     }
-    console.warn(`  Local aioncore bundle is incomplete or missing: ${resolvedLocalBundleDir}`);
+    throw new Error(`Local aioncore bundle is incomplete or missing: ${resolvedLocalBundleDir}`);
   }
 
   let sourcePath = null;
@@ -506,8 +509,15 @@ function prepareAioncore(options) {
   let sourceDetail = {};
   let tempDir = null;
 
+  if (localBinary) {
+    sourcePath = path.resolve(localBinary);
+    sourceType = 'local-binary';
+    sourceDetail = { path: sourcePath };
+    console.log(`  Using local aioncore binary: ${sourcePath}`);
+  }
+
   // 1. Download from GitHub Actions artifacts when manual build run id is provided.
-  if (actionsRunId) {
+  if (!sourcePath && actionsRunId) {
     const result = downloadAndExtractActionsArtifact(platform, arch, actionsRunId);
     sourcePath = result.binaryPath;
     tempDir = result.tempDir;
@@ -531,22 +541,6 @@ function prepareAioncore(options) {
       console.log(`  Downloaded from GitHub releases`);
     } catch (error) {
       console.warn(`  Download failed: ${error.message}`);
-    }
-  }
-
-  // 3. Use an explicitly supplied local cache when network download is unavailable.
-  if (!sourcePath) {
-    const localBinary = (process.env.AIONUI_BACKEND_LOCAL_BINARY || '').trim();
-    if (localBinary) {
-      const resolvedLocalBinary = path.resolve(localBinary);
-      if (fs.existsSync(resolvedLocalBinary) && fs.statSync(resolvedLocalBinary).isFile()) {
-        sourcePath = resolvedLocalBinary;
-        sourceType = 'local-binary';
-        sourceDetail = { path: resolvedLocalBinary };
-        console.log(`  Using local aioncore binary: ${resolvedLocalBinary}`);
-      } else {
-        console.warn(`  Local aioncore binary not found: ${resolvedLocalBinary}`);
-      }
     }
   }
 

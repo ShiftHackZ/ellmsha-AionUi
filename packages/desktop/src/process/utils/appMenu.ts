@@ -4,11 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ipcBridge } from '@/common';
+import { harnessVersion } from '@/common/branding';
 import type { MenuItemConstructorOptions } from 'electron';
 import { Menu, app } from 'electron';
 
 export function setupApplicationMenu(): void {
+  app.setAboutPanelOptions({
+    applicationName: 'eLLMsha',
+    applicationVersion: harnessVersion,
+    version: '',
+    copyright: 'Copyright © 2026 Moroz Inc.',
+  });
   const isMac = process.platform === 'darwin';
 
   const template: MenuItemConstructorOptions[] = [];
@@ -57,18 +63,6 @@ export function setupApplicationMenu(): void {
       { role: 'zoomOut' },
       { type: 'separator' },
       { role: 'togglefullscreen' },
-    ],
-  });
-
-  template.push({
-    label: 'Help',
-    submenu: [
-      {
-        label: 'Check for Updates...',
-        click: () => {
-          ipcBridge.update.open.emit({ source: 'menu' });
-        },
-      },
     ],
   });
 

@@ -20,6 +20,7 @@ import AionModal from '@/renderer/components/base/AionModal';
 import {
   DEFAULT_PLATFORM_VALUE,
   MODEL_PLATFORMS,
+  OLLAMA_API_KEY,
   NEW_API_PROTOCOL_OPTIONS,
   detectNewApiProtocol,
   getPlatformByValue,
@@ -214,7 +215,8 @@ const renderPlatformOption = (platform: PlatformConfig, t?: (key: string) => str
 const AddPlatformModal = ModalHOC<{
   onSubmit: (platform: IProvider) => void;
   deepLinkData?: DeepLinkAddProviderDetail;
-}>(({ modalProps, onSubmit, modalCtrl, deepLinkData }) => {
+  initialPlatform?: string;
+}>(({ modalProps, onSubmit, modalCtrl, deepLinkData, initialPlatform }) => {
   const [message, messageContext] = Message.useMessage();
   const { t } = useTranslation();
   const [form] = Form.useForm();
@@ -236,6 +238,8 @@ const AddPlatformModal = ModalHOC<{
   // 判断是否为"自定义"选项（没有预设 base_url） / Check if "Custom" option (no preset base_url)
   const isCustom = isCustomOption(platformValue);
   const isBedrock = platform === 'bedrock';
+  const isOllama = platformValue === 'Ollama';
+  const effectiveApiKey = api_key || (isOllama ? OLLAMA_API_KEY : '');
   const isGemini = isGeminiPlatform(platform);
   const isNewApi = isNewApiPlatform(platform);
 
@@ -264,7 +268,7 @@ const AddPlatformModal = ModalHOC<{
 
   // For Bedrock, don't pass bedrock_config to avoid auto-refresh on input changes
   // We'll build it dynamically in onFocus
-  const modelListState = useModeModeList(platform, actualBaseUrl, api_key, true, undefined);
+  const modelListState = useModeModeList(platform, actualBaseUrl, effectiveApiKey, true, undefined);
 
   // 协议检测 Hook / Protocol detection hook
   // 启用检测的条件：
@@ -274,7 +278,7 @@ const AddPlatformModal = ModalHOC<{
   // 1. Custom platform OR user entered a custom base URL (non-official, like local proxy)
   // 2. Input values differ from last "accepted suggestion" (avoid redundant detection after platform switch)
   const isNonOfficialBaseUrl = base_url && !isGoogleApisHost(base_url);
-  const shouldEnableDetection = isCustom || isNonOfficialBaseUrl;
+  const shouldEnableDetection = !isOllama && (isCustom || isNonOfficialBaseUrl);
   // 只有在用户修改了输入值（相对于上次采纳建议时）才触发检测
   // Only trigger detection when input changed since last accepted suggestion
   const inputChangedSinceLastSwitch =
@@ -328,10 +332,13 @@ const AddPlatformModal = ModalHOC<{
         if (deepLinkData.base_url) form.setFieldValue('base_url', deepLinkData.base_url);
         if (deepLinkData.api_key) form.setFieldValue('api_key', deepLinkData.api_key);
       } else {
-        form.setFieldValue('platform', DEFAULT_PLATFORM_VALUE);
+        const preset = getPlatformByValue(initialPlatform ?? DEFAULT_PLATFORM_VALUE);
+        form.setFieldValue('platform', preset?.value ?? DEFAULT_PLATFORM_VALUE);
+        form.setFieldValue('base_url', preset?.base_url ?? '');
+        setOpenAiApiMode(preset?.value === 'Ollama' ? 'chat_completions' : 'auto');
       }
     }
-  }, [modalProps.visible, deepLinkData]);
+  }, [modalProps.visible, deepLinkData, initialPlatform]);
 
   useEffect(() => {
     if (platform?.includes('gemini')) {
@@ -363,7 +370,7 @@ const AddPlatformModal = ModalHOC<{
           // 优先使用用户输入的 base_url，否则使用平台预设值
           // Prefer user input base_url, fallback to platform preset
           base_url: isBedrock ? '' : values.base_url || selectedPlatform?.base_url || '',
-          api_key: isBedrock ? '' : values.api_key,
+          api_key: isBedrock ? '' : values.api_key || (isOllama ? OLLAMA_API_KEY : ''),
           // The model Select is multi-select: values.model is a string[], but
           // keep the single-value fallback for safety.
           models: Array.isArray(values.model) ? values.model : [values.model],
@@ -451,6 +458,7 @@ const AddPlatformModal = ModalHOC<{
                   // edit it. Custom / New API have no preset — clear the field so
                   // it doesn't carry over the previously selected platform's URL.
                   form.setFieldValue('base_url', plat.base_url ?? '');
+                  setOpenAiApiMode(plat.value === 'Ollama' ? 'chat_completions' : 'auto');
                 }
               }}
               renderFormat={(option) => {
@@ -532,12 +540,14 @@ const AddPlatformModal = ModalHOC<{
           <Form.Item
             hidden={isBedrock}
             label={t('settings.apiKey')}
-            required={!isBedrock}
-            rules={[{ required: !isBedrock }]}
+            required={!isBedrock && !isOllama}
+            rules={[{ required: !isBedrock && !isOllama }]}
             field={'api_key'}
             extra={
               <div className='space-y-2px'>
-                <div className='text-11px text-t-secondary mt-2 leading-4'>{t('settings.multiApiKeyTip')}</div>
+                <div className='text-11px text-t-secondary mt-2 leading-4'>
+                  {t(isOllama ? 'settings.ollama.apiKeyOptional' : 'settings.multiApiKeyTip')}
+                </div>
                 {/* 协议检测状态 / Protocol detection status */}
                 {shouldShowDetectionResult && (
                   <ProtocolDetectionStatus
@@ -631,6 +641,7 @@ const AddPlatformModal = ModalHOC<{
           {/* 模型选择 / Model Selection */}
           <Form.Item
             label={t('settings.modelName')}
+            extra={isOllama ? t('settings.ollama.modelsHint') : undefined}
             field={'model'}
             required
             rules={[{ required: true }]}
@@ -710,7 +721,7 @@ const AddPlatformModal = ModalHOC<{
                         return;
                       }
                       // For Gemini, no api_key check needed
-                      if (!isGemini && !api_key) {
+                      if (!isGemini && !effectiveApiKey) {
                         message.warning(t('settings.pleaseEnterApiKey'));
                         return;
                       }

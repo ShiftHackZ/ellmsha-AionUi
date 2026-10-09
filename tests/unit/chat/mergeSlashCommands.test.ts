@@ -59,14 +59,14 @@ describe('mergeSlashCommands', () => {
 });
 
 describe('buildGuidSlashCommands', () => {
-  it('uses agent metadata commands before selected skill fallbacks', () => {
+  it('keeps global skills visible alongside agent commands and deduplicates collisions', () => {
     const commands = buildGuidSlashCommands({
       builtinCommands: [builtin('open')],
       agentCommands: [acp('review'), acp('cron')],
-      selectedSkills: ['cron', 'officecli'],
+      selectedSkills: ['cron', 'bmad-prd'],
       descriptionByName: new Map([
         ['cron', 'Scheduled tasks'],
-        ['officecli', 'Office automation'],
+        ['bmad-prd', 'Create a PRD'],
       ]),
       skillFallbackDescription: 'Skill',
     });
@@ -75,6 +75,7 @@ describe('buildGuidSlashCommands', () => {
       'builtin:open',
       'acp:review',
       'acp:cron',
+      'skill:bmad-prd',
     ]);
   });
 

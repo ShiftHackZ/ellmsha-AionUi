@@ -24,7 +24,6 @@ import {
   recordAutoUpdateQuitAndInstall,
   recordAutoUpdateStatus,
 } from './autoUpdateDiagnostics';
-import { buildCdnFeedOptions } from './updateFeed';
 
 const FORCE_DEV_AUTO_UPDATE_ENV = 'AIONUI_FORCE_DEV_AUTO_UPDATE';
 const DEBUG_AUTO_UPDATE_CURRENT_VERSION_ENV = 'AIONUI_DEBUG_AUTO_UPDATE_CURRENT_VERSION';
@@ -131,7 +130,7 @@ class AutoUpdaterService extends EventEmitter {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
     this.configureDevAutoUpdateDebug();
-    const cdnFeedOptions = buildCdnFeedOptions();
+    const releaseFeed = { provider: 'github' as const, owner: 'ShiftHackZ', repo: 'ellmsha-AionUi' };
 
     // Set the correct update channel based on platform and architecture before
     // any update checks are performed
@@ -140,11 +139,11 @@ class AutoUpdaterService extends EventEmitter {
       autoUpdater.channel = channel;
       log.info(`Update channel set to: ${channel}`);
     }
-    autoUpdater.setFeedURL(cdnFeedOptions);
-    log.info('Update feed set to CDN provider');
-    log.debug('[auto-update] CDN feed configured', {
-      provider: cdnFeedOptions.provider,
-      url: cdnFeedOptions.url,
+    autoUpdater.setFeedURL(releaseFeed);
+    log.info('Update feed set to eLLMsha GitHub releases');
+    log.debug('[auto-update] GitHub feed configured', {
+      provider: releaseFeed.provider,
+      repo: releaseFeed.repo,
       channel: channel ?? 'latest',
       platform: process.platform,
       arch: process.arch,
@@ -194,11 +193,11 @@ class AutoUpdaterService extends EventEmitter {
    */
   private ensureDevUpdateConfig(): void {
     try {
-      const cdnFeedOptions = buildCdnFeedOptions();
       const devConfig = [
-        'provider: generic',
-        `url: ${cdnFeedOptions.url}`,
-        'updaterCacheDirName: com.aionui.app',
+        'provider: github',
+        'owner: ShiftHackZ',
+        'repo: ellmsha-AionUi',
+        'updaterCacheDirName: com.ellmsha.app',
         '',
       ].join('\n');
       const configPath = path.join(app.getPath('userData'), 'dev-app-update.yml');
@@ -617,7 +616,7 @@ class AutoUpdaterService extends EventEmitter {
 
       if (this._allowPrerelease) {
         log.info('Skipping electron-updater check for prerelease manual mode');
-        log.debug('[auto-update] CDN stable feed skipped because prerelease mode is handled by GitHub API');
+        log.debug('[auto-update] Stable feed skipped because prerelease mode is handled by GitHub API');
         return { success: true };
       }
 

@@ -98,6 +98,7 @@ const ensureCliSafeSymlink = (targetPath: string, symlinkName: string): string =
 export const getDataPath = (): string => {
   const rootPath = getElectronPathOrFallback('userData');
   const dataPath = path.join(rootPath, 'aionui');
+  if (process.env.ELLM_SHA_USER_DATA_DIR) return dataPath;
   return ensureCliSafeSymlink(dataPath, getEnvAwareName('.aionui'));
 };
 
@@ -110,6 +111,7 @@ export const getDataPath = (): string => {
 export const getConfigPath = (): string => {
   const rootPath = getElectronPathOrFallback('userData');
   const configPath = path.join(rootPath, 'config');
+  if (process.env.ELLM_SHA_USER_DATA_DIR) return configPath;
   return ensureCliSafeSymlink(configPath, getEnvAwareName('.aionui-config'));
 };
 

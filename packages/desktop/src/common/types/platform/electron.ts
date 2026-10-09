@@ -1,3 +1,28 @@
+export type ProjectIndexCatalog = {
+  project_id: string | null;
+  name: string;
+  workspace: string;
+  repositories: Array<{
+    name: string;
+    path: string;
+    code_graph_id?: string;
+    status: string;
+    indexed_at?: string | null;
+    error?: string;
+    stats?: { files: number; nodes: number; edges: number } | null;
+  }>;
+  errors: Array<{ path: string; error: string }>;
+};
+export type ProjectIndexResult = { results: Array<{ repository: string; accepted: boolean; error?: string }> };
+export type MemoryEmbeddingInput = { baseUrl: string; model: string; apiKey?: string };
+export type MemoryEmbeddingStatus = {
+  available: boolean;
+  phase: string;
+  done: number;
+  total: number;
+  layer?: string;
+  current?: { baseUrl: string; model: string; dimensions: number; hasApiKey: boolean };
+};
 // WebUI 状态接口 / WebUI status interface
 export interface WebUIStatus {
   running: boolean;
@@ -22,6 +47,18 @@ export interface ElectronBridgeAPI {
   // Forward feedback diagnostics logs to the main process console / 转发反馈诊断日志到主进程控制台
   logFeedbackEvent?: (payload: { details?: unknown; level: 'info' | 'warn' | 'error'; message: string }) => void;
   recoverCorruptedDatabase?: () => Promise<void>;
+  memoryProject?: {
+    (input: { projectId: string; action: 'catalog' }): Promise<ProjectIndexCatalog>;
+    (input: { projectId: string; action: 'index'; repository?: string }): Promise<ProjectIndexResult>;
+  };
+  getMemoryEmbedding?: () => Promise<MemoryEmbeddingStatus>;
+  probeMemoryEmbedding?: (input: MemoryEmbeddingInput) => Promise<{ dimensions: number }>;
+  applyMemoryEmbedding?: (input: MemoryEmbeddingInput) => Promise<void>;
+  getMemoryPanelUrl?: () => Promise<string>;
+  getLocalMemoryKey?: () => Promise<string | null>;
+  verifyMemoryKey?: (
+    key: string
+  ) => Promise<{ instanceId: string; user: { user_id: string; username: string; display_name?: string } }>;
 }
 
 export type BackendStartupFailureReason =

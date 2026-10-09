@@ -21,6 +21,7 @@ const {
   resolveGuidAssistantDefaultsMock,
   sendMock,
   navigateMock,
+  listAvailableSkillsMock,
 } = vi.hoisted(() => ({
   modelSelectionMock: {
     modelList: [],
@@ -123,6 +124,7 @@ const {
     isButtonDisabled: false,
   },
   navigateMock: vi.fn(),
+  listAvailableSkillsMock: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -140,7 +142,7 @@ vi.mock('react-router-dom', () => ({
 vi.mock('@/common', () => ({
   ipcBridge: {
     fs: {
-      listAvailableSkills: { invoke: vi.fn().mockResolvedValue([]) },
+      listAvailableSkills: { invoke: listAvailableSkillsMock },
     },
   },
 }));
@@ -302,6 +304,7 @@ const guidInputCardProps = {
 
 describe('GuidPage', () => {
   beforeEach(() => {
+    listAvailableSkillsMock.mockResolvedValue([]);
     locationMock.state = null;
     locationMock.key = 'guid-location';
     navigateMock.mockReset();
@@ -556,6 +559,21 @@ describe('GuidPage', () => {
         guidDisabledBuiltinSkills: undefined,
       });
     });
+  });
+
+  it('keeps global BMAD skills selected while assistant details are unavailable', async () => {
+    listAvailableSkillsMock.mockResolvedValue([
+      { name: 'bmad-prd', description: 'Create a PRD', source: 'custom', is_auto_inject: false },
+      { name: 'ponytail', description: 'Minimal implementation', source: 'custom', is_auto_inject: false },
+      { name: 'optional-skill', description: 'Opt-in skill', source: 'custom', is_auto_inject: false },
+    ]);
+
+    render(<GuidPage />);
+
+    await waitFor(() => {
+      expect(capturedGuidSendDeps.at(-1)?.guidEnabledSkills).toEqual(['bmad-prd', 'ponytail']);
+    });
+    expect(capturedGuidActionRowProps.at(-1)?.enabledSkills).toEqual(['bmad-prd', 'ponytail']);
   });
 
   it('applies an aionrs assistant default model after provider models load', async () => {

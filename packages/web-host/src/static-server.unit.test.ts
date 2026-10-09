@@ -88,6 +88,52 @@ describe('static-server', () => {
     expect(json.path).toBe('/api/anything');
   });
 
+  it('forwards generation callback bearer and body without requiring browser cookies', async () => {
+    const callbackPath = '/api/runtime/tencent/v1/chat/completions';
+    const payload = { model: 'selected-model', messages: [{ role: 'user', content: 'Summarize this source.' }] };
+    const backend = await startMockBackend((req, res) => {
+      if (req.headers.authorization !== 'Bearer callback-capability') {
+        res.writeHead(401, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: 'unauthorized' }));
+        return;
+      }
+      let body = '';
+      req.setEncoding('utf8');
+      req.on('data', (chunk: string) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            path: req.url,
+            method: req.method,
+            cookie: req.headers.cookie ?? null,
+            body: JSON.parse(body),
+          })
+        );
+      });
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const response = await fetch(`${handle.localUrl}${callbackPath}`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer callback-capability', 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ path: callbackPath, method: 'POST', cookie: null, body: payload });
+
+    const rejected = await fetch(`${handle.localUrl}${callbackPath}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    expect(rejected.status).toBe(401);
+    expect(await rejected.json()).toEqual({ error: 'unauthorized' });
+  });
+
   it('/login reverse-proxies to backend (no local handler)', async () => {
     const backend = await startMockBackend((req, res) => {
       if (req.url === '/login' && req.method === 'POST') {

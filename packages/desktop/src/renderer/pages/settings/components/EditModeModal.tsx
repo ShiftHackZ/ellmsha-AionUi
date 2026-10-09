@@ -7,7 +7,7 @@ import AionModal from '@/renderer/components/base/AionModal';
 import { LinkCloud } from '@icon-park/react';
 import { ipcBridge } from '@/common';
 import useModeModeList from '@renderer/hooks/agent/useModeModeList';
-import { getProviderLogo } from '@/renderer/utils/model/modelPlatforms';
+import { getProviderLogo, isOllamaProvider, OLLAMA_API_KEY } from '@/renderer/utils/model/modelPlatforms';
 
 /**
  * 供应商 Logo 组件
@@ -30,6 +30,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
     // Watch bedrockAuthMethod only for UI conditional rendering (not for auto-refresh)
     const bedrockAuthMethod = Form.useWatch('bedrockAuthMethod', form);
     const isBedrock = data?.platform === 'bedrock';
+    const isOllama = isOllamaProvider(data);
 
     // Watch the live form values so editing the Base URL (or API key) re-keys the
     // model-list SWR cache. Without this the list would keep fetching from the
@@ -38,7 +39,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
     const watchedBaseUrl = Form.useWatch('base_url', form);
     const watchedApiKey = Form.useWatch('api_key', form);
     const effectiveBaseUrl = watchedBaseUrl ?? data?.base_url;
-    const effectiveApiKey = watchedApiKey ?? data?.api_key;
+    const effectiveApiKey = (watchedApiKey ?? data?.api_key) || (isOllama ? OLLAMA_API_KEY : '');
 
     // 获取供应商 Logo / Get provider logo
     const providerLogo = useMemo(() => {
@@ -76,7 +77,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
       if (isFullUrl || isBedrock) return;
 
       const nextBaseUrl = form.getFieldValue('base_url') as string | undefined;
-      const apiKey = (form.getFieldValue('api_key') as string | undefined) ?? '';
+      const apiKey = (form.getFieldValue('api_key') as string | undefined) || (isOllama ? OLLAMA_API_KEY : '');
       // Backend requires an api_key for non-bedrock platforms; without one a
       // fetch would just return empty — skip and clear any stale hint.
       if (!apiKey) {
@@ -125,6 +126,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
       if (data) {
         form.setFieldsValue({
           ...data,
+          api_key: isOllama && data.api_key === OLLAMA_API_KEY ? '' : data.api_key,
           model:
             data.models && data.models.length > 0
               ? data.models.length === 1
@@ -153,6 +155,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
             const updatedProvider: IProvider = {
               ...data,
               ...values,
+              api_key: values.api_key || (isOllama ? OLLAMA_API_KEY : ''),
               // Ensure models is always an array
               models: Array.isArray(values.model) ? values.model : [values.model],
             };
@@ -228,10 +231,14 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
             <Form.Item
               hidden={isBedrock}
               label={t('settings.apiKey')}
-              required={!isBedrock}
-              rules={[{ required: !isBedrock }]}
+              required={!isBedrock && !isOllama}
+              rules={[{ required: !isBedrock && !isOllama }]}
               field={'api_key'}
-              extra={<div className='text-11px text-t-secondary mt-2'>💡 {t('settings.multiApiKeyEditTip')}</div>}
+              extra={
+                <div className='text-11px text-t-secondary mt-2'>
+                  {t(isOllama ? 'settings.ollama.apiKeyOptional' : 'settings.multiApiKeyEditTip')}
+                </div>
+              }
             >
               <Input.TextArea rows={4} placeholder={t('settings.apiKeyPlaceholder')} />
             </Form.Item>

@@ -29,6 +29,7 @@ export const BUILTIN_TAB_IDS = [
   'model',
   'skills',
   'tools',
+  'memory',
   'appearance',
   'webui',
   'pet',
@@ -101,6 +102,7 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
         icon: <Toolkit />,
         path: 'tools',
       },
+      memory: { id: 'memory', label: 'Memory', icon: <LinkCloud />, path: 'memory' },
       appearance: { id: 'appearance', label: t('settings.appearancePanel'), icon: <Computer />, path: 'appearance' },
       webui: {
         id: 'webui',

@@ -1,3 +1,4 @@
+import { showUpstreamPromotions } from '@/common/branding';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -53,6 +54,9 @@ type GuidNavigationState = {
   [key: string]: unknown;
 };
 
+const isGlobalSkill = (name: string) =>
+  name.startsWith('bmad-') || name.startsWith('ponytail') || name.startsWith('ellmsha-');
+
 const GuidPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -86,6 +90,8 @@ const GuidPage: React.FC = () => {
     ipcBridge.fs.listAvailableSkills
       .invoke()
       .then((availableSkills) => {
+        const globalSkills = availableSkills.filter((skill) => isGlobalSkill(skill.name)).map((skill) => skill.name);
+        setGuidEnabledSkills((current) => [...new Set([...(current ?? []), ...globalSkills])]);
         setAllSkills(
           availableSkills.map((s) => ({
             name: s.name,
@@ -347,14 +353,21 @@ const GuidPage: React.FC = () => {
   useEffect(() => {
     if (!selectedAssistantId || !selectedAssistantDetail) {
       setGuidDisabledBuiltinSkills(undefined);
-      setGuidEnabledSkills(undefined);
+      const globalSkills = allSkills.filter((skill) => isGlobalSkill(skill.name)).map((skill) => skill.name);
+      setGuidEnabledSkills(globalSkills.length > 0 ? globalSkills : undefined);
       return;
     }
 
     const resolvedDefaults = resolveGuidAssistantDefaults(selectedAssistantDetail);
     setGuidDisabledBuiltinSkills(resolvedDefaults.disabledBuiltinSkillIds);
-    setGuidEnabledSkills(resolvedDefaults.skillIds);
-  }, [selectedAssistantDetail, selectedAssistantId]);
+    setGuidEnabledSkills((current) => [
+      ...new Set([
+        ...resolvedDefaults.skillIds,
+        ...allSkills.filter((skill) => isGlobalSkill(skill.name)).map((skill) => skill.name),
+        ...(current ?? []).filter(isGlobalSkill),
+      ]),
+    ]);
+  }, [selectedAssistantDetail, selectedAssistantId, allSkills]);
 
   const appliedAssistantDefaultsKeyRef = useRef<string | null>(null);
   const manualModelSelectionAssistantRef = useRef<string | null>(null);
@@ -734,12 +747,14 @@ const GuidPage: React.FC = () => {
           ) : null}
         </div>
 
-        <QuickActionButtons
-          onOpenLink={openLink}
-          onOpenBugReport={() => setShowFeedbackModal(true)}
-          inactiveBorderColor={inactiveBorderColor}
-          activeShadow={activeShadow}
-        />
+        {showUpstreamPromotions && (
+          <QuickActionButtons
+            onOpenLink={openLink}
+            onOpenBugReport={() => setShowFeedbackModal(true)}
+            inactiveBorderColor={inactiveBorderColor}
+            activeShadow={activeShadow}
+          />
+        )}
         <FeedbackReportModal visible={showFeedbackModal} onCancel={() => setShowFeedbackModal(false)} />
       </div>
     </ConfigProvider>

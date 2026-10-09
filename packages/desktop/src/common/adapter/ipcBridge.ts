@@ -726,7 +726,7 @@ export const fs = {
   deleteAssistantRule: httpDelete<boolean, { assistant_id: string }>(
     (p) => `/api/skills/assistant-rule/${p.assistant_id}`
   ),
-  listAvailableSkills: httpGet<
+  listAvailableSkills: withResponseMap(httpGet<
     Array<{
       name: string;
       description: string;
@@ -737,7 +737,12 @@ export const fs = {
       source: 'builtin' | 'custom' | 'cron' | 'extension';
     }>,
     void
-  >('/api/skills'),
+  >('/api/skills'), (skills) => {
+    const names = new Set(skills.map((skill) => skill.name));
+    return skills.filter((skill) =>
+      !skill.name.startsWith('aionui-') || !names.has(skill.name.replace(/^aionui-/, 'ellmsha-'))
+    );
+  }),
   materializeSkillsForAgent: httpPost<
     { skills: Array<{ name: string; source_path: string }> },
     { conversation_id: string; skills: string[] }

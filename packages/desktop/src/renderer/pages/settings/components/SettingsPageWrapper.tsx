@@ -64,6 +64,7 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn): 
       icon: <Toolkit theme='outline' size='16' />,
       path: 'tools',
     },
+    memory: { id: 'memory', label: 'Memory', icon: <LinkCloud theme='outline' size='16' />, path: 'memory' },
     appearance: {
       id: 'appearance',
       label: t('settings.appearancePanel'),

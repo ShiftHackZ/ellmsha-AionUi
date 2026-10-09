@@ -22,6 +22,27 @@ vi.mock('@/renderer/utils/platform', () => ({
 }));
 
 describe('AssistantSelectionArea', () => {
+  it('labels the standard native assistant for Ollama while preserving custom native names', () => {
+    const native = {
+      ...assistants()[0],
+      source: 'generated' as const,
+      agent: { type: 'aionrs', source: 'internal' as const },
+      name_i18n: {},
+    };
+    render(
+      <AssistantSelectionArea
+        assistants={[
+          { ...native, id: 'native', name: 'eLLMsha' },
+          { ...native, id: 'renamed-native', name: 'My local assistant' },
+        ]}
+        localeKey='en-US'
+        onSelectAssistant={vi.fn()}
+      />
+    );
+    expect(screen.getByText('settings.ollama.nativeAgent')).toBeInTheDocument();
+    expect(screen.getByText('My local assistant')).toBeInTheDocument();
+  });
+
   it('returns the real assistant id when a pill is selected', () => {
     const onSelectAssistant = vi.fn();
 

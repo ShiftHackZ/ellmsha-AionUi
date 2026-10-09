@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { execSync } from 'node:child_process';
 
 const BINARY_NAME = 'aioncore';
@@ -65,6 +65,13 @@ function trimLookupText(text: string): string {
  * Returns the absolute path to the binary, or throws if not found.
  */
 export function resolveBinaryPath(): string {
+  const override = process.env.AIONUI_BACKEND_BIN;
+  if (override) {
+    if (!isAbsolute(override) || !existsSync(override)) {
+      throw new Error(`AIONUI_BACKEND_BIN must point to an existing absolute binary path: ${override}`);
+    }
+    return override;
+  }
   const runtimeKey = getRuntimeKey();
   const binaryName = getBinaryName();
   const diagnostics: BackendBinaryResolveDiagnostics = {

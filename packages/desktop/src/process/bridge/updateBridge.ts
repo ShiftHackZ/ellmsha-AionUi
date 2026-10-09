@@ -60,8 +60,8 @@ interface AutoUpdateCheckParams {
   includePrerelease?: boolean;
 }
 
-const DEFAULT_REPO = 'iOfficeAI/AionUi';
-const DEFAULT_USER_AGENT = 'AionUi';
+const DEFAULT_REPO = 'ShiftHackZ/ellmsha-AionUi';
+const DEFAULT_USER_AGENT = 'eLLMsha';
 const ALLOWED_ASSET_EXTS = new Set(['.exe', '.msi', '.dmg', '.zip', '.deb', '.rpm']);
 const CDN_HOST = 'static.aionui.com';
 const CDN_BASE_URL = `https://${CDN_HOST}/releases`;

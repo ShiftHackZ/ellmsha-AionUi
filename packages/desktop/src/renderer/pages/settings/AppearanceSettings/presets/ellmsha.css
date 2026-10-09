@@ -1,0 +1,35 @@
+:root[data-theme='dark'] {
+  --color-primary: #c5ff5a;
+  --primary: #c5ff5a;
+  --color-primary-light-1: #d5ff88;
+  --color-primary-light-2: #e1ffac;
+  --color-primary-dark-1: #a7db40;
+  --primary-rgb: 197, 255, 90;
+  --brand: #c5ff5a;
+  --brand-light: #22301b;
+  --brand-hover: #d5ff88;
+  --color-brand-fill: #c5ff5a;
+  --color-brand-bg: #22301b;
+  --bg-base: #07090c;
+  --bg-1: #0d1116;
+  --bg-2: #151b22;
+  --bg-3: #1e2730;
+  --bg-4: #2b3640;
+  --color-bg-1: #0d1116;
+  --color-bg-2: #151b22;
+  --color-bg-3: #1e2730;
+  --color-bg-4: #2b3640;
+  --color-text-1: #f2f6f8;
+  --color-text-2: #aebbc3;
+  --color-text-3: #7f929f;
+  --text-primary: #f2f6f8;
+  --text-secondary: #aebbc3;
+  --color-border: #293640;
+  --color-border-1: #293640;
+  --color-border-2: #354450;
+  --border-base: #293640;
+  --message-user-bg: #203019;
+  --message-tips-bg: #13212a;
+  --workspace-btn-bg: #1a2620;
+  --info: #70e6ff;
+}

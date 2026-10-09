@@ -17,6 +17,7 @@
  */
 
 import { Button, Input, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
+import type { ProjectIndexCatalog } from '@/common/types/platform/electron';
 import { FolderPlus } from '@icon-park/react';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -143,6 +144,64 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
       openPreview(content, contentType, metadata);
     } catch (e) {
       Message.error(t(previewErrorToI18nKey(classifyPreviewError(e))));
+    }
+  };
+
+  const [indexOpen, setIndexOpen] = useState(false);
+  const [indexCatalog, setIndexCatalog] = useState<ProjectIndexCatalog>();
+  const [indexBusy, setIndexBusy] = useState(false);
+  const [indexError, setIndexError] = useState('');
+  const indexStatuses: Record<string, string> = {
+    not_indexed: t('conversation.explorer.codeIndex.status.not_indexed'),
+    pending: t('conversation.explorer.codeIndex.status.pending'),
+    processing: t('conversation.explorer.codeIndex.status.processing'),
+    ready: t('conversation.explorer.codeIndex.status.ready'),
+    failed: t('conversation.explorer.codeIndex.status.failed'),
+    unavailable: t('conversation.explorer.codeIndex.status.unavailable'),
+  };
+  const memoryProject = window.electronAPI?.memoryProject;
+  const refreshIndexes = async (): Promise<void> => {
+    try {
+      if (memoryProject) setIndexCatalog(await memoryProject({ projectId, action: 'catalog' }));
+      setIndexError('');
+    } catch (error) {
+      setIndexError(error instanceof Error ? error.message : String(error));
+    }
+  };
+  useEffect(() => {
+    if (!indexOpen || !memoryProject) return;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const catalog = await memoryProject({ projectId, action: 'catalog' });
+        if (active) {
+          setIndexCatalog(catalog);
+          setIndexError('');
+        }
+      } catch (error) {
+        if (active) setIndexError(error instanceof Error ? error.message : String(error));
+      }
+    };
+    void refresh();
+    const timer = setInterval(() => void refresh(), 5000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [indexOpen, projectId, memoryProject]);
+  const indexRepositories = async (repository?: string): Promise<void> => {
+    if (!memoryProject) return;
+    setIndexBusy(true);
+    try {
+      const result = await memoryProject({ projectId, action: 'index', repository });
+      const failures = result.results.filter((item) => !item.accepted);
+      if (failures.length) Message.error(failures.map((item) => `${item.repository}: ${item.error}`).join('\n'));
+      else Message.success(t('conversation.explorer.codeIndex.accepted'));
+      await refreshIndexes();
+    } catch (error) {
+      setIndexError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIndexBusy(false);
     }
   };
 
@@ -351,6 +410,11 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
               adjacent buttons feel consistent. Note: an Arco Tooltip must not wrap
               a Dropdown (it would resolve a non-DOM node and crash); wrapping a
               plain Button like this is safe. */}
+          {memoryProject && (
+            <Button type='text' size='small' onClick={() => setIndexOpen(true)}>
+              {t('conversation.explorer.codeIndex.title')}
+            </Button>
+          )}
           <Tooltip content={t('conversation.explorer.addFolder')} mini>
             <Button
               type='text'
@@ -364,6 +428,61 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           {workspacePath && <WorkspaceOpenButton workspacePath={workspacePath} isTemporary={false} />}
         </div>
       </div>
+      <Modal
+        title={t('conversation.explorer.codeIndex.title')}
+        visible={indexOpen}
+        onCancel={() => setIndexOpen(false)}
+        footer={null}
+        style={{ width: 720 }}
+      >
+        <p className='text-t-secondary'>{t('conversation.explorer.codeIndex.description')}</p>
+        <div className='flex gap-8px mb-16px'>
+          <Button
+            type='primary'
+            loading={indexBusy}
+            disabled={!indexCatalog?.repositories.length}
+            onClick={() => void indexRepositories()}
+          >
+            {t('conversation.explorer.codeIndex.indexAll')}
+          </Button>
+          <Button onClick={() => void refreshIndexes()}>{t('conversation.explorer.codeIndex.refresh')}</Button>
+        </div>
+        {indexError && (
+          <p role='alert' className='text-[var(--color-danger-6)]'>
+            {indexError}
+          </p>
+        )}
+        {!indexCatalog && !indexError && <Spin />}
+        {indexCatalog?.errors.map((item) => (
+          <p role='alert' key={item.path}>
+            {item.path}: {item.error}
+          </p>
+        ))}
+        {indexCatalog?.repositories.length === 0 && <p>{t('conversation.explorer.codeIndex.empty')}</p>}
+        <div className='max-h-400px overflow-auto'>
+          {indexCatalog?.repositories.map((repo) => (
+            <div key={repo.path} className='py-12px border-b border-[var(--bg-3)]'>
+              <div className='flex items-center justify-between gap-8px'>
+                <strong>{repo.name}</strong>
+                <Button
+                  size='small'
+                  disabled={indexBusy || ['pending', 'processing'].includes(repo.status)}
+                  onClick={() => void indexRepositories(repo.path)}
+                >
+                  {t('conversation.explorer.codeIndex.index')}
+                </Button>
+              </div>
+              <div className='text-t-secondary break-all'>{repo.path}</div>
+              <div>
+                {indexStatuses[repo.status] || repo.status}
+                {repo.stats ? ` · ${t('conversation.explorer.codeIndex.files', { count: repo.stats.files })}` : ''}
+                {repo.indexed_at ? ` · ${new Date(repo.indexed_at).toLocaleString()}` : ''}
+              </div>
+              {repo.error && <div role='alert'>{repo.error}</div>}
+            </div>
+          ))}
+        </div>
+      </Modal>
       {/* Files tab (explorer): kept mounted across tab switches so the tree + WS
           state survive (only hidden when the changes tab is active). */}
       {/* Search area is persistent at the top of the files tab; the tree renders

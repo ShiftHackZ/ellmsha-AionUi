@@ -14,6 +14,11 @@
 
 import { resolveBackendAssetUrl } from '@/renderer/utils/platform';
 
+// The OpenAI client requires a non-empty key; local Ollama ignores this public placeholder.
+export const OLLAMA_API_KEY = 'ollama';
+export const isOllamaProvider = (provider?: { platform?: string; name?: string; api_key?: string }): boolean =>
+  provider?.platform === 'custom' && (provider.name?.toLowerCase() === 'ollama' || provider.api_key === OLLAMA_API_KEY);
+
 const buildLogoAssetUrl = (path: string): string => {
   return resolveBackendAssetUrl(`/api/assets/logos/${path}`) ?? `/api/assets/logos/${path}`;
 };
@@ -71,6 +76,15 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
     logo: buildLogoAssetUrl('ai-china/kimi.svg'),
     platform: 'custom',
     base_url: 'https://api.moonshot.ai/v1',
+  },
+
+  // Ollama is an OpenAI-compatible model provider for the native agent.
+  {
+    name: 'Ollama',
+    value: 'Ollama',
+    logo: buildLogoAssetUrl('ai-major/ollama.png'),
+    platform: 'custom',
+    base_url: 'http://localhost:11434/v1',
   },
 
   // New API 多模型网关 / New API multi-model gateway

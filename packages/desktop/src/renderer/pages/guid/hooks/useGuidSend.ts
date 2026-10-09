@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { BUILTIN_TDAI_MEMORY_NAME } from '@/common/config/constants';
 import { type ChatFileRef, chatFileRefPath } from '@/common/types/chatFile';
 import type { IMcpServer, TProviderWithModel } from '@/common/config/storage';
 import { toSessionMcpServer } from '@/renderer/hooks/mcp/catalog';
@@ -113,8 +114,15 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     const assistantConversationId = selectedAssistantId;
     const assistantBackend = selectedAssistantBackend;
     const enabled_skills_to_send = guidEnabledSkills ?? assistantDefaultSkillIds;
-    const excludeBuiltinSkills = guidDisabledBuiltinSkills ?? assistantDefaultDisabledBuiltinSkillIds;
-    const selectedAllMcpServerIds = selectedMcpServerIds ?? [];
+    const excludeBuiltinSkills = [
+      ...new Set([...(guidDisabledBuiltinSkills ?? assistantDefaultDisabledBuiltinSkillIds ?? []), 'aionui-config']),
+    ];
+    const sharedMemoryServer = availableMcpServers.find(
+      (server) => server.name === BUILTIN_TDAI_MEMORY_NAME && server.builtin === true && server.enabled
+    );
+    const selectedAllMcpServerIds = [
+      ...new Set([...(selectedMcpServerIds ?? []), ...(sharedMemoryServer ? [sharedMemoryServer.id] : [])]),
+    ];
     const selectedMcpServerIdSet = new Set(selectedAllMcpServerIds);
     const selectedUserMcpServerIds = availableMcpServers
       .filter((server) => selectedMcpServerIdSet.has(server.id) && server.builtin !== true)
@@ -122,10 +130,9 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     const selectedAllSessionMcpServers = availableMcpServers
       .filter((server) => selectedMcpServerIdSet.has(server.id))
       .map((server) => toSessionMcpServer(server));
-    const selectedSessionMcpServers = availableMcpServers
-      .filter((server) => selectedMcpServerIdSet.has(server.id) && server.builtin === true)
-      .map((server) => toSessionMcpServer(server));
-    const defaultSelectedMcpServerIds = assistantDefaultMcpIds;
+    const defaultSelectedMcpServerIds = [
+      ...new Set([...(assistantDefaultMcpIds ?? []), ...(sharedMemoryServer ? [sharedMemoryServer.id] : [])]),
+    ];
     const defaultSelectedUserMcpServerIds = availableMcpServers
       .filter((server) => (defaultSelectedMcpServerIds ?? []).includes(server.id) && server.builtin !== true)
       .map((server) => server.id);
@@ -234,8 +241,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
           custom_workspace: isCustomWorkspace,
           default_files: files.map(chatFileRefPath),
           selected_mcp_server_ids: selectedUserMcpServerIdsToSend,
-          selected_session_mcp_servers:
-            selectedMcpServerIds !== undefined ? selectedSessionMcpServers : selectedSessionMcpServersToSend,
+          selected_session_mcp_servers: selectedSessionMcpServersToSend,
         },
       });
       if (!conversation || !conversation.id) {

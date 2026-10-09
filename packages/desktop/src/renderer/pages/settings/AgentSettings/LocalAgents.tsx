@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { assistantRuntimeKey } from '@/common/types/agent/assistantTypes';
 import { parseError } from '@/common/utils';
 import { formatManagedAgentDiagnosticMessage, type ManagedAgent } from '@/renderer/utils/model/agentTypes';
 import AionModal from '@/renderer/components/base/AionModal';
@@ -39,6 +40,9 @@ const LocalAgents: React.FC = () => {
   const [agentFilter, setAgentFilter] = useState<AgentAvailabilityFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const { assistants } = useAssistantsForAgents();
+  const nativeAssistant = assistants.find(
+    (assistant) => assistant.source === 'generated' && assistantRuntimeKey(assistant) === 'aionrs' && assistant.enabled
+  );
 
   // Management view: includes user-disabled custom agents so they stay
   // listed (greyed) with a working re-enable toggle. `refreshCatalog`
@@ -122,6 +126,7 @@ const LocalAgents: React.FC = () => {
         agent.backend,
         agent.command,
         agent.agent_source_info?.binary_name,
+        agent.agent_type === 'aionrs' || agent.backend === 'aionrs' ? 'Ollama local API' : '',
       ]
         .filter(Boolean)
         .join(' ')
@@ -271,6 +276,25 @@ const LocalAgents: React.FC = () => {
         activeTab={agentFilter}
         onTabChange={(key) => setAgentFilter(key as AgentAvailabilityFilter)}
       />
+
+      {(!normalizedSearchQuery || 'ollama local api'.includes(normalizedSearchQuery)) && (
+        <div
+          className='rounded-12px border border-border-2 bg-2 p-16px flex flex-col gap-8px'
+          data-testid='ollama-agent-setup'
+        >
+          <Typography.Text className='font-medium'>Ollama</Typography.Text>
+          <Typography.Text type='secondary'>{t('settings.ollama.description')}</Typography.Text>
+          <div className='flex gap-8px'>
+            <Button onClick={() => navigate('/settings/model?provider=Ollama')}>{t('settings.ollama.setup')}</Button>
+            <Button
+              disabled={!nativeAssistant}
+              onClick={() => navigate('/guid', { state: { selectedAssistantId: nativeAssistant?.id } })}
+            >
+              {t('settings.ollama.startChat')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {isRefreshing ? (
         <div className='text-11px text-t-tertiary'>{t('settings.agentManagement.refreshingStatuses')}</div>

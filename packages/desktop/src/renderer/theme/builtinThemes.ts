@@ -23,6 +23,8 @@ import retromaY2kCss from '@renderer/pages/settings/AppearanceSettings/presets/r
 import retromaObsidianBookCss from '@renderer/pages/settings/AppearanceSettings/presets/retroma-obsidian-book.css?raw';
 import discourseHorizonCss from '@renderer/pages/settings/AppearanceSettings/presets/discourse-horizon.css?raw';
 import glitteringInputFieldCss from '@renderer/pages/settings/AppearanceSettings/presets/glittering-input-field.css?raw';
+import ellmshaCss from '@renderer/pages/settings/AppearanceSettings/presets/ellmsha.css?raw';
+import ellmshaCover from '@renderer/assets/logos/brand/app.png';
 
 const T0 = 0;
 
@@ -38,6 +40,7 @@ const decorative = (id: string, name: string, appearance: Theme['appearance'], c
 });
 
 export const BUILTIN_THEMES: Theme[] = [
+  decorative('ellmsha', 'eLLMsha', 'dark', ellmshaCss, ellmshaCover),
   {
     id: LIGHT_THEME_ID,
     name: 'Light',

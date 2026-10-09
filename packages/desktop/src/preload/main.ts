@@ -49,6 +49,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logFeedbackEvent: (payload: { details?: unknown; level: 'info' | 'warn' | 'error'; message: string }) =>
     ipcRenderer.send('feedback:renderer-log', payload),
   recoverCorruptedDatabase: () => ipcRenderer.invoke('backend:recover-corrupted-database'),
+  memoryProject: (input: { projectId: string; action: 'catalog' | 'index'; repository?: string }) =>
+    ipcRenderer.invoke('ellmsha:memory:project', input),
+  getMemoryEmbedding: () => ipcRenderer.invoke('ellmsha:memory:embedding-status'),
+  probeMemoryEmbedding: (input: unknown) => ipcRenderer.invoke('ellmsha:memory:embedding-probe', input),
+  applyMemoryEmbedding: (input: unknown) => ipcRenderer.invoke('ellmsha:memory:embedding-apply', input),
+  getMemoryPanelUrl: () => ipcRenderer.invoke('ellmsha:memory:panel-url'),
+  getLocalMemoryKey: () => ipcRenderer.invoke('ellmsha:memory:local-key'),
+  verifyMemoryKey: (key: string) => ipcRenderer.invoke('ellmsha:memory:verify-key', key),
 });
 
 // Synchronously fetch the aioncore port and expose it to the renderer

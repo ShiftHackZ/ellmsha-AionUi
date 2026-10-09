@@ -17,6 +17,7 @@ const SystemSettings = React.lazy(() => import('@renderer/pages/settings/SystemS
 const WebuiSettings = React.lazy(() => import('@renderer/pages/settings/WebuiSettings'));
 const PetSettings = React.lazy(() => import('@renderer/pages/settings/PetSettings'));
 const ExtensionSettingsPage = React.lazy(() => import('@renderer/pages/settings/ExtensionSettingsPage'));
+const MemorySettings = React.lazy(() => import('@renderer/pages/settings/MemorySettings'));
 const LoginPage = React.lazy(() => import('@renderer/pages/login'));
 const ComponentsShowcase = React.lazy(() => import('@renderer/pages/TestShowcase'));
 const ScheduledTasksPage = React.lazy(() => import('@renderer/pages/cron/ScheduledTasksPage'));
@@ -83,6 +84,7 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
           <Route path='/settings/skills/import-history' element={withRouteFallback(SkillsSettings)} />
           <Route path='/settings/skills/detail/:skillName' element={withRouteFallback(SkillDetailPage)} />
           <Route path='/settings/tools' element={withRouteFallback(ToolsSettings)} />
+          <Route path='/settings/memory' element={withRouteFallback(MemorySettings)} />
           {/* Legacy routes — the previous combined "Capabilities" page is now two pages. */}
           <Route path='/settings/capabilities' element={<CapabilitiesRedirect />} />
           <Route

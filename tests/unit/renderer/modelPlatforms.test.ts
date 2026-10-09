@@ -9,9 +9,22 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PLATFORM_VALUE, MODEL_PLATFORMS } from '@renderer/utils/model/modelPlatforms';
+import {
+  DEFAULT_PLATFORM_VALUE,
+  MODEL_PLATFORMS,
+  isOllamaProvider,
+  searchPlatformsByName,
+} from '@renderer/utils/model/modelPlatforms';
 
 describe('MODEL_PLATFORMS ordering', () => {
+  it('offers discoverable local Ollama through the native OpenAI-compatible provider', () => {
+    expect(searchPlatformsByName('oll')).toEqual([
+      expect.objectContaining({ value: 'Ollama', platform: 'custom', base_url: 'http://localhost:11434/v1' }),
+    ]);
+    expect(isOllamaProvider({ platform: 'custom', name: 'Ollama' })).toBe(true);
+    expect(isOllamaProvider({ platform: 'custom', name: 'Home server', api_key: 'ollama' })).toBe(true);
+    expect(isOllamaProvider({ platform: 'anthropic', name: 'Ollama' })).toBe(false);
+  });
   it('keeps Custom first and pins both Moonshot entries right after it', () => {
     const values = MODEL_PLATFORMS.map((p) => p.value);
     expect(values[0]).toBe('custom');

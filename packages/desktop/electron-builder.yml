@@ -1,10 +1,10 @@
-appId: com.aionui.app
-productName: AionUi
-executableName: AionUi
-copyright: Copyright © 2024 AionUi
+appId: com.ellmsha.app
+productName: eLLMsha
+executableName: eLLMsha
+copyright: Copyright © 2026 Moroz Inc.
 
 protocols:
-  - name: AionUi Protocol
+  - name: eLLMsha Protocol
     schemes:
       - aionui
 
@@ -103,10 +103,20 @@ files:
     to: static
 
 extraResources:
+  - from: resources/tencent-memory
+    to: tencent-memory
   - from: public
     to: .
   - from: resources/app.png
     to: app.png
+  - from: resources/dock
+    to: dock
+  - from: resources/ellmsha-skills
+    to: ellmsha-skills
+  - from: ../bmad-method/ellmsha-skills
+    to: global-skills/bmad
+  - from: ../ponytail/skills
+    to: global-skills/ponytail
   # aioncore binary (pre-compiled per platform/arch, ships its own bun runtime)
   - from: resources/bundled-aioncore
     to: bundled-aioncore
@@ -120,6 +130,7 @@ win:
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 nsis:
+  deleteAppDataOnUninstall: false
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
@@ -175,9 +186,9 @@ linux:
   description: ${description}
   desktop:
     entry:
-      Name: AionUi
+      Name: eLLMsha
       Comment: ${description}
-      Icon: AionUi
+      Icon: eLLMsha
       Categories: Office;Utility;
       MimeType: x-scheme-handler/aionui;
 
@@ -206,6 +217,7 @@ asarUnpack:
   # Builtin MCP server scripts must be unpacked so external node processes can execute them
   - 'out/main/builtin-mcp-image-gen.js'
   - 'out/main/builtin-mcp-browser.js'
+  - 'out/main/builtin-mcp-tencent-memory.js'
   - 'out/main/team-mcp-stdio.js'
 
 # Compression level: normal for faster builds, maximum for smallest size
@@ -218,7 +230,7 @@ electronDownload:
 
 publish:
   provider: github
-  owner: iOfficeAI
-  repo: AionUi
+  owner: ShiftHackZ
+  repo: ellmsha-AionUi
   publishAutoUpdate: true
   releaseType: release

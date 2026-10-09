@@ -531,7 +531,7 @@ function createMacArtifactsWithPrepackaged(appDir, targetArch) {
   const appPath = path.join(appDir, appName);
 
   execSync(
-    `bunx electron-builder --config packages/desktop/electron-builder.yml --mac dmg zip --${targetArch} --prepackaged "${appPath}" --publish=never`,
+    `./node_modules/.bin/electron-builder --config packages/desktop/electron-builder.yml --mac dmg zip --${targetArch} --prepackaged "${appPath}" --publish=never`,
     {
       stdio: 'inherit',
       shell: process.platform === 'win32',
@@ -717,7 +717,7 @@ try {
   if (!skipViteBuild) {
     // Run electron-vite to build all bundles (main + preload + renderer)
     console.log(`📦 Building ${targetArch}...`);
-    execSync(`bunx electron-vite build --config packages/desktop/electron.vite.config.ts`, {
+    execSync(`./node_modules/.bin/electron-vite build --config packages/desktop/electron.vite.config.ts`, {
       stdio: 'inherit',
       shell: process.platform === 'win32',
       env: {
@@ -762,6 +762,11 @@ try {
     console.log('✅ Package completed! (skipped distributable creation)');
     return;
   }
+
+  if (targetArch !== process.arch || archArgs.length > 1 || (builderArgs.includes('--win') && process.platform !== 'win32') || (builderArgs.includes('--linux') && process.platform !== 'linux') || (builderArgs.includes('--mac') && process.platform !== 'darwin')) {
+    throw new Error('Tencent desktop runtime requires a native build for each target OS and architecture');
+  }
+  execSync(`node "${path.join(__dirname, 'memory/prepare.cjs')}"`, { stdio: 'inherit', env: process.env });
 
   // 5. Prepare aioncore binary (for packaged runtime usage)
   const { prepareAioncore } = require('../packages/shared-scripts/src/prepare-aioncore.js');
@@ -863,7 +868,7 @@ try {
     cleanupWindowsPackOutput();
   }
 
-  const builderCommand = `bunx electron-builder --config packages/desktop/electron-builder.yml ${builderArgs} ${archFlag} ${nsisInclude} ${publishArg}`;
+  const builderCommand = `./node_modules/.bin/electron-builder --config packages/desktop/electron-builder.yml ${builderArgs} ${archFlag} ${nsisInclude} ${publishArg}`;
   try {
     buildWithDmgRetry(builderCommand, targetArch);
   } catch (error) {

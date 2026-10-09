@@ -24,7 +24,7 @@ export interface WebviewHostProps {
   /** Extra styles for root container */
   style?: React.CSSProperties;
   /** Called when the page finishes loading */
-  onDidFinishLoad?: () => void;
+  onDidFinishLoad?: (webview: Electron.WebviewTag) => void;
   /** Called when the page fails to load */
   onDidFailLoad?: (errorCode: number, errorDescription: string) => void;
   /**
@@ -419,7 +419,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
 
     const handleDidFinishLoad = () => {
       setIsLoading(false);
-      onDidFinishLoad?.();
+      onDidFinishLoad?.(webviewEl);
     };
 
     const handleDidFailLoad = (event: any) => {

@@ -218,14 +218,6 @@ const buildTrayContextMenu = async (): Promise<Electron.Menu> => {
   });
   template.push({ type: 'separator' });
   template.push({
-    label: i18n.t('common.tray.checkUpdate'),
-    click: () => {
-      showAndFocusMainWindow();
-      mainWindowRef?.webContents.send('tray:check-update');
-    },
-  });
-  template.push({ type: 'separator' });
-  template.push({
     label: i18n.t('common.tray.about'),
     click: () => {
       showAndFocusMainWindow();
@@ -262,7 +254,7 @@ export const createOrUpdateTray = (): void => {
   try {
     const icon = getTrayIcon();
     tray = new Tray(icon);
-    tray.setToolTip('AionUi');
+    tray.setToolTip('eLLMsha');
     void buildTrayContextMenu().then((menu) => tray?.setContextMenu(menu));
 
     // Double-click: always show/focus (Windows/Linux; macOS rarely fires this).

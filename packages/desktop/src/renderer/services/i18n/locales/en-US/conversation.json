@@ -15,10 +15,10 @@
     "clearWorkspace": "Remove project",
     "openFolder": "Open Folder",
     "none": "None",
-    "quickActionsTitle": "What can AionUi do?",
+    "quickActionsTitle": "What can eLLMsha do?",
     "quickActionFeedback": "Report Issue",
     "quickActionStar": "Like us? Give us a star!",
-    "skillsMarket": "AionUi Skills Market",
+    "skillsMarket": "eLLMsha Skills Market",
     "skillsMarketDesc": "Search and activate community Skills on demand. Configure once, available for all agents.",
     "skillsMarketDetails": "View More >>"
   },
@@ -309,7 +309,7 @@
       },
       "MCP_HTTP_RESPONSE_READ_FAILED": {
         "title": "Failed to read the team helper response",
-        "body": "AionUi could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
+        "body": "eLLMsha could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
       },
       "MCP_TOOL_REMOTE_ERROR": {
         "title": "The local team helper rejected the request",
@@ -317,11 +317,11 @@
       },
       "MCP_TOOL_RESPONSE_UNEXPECTED": {
         "title": "The team helper returned an unexpected response",
-        "body": "AionUi received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
+        "body": "eLLMsha received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
       },
       "MCP_TCP_READ_FAILED": {
         "title": "Failed to read from the local team helper",
-        "body": "AionUi could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
+        "body": "eLLMsha could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
       },
       "TEAM_SERVICE_UNAVAILABLE": {
         "title": "Team service is not ready yet",
@@ -631,6 +631,24 @@
       "searching": "Searching…",
       "empty": "No files match",
       "limitReached": "Showing first {{count}} — refine to narrow"
+    },
+    "codeIndex": {
+      "title": "Code indexes",
+      "description": "Each Git repository has its own Tencent index. Search across the project from chat. Indexes are snapshots; refresh after code changes.",
+      "indexAll": "Index all",
+      "refresh": "Refresh status",
+      "index": "Index / update",
+      "accepted": "Indexing queued. Status updates automatically.",
+      "empty": "No Git repositories found. Attach repository folders; discovery scans up to 3 directory levels.",
+      "files": "{{count}} files",
+      "status": {
+        "not_indexed": "Not indexed",
+        "pending": "Queued",
+        "processing": "Indexing",
+        "ready": "Ready",
+        "failed": "Failed",
+        "unavailable": "Unavailable"
+      }
     }
   }
 }

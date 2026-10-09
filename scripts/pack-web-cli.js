@@ -86,6 +86,23 @@ if (!fs.existsSync(backendSrc)) {
 fs.mkdirSync(path.dirname(backendDest), { recursive: true });
 fs.cpSync(backendSrc, backendDest, { recursive: true });
 
+// Carry the same memory tools and global workflows as the desktop bundle.
+const mcpDest = path.join(tarballContentDir, 'mcp');
+fs.mkdirSync(mcpDest, { recursive: true });
+fs.copyFileSync(
+  path.join(projectRoot, 'out/main/builtin-mcp-tencent-memory.js'),
+  path.join(mcpDest, 'builtin-mcp-tencent-memory.js')
+);
+for (const [name, source] of [
+  ['bmad', path.resolve(projectRoot, '../bmad-method/ellmsha-skills')],
+  ['ponytail', path.resolve(projectRoot, '../ponytail/skills')],
+  ['ellmsha', path.join(projectRoot, 'resources/ellmsha-skills')],
+]) {
+  if (fs.existsSync(source)) {
+    fs.cpSync(source, path.join(tarballContentDir, 'global-skills', name), { recursive: true });
+  }
+}
+
 // 8. Create tarball
 fs.mkdirSync(distDir, { recursive: true });
 execSync(`tar -czf ${path.basename(tarballPath)} -C ${stagingDir} aionui-web`, {

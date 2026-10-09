@@ -11,14 +11,13 @@ import { applyTheme, setActiveTheme } from '@/renderer/utils/theme/applyTheme';
 import { getSystemPrefersDark } from '@/renderer/utils/theme/systemAppearance';
 import { startSystemThemeWatcher } from '@/renderer/utils/theme/systemThemeWatcher';
 import { BUILTIN_THEMES } from '@renderer/theme/builtinThemes';
-import { LIGHT_THEME_ID } from '@/common/theme/constants';
 import type { Theme } from '@/common/theme/types';
 import { useCallback, useEffect, useState } from 'react';
 
 const APPEARANCE_CACHE_KEY = '__aionui_theme';
 
 function getPersistedActiveId(): string {
-  return (configService.get('theme.activeId') as string) || LIGHT_THEME_ID;
+  return (configService.get('theme.activeId') as string) || 'ellmsha';
 }
 
 async function initActiveTheme(): Promise<Theme> {
@@ -38,7 +37,7 @@ async function initActiveTheme(): Promise<Theme> {
     return resolved;
   } catch (e) {
     console.error('init theme failed', e);
-    const fallback = resolveActiveTheme(LIGHT_THEME_ID, BUILTIN_THEMES);
+    const fallback = resolveActiveTheme('ellmsha', BUILTIN_THEMES);
     applyTheme(fallback);
     return fallback;
   }

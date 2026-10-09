@@ -5,7 +5,7 @@
  */
 
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { BrowserWindow, ipcMain, screen } from 'electron';
 import type { IConfirmation } from '@/common/chat/chatLib';
 import { ipcBridge } from '@/common';
 import i18n from '@process/services/i18n';
@@ -222,7 +222,7 @@ function loadContent(): void {
 
   const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
 
-  if (!app.isPackaged && rendererUrl) {
+  if (rendererUrl) {
     confirmWindow.loadURL(`${rendererUrl}/pet/pet-confirm.html`).catch((error) => {
       console.error('[PetConfirm] loadURL failed:', error);
     });

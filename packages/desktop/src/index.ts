@@ -14,6 +14,10 @@ initSentry();
 
 import './process/utils/configureConsoleLog';
 import { app, BrowserWindow, ipcMain, nativeImage, powerMonitor } from 'electron';
+import { startDockMascot } from './process/branding/dockMascot';
+import { configureEmbeddingRuntime, stopEmbeddingJob } from './process/memory/native/embedding';
+import { startNativeMemory, stopNativeMemory } from './process/memory/native';
+import { registerMemoryIdentityBridge } from './process/memory/registerMemoryIdentityBridge';
 import fixPath from 'fix-path';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,7 +29,7 @@ import { assertStartupArchitectureCompatible } from './process/startup/architect
 import { classifyBackendStartupFailure } from './process/startup/backendStartupFailure';
 import { installQuitCleanup } from './process/startup/quitCleanup';
 import { shouldRegisterBackendStartup } from './process/startup/singleInstanceGating';
-import { ProcessConfig } from './process/utils/initStorage';
+import { getBuiltinMcpScriptPath, ProcessConfig } from './process/utils/initStorage';
 import type { BackendStartupFailureInfo } from './common/types/platform/electron';
 import { registerWindowMaximizeListeners } from '@process/bridge';
 import { BackendLifecycleManager } from '@aionui/web-host';
@@ -192,6 +196,7 @@ let isExplicitQuit = false;
 let appReadyDone = false;
 
 let mainWindow: BrowserWindow;
+registerMemoryIdentityBridge(() => mainWindow);
 const backendManager = new BackendLifecycleManager(
   {
     version: app.getVersion(),
@@ -233,7 +238,11 @@ ipcMain.handle('backend:recover-corrupted-database', async () => {
 
   await recoverCorruptedDatabaseAfterUserConfirmation({
     getFailure: () => backendStartupFailureInfo,
-    stopBackend: () => backendManager.stop(),
+    stopBackend: async () => {
+    await backendManager.stop();
+    await stopEmbeddingJob();
+    await stopNativeMemory();
+  },
     startBackendWithRecovery: async () => {
       try {
         const { getDataPath } = await import('./process/utils/utils');
@@ -550,11 +559,12 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     console.log('[AionUi] Auto-updater disabled via env/CI guard');
   }
 
-  // Load the renderer: dev server URL in development, built HTML file in production
+  // A branded dev Electron binary reports isPackaged=true; electron-vite's explicit
+  // renderer URL remains the source of truth for live source/HMR, including recovery.
   const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
   const fallbackFile = path.join(__dirname, '../renderer/index.html');
 
-  if (!app.isPackaged && rendererUrl) {
+  if (rendererUrl) {
     console.log(`[AionUi] Loading renderer URL: ${rendererUrl}`);
     mainWindow.loadURL(rendererUrl).catch((error) => {
       console.error('[AionUi] loadURL failed, falling back to file:', error.message || error);
@@ -582,7 +592,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     if (!mainWindow.isDestroyed()) {
       console.log('[AionUi] Attempting to recover from renderer crash by reloading...');
 
-      if (!app.isPackaged && rendererUrl) {
+      if (rendererUrl) {
         mainWindow.loadURL(rendererUrl).catch((error) => {
           console.error('[AionUi] Recovery loadURL failed:', error.message || error);
         });
@@ -647,21 +657,7 @@ const handleAppReady = async (): Promise<void> => {
     return;
   }
 
-  // Set dock icon in development mode on macOS
-  // In production, the icon is set via forge.config.ts packagerConfig.icon
-  if (process.platform === 'darwin' && !app.isPackaged && app.dock) {
-    try {
-      const iconPath = path.join(process.cwd(), 'resources', 'app_dev.png');
-      if (fs.existsSync(iconPath)) {
-        const icon = nativeImage.createFromPath(iconPath);
-        if (!icon.isEmpty()) {
-          app.dock.setIcon(icon);
-        }
-      }
-    } catch {
-      // Ignore dock icon errors in development
-    }
-  }
+  startDockMascot();
 
   setSentryDeviceId();
 
@@ -744,7 +740,29 @@ const handleAppReady = async (): Promise<void> => {
     }
   }
 
+  if (!isWebUIMode && !isResetPasswordMode && process.env.AIONUI_E2E_TEST !== '1' && process.env.ELLM_SHA_MEMORY_MODE !== 'external') {
+    const resourceRoot = app.isPackaged && !process.env.ELECTRON_RENDERER_URL ? process.resourcesPath : path.resolve(process.cwd(), 'resources');
+    const memoryBundle = path.join(resourceRoot, 'tencent-memory', `${process.platform}-${process.arch}`);
+    await startNativeMemory(memoryBundle, app.getPath('userData'));
+    configureEmbeddingRuntime(memoryBundle, app.getPath('userData'));
+  }
+
   const debugBackendStartupFailure = resolveDebugBackendStartupFailure();
+  // The backend registers memory for every session, including delegated agents.
+  // Publish the unpacked MCP entry before spawning it so the child inherits it.
+  process.env.AIONUI_TDAI_MEMORY_MCP_PATH = getBuiltinMcpScriptPath('builtin-mcp-tencent-memory');
+  process.env.ELLM_SHA_BMAD_SKILLS_DIR ||=
+    app.isPackaged && !process.env.ELECTRON_RENDERER_URL
+      ? path.join(process.resourcesPath, 'global-skills', 'bmad')
+      : path.resolve(process.cwd(), '../bmad-method/ellmsha-skills');
+  process.env.ELLM_SHA_PONYTAIL_SKILLS_DIR ||=
+    app.isPackaged && !process.env.ELECTRON_RENDERER_URL
+      ? path.join(process.resourcesPath, 'global-skills', 'ponytail')
+      : path.resolve(process.cwd(), '../ponytail/skills');
+  process.env.ELLM_SHA_SKILLS_DIR ||=
+    app.isPackaged && !process.env.ELECTRON_RENDERER_URL
+      ? path.join(process.resourcesPath, 'ellmsha-skills')
+      : path.resolve(process.cwd(), 'resources/ellmsha-skills');
   if (debugBackendStartupFailure) {
     applyDebugBackendStartupFailure(debugBackendStartupFailure);
     mark(`debugBackendStartupFailure:${debugBackendStartupFailure.reason}`);
@@ -1089,7 +1107,11 @@ installQuitCleanup({
   },
   // Stop aioncore subprocess — backend shutdown kills all agent children
   // transitively (no separate frontend workerTaskManager remains).
-  stopBackend: () => backendManager.stop(),
+  stopBackend: async () => {
+    await backendManager.stop();
+    await stopEmbeddingJob();
+    await stopNativeMemory();
+  },
   destroyPetWindow: async () => {
     const { destroyPetWindow } = await import('./process/pet/petManager');
     destroyPetWindow();

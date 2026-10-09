@@ -174,7 +174,8 @@ const AssistantSelectionArea: React.FC<AssistantSelectionAreaProps> = ({
     if (!query) return overflowAssistants;
     return overflowAssistants.filter((assistant) => {
       const label = assistant.name_i18n?.[localeKey] || assistant.name;
-      return label.toLowerCase().includes(query);
+      const alias = assistant.source === 'generated' && assistantRuntimeKey(assistant) === 'aionrs' ? 'ollama api' : '';
+      return `${label} ${alias}`.toLowerCase().includes(query);
     });
   }, [localeKey, overflowAssistants, search, showOverflowSearch]);
 
@@ -183,7 +184,12 @@ const AssistantSelectionArea: React.FC<AssistantSelectionAreaProps> = ({
   const renderAssistantPill = (assistant: Assistant, testId: string, fullWidth = false) => {
     const avatar = resolveAssistantAvatar(assistant.avatar);
     const isSelected = selectedId === assistant.id;
-    const label = assistant.name_i18n?.[localeKey] || assistant.name;
+    const label =
+      assistant.source === 'generated' &&
+      assistantRuntimeKey(assistant) === 'aionrs' &&
+      ['Aion CLI', 'AionCLI', 'eLLMsha', 'Ollama'].includes(assistant.name)
+        ? t('settings.ollama.nativeAgent')
+        : assistant.name_i18n?.[localeKey] || assistant.name;
 
     return (
       <Button

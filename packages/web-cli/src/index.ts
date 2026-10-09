@@ -33,6 +33,10 @@ function resolveCliRoot(): string {
 }
 
 const cliRoot = resolveCliRoot();
+process.env.AIONUI_TDAI_MEMORY_MCP_PATH ||= path.join(cliRoot, 'mcp', 'builtin-mcp-tencent-memory.js');
+process.env.ELLM_SHA_BMAD_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'bmad');
+process.env.ELLM_SHA_PONYTAIL_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'ponytail');
+process.env.ELLM_SHA_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'ellmsha');
 
 // `isPackaged` mirrors AppMetadata.isPackaged: true when running as the
 // bun-compiled single-file binary inside a release tarball. Only the

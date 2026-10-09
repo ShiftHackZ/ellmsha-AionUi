@@ -1,5 +1,6 @@
 // src/renderer/pages/team/hooks/useTeamSession.ts
 import { ipcBridge } from '@/common';
+import { attachSharedMemory } from '@/renderer/hooks/mcp/attachSharedMemory';
 import { normalizeTeamStatus } from '@/common/adapter/teamMapper';
 import type { TeamAssistantInput } from '@/common/adapter/teamMapper';
 import type {
@@ -130,6 +131,7 @@ export function useTeamSession(team: TTeam, warmupPhase?: TeamWarmupPhase) {
   const addAssistant = useCallback(
     async (assistant: TeamAssistantInput): Promise<TeamAssistant> => {
       const created = await ipcBridge.team.addAgent.invoke({ team_id: team.id, assistant });
+      await attachSharedMemory(created.conversation_id);
       await mutateTeam();
       return created;
     },

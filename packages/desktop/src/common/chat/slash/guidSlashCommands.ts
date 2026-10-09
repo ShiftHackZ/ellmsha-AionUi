@@ -79,10 +79,7 @@ export const buildGuidSlashCommands = ({
   skillFallbackDescription,
 }: BuildGuidSlashCommandsInput): SlashCommandItem[] => {
   const safeAgentCommands = agentCommands ?? [];
-  const skillCommands =
-    safeAgentCommands.length > 0
-      ? []
-      : buildSkillSlashCommands(selectedSkills, descriptionByName, skillFallbackDescription);
+  const skillCommands = buildSkillSlashCommands(selectedSkills, descriptionByName, skillFallbackDescription);
 
   return mergeSlashCommands(builtinCommands, safeAgentCommands, skillCommands);
 };

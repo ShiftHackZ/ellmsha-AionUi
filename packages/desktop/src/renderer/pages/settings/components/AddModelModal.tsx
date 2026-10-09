@@ -14,6 +14,8 @@ import { useTranslation } from 'react-i18next';
 import useModeModeList from '@renderer/hooks/agent/useModeModeList';
 import {
   isNewApiPlatform,
+  isOllamaProvider,
+  OLLAMA_API_KEY,
   NEW_API_PROTOCOL_OPTIONS,
   detectNewApiProtocol,
 } from '@/renderer/utils/model/modelPlatforms';
@@ -27,7 +29,12 @@ const AddModelModal = ModalHOC<{ data?: IProvider; model?: string; onSubmit: (mo
     const [openAiApiMode, setOpenAiApiMode] = useState<ModelOpenAiApiModeChoice>('auto');
     const isNewApi = isNewApiPlatform(data?.platform ?? '');
     const isEditing = Boolean(editingModel);
-    const { data: modelList, isLoading } = useModeModeList(data?.platform, data?.base_url, data?.api_key);
+    const isOllama = isOllamaProvider(data);
+    const { data: modelList, isLoading } = useModeModeList(
+      data?.platform,
+      data?.base_url,
+      data?.api_key || (isOllama ? OLLAMA_API_KEY : '')
+    );
     const existingModels = data?.models || [];
     const showOpenAiApiMode = supportsOpenAiApiMode(data?.platform ?? '', modelProtocol);
     const optionsList = useMemo(() => {
@@ -45,7 +52,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; model?: string; onSubmit: (mo
       setModels([]);
       const settings = editingModel ? data?.model_settings?.[editingModel] : undefined;
       setImageInput(settings?.image_input ?? 'auto');
-      setOpenAiApiMode(settings?.openai_api_mode ?? 'auto');
+      setOpenAiApiMode(settings?.openai_api_mode ?? (isOllama ? 'chat_completions' : 'auto'));
       setModelProtocol(editingModel ? (data?.model_protocols?.[editingModel] ?? 'openai') : 'openai');
     }, [data, editingModel, modalProps.visible]);
 

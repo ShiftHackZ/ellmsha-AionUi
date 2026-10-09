@@ -39,11 +39,10 @@ export function getPlatformServices(): IPlatformServices {
         // Dev isolation: set app name before any getPath('userData') call.
         // Rollup may load this chunk before configureChromium.ts runs, so we
         // must apply the dev name here as a safety net.
-        if (!app.isPackaged) {
-          const devAppName = getDevAppName();
-          app.setName(devAppName);
-          app.setPath('userData', path.join(path.dirname(app.getPath('userData')), devAppName));
-        }
+        const stableUserData = (process.env.AIONUI_E2E_TEST === '1' && process.env.AIONUI_E2E_USER_DATA_DIR) || process.env.ELLM_SHA_USER_DATA_DIR || path.join(app.getPath('appData'), 'eLLMsha Desktop');
+        process.env.ELLM_SHA_USER_DATA_DIR = stableUserData;
+        app.setName('eLLMsha');
+        app.setPath('userData', stableUserData);
         // Typed as IPlatformPaths so tsc enforces completeness: any new method
         // added to the interface will cause a compile error here if omitted below.
         const paths: import('./IPlatformServices').IPlatformPaths = {

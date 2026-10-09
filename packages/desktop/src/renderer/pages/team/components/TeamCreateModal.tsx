@@ -4,6 +4,7 @@ import type { RefInputType } from '@arco-design/web-react/es/Input/interface';
 import { Plus } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
+import { attachSharedMemory } from '@/renderer/hooks/mcp/attachSharedMemory';
 import type { TTeam } from '@/common/types/team/teamTypes';
 import type { TeamAssistantInput } from '@/common/adapter/teamMapper';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
@@ -132,6 +133,8 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
         Message.error(getConversationCreateErrorMessage(result.message ?? t('team.create.error'), t));
         return;
       }
+
+      await Promise.all(team.assistants.map((assistant) => attachSharedMemory(assistant.conversation_id)));
 
       onCreated(team);
       handleClose();

@@ -341,7 +341,7 @@ function loadContent(): void {
   if (!petWindow || !petHitWindow) return;
   const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
 
-  if (!app.isPackaged && rendererUrl) {
+  if (rendererUrl) {
     petWindow.loadURL(`${rendererUrl}/pet/pet.html`).catch((error) => {
       console.error('[Pet] loadURL failed for pet window:', error);
     });

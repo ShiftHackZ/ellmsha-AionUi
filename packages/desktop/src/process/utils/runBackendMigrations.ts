@@ -5,11 +5,14 @@
  */
 
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { app } from 'electron';
 import { migrateConfigStorage, migrateLegacyMcpConfigToDb, migrateProviders } from '@/common/config/configMigration';
 import { httpRequest } from '@/common/adapter/httpBridge';
 import { mcpService } from '@/common/adapter/ipcBridge';
 import type { ImageGenerationModelSetting } from '@/common/config/clientSettings';
-import { BUILTIN_BROWSER_MCP_NAME } from '@/common/config/constants';
+import { BUILTIN_BROWSER_MCP_NAME, BUILTIN_TDAI_MEMORY_NAME } from '@/common/config/constants';
 import {
   removeImageGenerationEnvKeys,
   resolveImageGenerationMcpEnv,
@@ -24,6 +27,7 @@ type MigrationStepResult = boolean;
 type McpImportServer = Partial<IMcpServer> & Pick<IMcpServer, 'name' | 'transport'>;
 type BackendClientPreferences = Record<string, unknown>;
 const BUILTIN_CHROME_DEVTOOLS_NAME = 'chrome-devtools';
+const BUILTIN_TDAI_MEMORY_SCRIPT = 'builtin-mcp-tencent-memory';
 
 /**
  * 内置「应用内浏览器」MCP。
@@ -74,6 +78,40 @@ async function fetchProviders(): Promise<IProvider[]> {
     console.warn('[Migration] MCP bootstrap could not load providers for image generation env resolution', error);
     return [];
   }
+}
+
+async function importGlobalSkills(name: string, path: string | undefined): Promise<void> {
+  if (!path || !existsSync(path)) return;
+  const paths = await httpRequest<Array<{ name: string; path: string }>>('GET', '/api/skills/external-paths');
+  if (!paths?.some((entry) => entry.path === path)) {
+    await httpRequest<void>('POST', '/api/skills/external-paths', { name, path });
+  }
+  const imported = await httpRequest<{ skill_names?: string[]; failed?: Array<{ source_name: string }> }>(
+    'POST',
+    '/api/skills/import',
+    { skill_path: path }
+  );
+  if (imported.failed?.length) {
+    throw new Error(`${name} skill import failed: ${imported.failed.map((item) => item.source_name).join(', ')}`);
+  }
+  console.info('[eLLMsha] Imported %d %s skills from %s', imported.skill_names?.length ?? 0, name, path);
+}
+
+async function ensureGlobalSkillPacks(): Promise<void> {
+  const brandedSkills = app.isPackaged
+    ? path.join(process.resourcesPath, 'ellmsha-skills')
+    : path.join(process.cwd(), 'resources', 'ellmsha-skills');
+  await importGlobalSkills('eLLMsha', brandedSkills);
+  await importGlobalSkills(
+    'BMAD',
+    process.env.ELLM_SHA_BMAD_SKILLS_DIR ||
+      (app.isPackaged ? path.join(process.resourcesPath, 'global-skills', 'bmad') : undefined)
+  );
+  await importGlobalSkills(
+    'Ponytail',
+    process.env.ELLM_SHA_PONYTAIL_SKILLS_DIR ||
+      (app.isPackaged ? path.join(process.resourcesPath, 'global-skills', 'ponytail') : undefined)
+  );
 }
 
 export function resolveImageGenerationMigrationConfig(
@@ -200,6 +238,24 @@ function buildBuiltinBrowserServer(): McpImportServer {
   };
 }
 
+function buildTencentMemoryServer(): McpImportServer | null {
+  const configPath = process.env.AIONUI_TDAI_MEMORY_CONFIG;
+  if (!configPath || !existsSync(configPath)) return null;
+  const serverConfig = {
+    command: 'node',
+    args: [getBuiltinMcpScriptPath(BUILTIN_TDAI_MEMORY_SCRIPT)],
+    env: { AIONUI_TDAI_MEMORY_CONFIG: configPath },
+  };
+  return {
+    name: BUILTIN_TDAI_MEMORY_NAME,
+    description: 'Shared TencentDB memory tools for agents and subagents in eLLMsha v3.',
+    enabled: true,
+    builtin: true,
+    transport: { type: 'stdio', ...serverConfig },
+    original_json: JSON.stringify({ mcpServers: { [BUILTIN_TDAI_MEMORY_NAME]: serverConfig } }, null, 2),
+  };
+}
+
 function buildDefaultMcpServers(): McpImportServer[] {
   const chromeConfig = {
     command: 'npx',
@@ -220,6 +276,7 @@ function buildDefaultMcpServers(): McpImportServer[] {
       original_json: JSON.stringify({ mcpServers: { [BUILTIN_CHROME_DEVTOOLS_NAME]: chromeConfig } }, null, 2),
     },
     buildBuiltinBrowserServer(),
+    ...[buildTencentMemoryServer()].filter((server): server is McpImportServer => server !== null),
   ];
 }
 
@@ -314,6 +371,24 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
 
   if (missing.length > 0) {
     await mcpService.batchImportServers.invoke({ servers: missing });
+  }
+
+  const existingMemoryServer = existingByName.get(BUILTIN_TDAI_MEMORY_NAME);
+  const desiredMemoryServer = buildTencentMemoryServer();
+  if (existingMemoryServer) {
+    const transportChanged =
+      desiredMemoryServer && !isSameStdioTransport(existingMemoryServer.transport, desiredMemoryServer.transport);
+    const enabledChanged = existingMemoryServer.enabled !== Boolean(desiredMemoryServer);
+    if (transportChanged && desiredMemoryServer) {
+      await mcpService.updateServer.invoke({
+        id: existingMemoryServer.id,
+        data: {
+          transport: desiredMemoryServer.transport,
+          original_json: desiredMemoryServer.original_json,
+        },
+      });
+    }
+    if (enabledChanged) await mcpService.toggleServer.invoke({ id: existingMemoryServer.id });
   }
 
   const existingChromeDevtools = existingByName.get(BUILTIN_CHROME_DEVTOOLS_NAME);
@@ -458,6 +533,7 @@ const MIGRATION_STEPS: Array<{
     name: 'ensureBootstrapMcpServersInDb',
     run: async (configFile) => (await ensureBootstrapMcpServersInDb(configFile), true),
   },
+  { name: 'ensureGlobalSkillPacks', run: async () => (await ensureGlobalSkillPacks(), true) },
   { name: 'migrateAssistantsToBackend', run: async (configFile) => migrateAssistantsToBackend(configFile) },
 ];
 

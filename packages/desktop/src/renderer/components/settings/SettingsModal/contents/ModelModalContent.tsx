@@ -21,6 +21,7 @@ import {
 } from '@icon-park/react';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AddModelModal from '@/renderer/pages/settings/components/AddModelModal';
 import AddPlatformModal from '@/renderer/pages/settings/components/AddPlatformModal';
 import { isNewApiPlatform, NEW_API_PROTOCOL_OPTIONS } from '@/renderer/utils/model/modelPlatforms';
@@ -107,6 +108,8 @@ const isModelEnabled = (platform: IProvider, model: string): boolean => {
 
 const ModelModalContent: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const viewMode = useSettingsViewMode();
   const isPageMode = viewMode === 'page';
   const [collapseKey, setCollapseKey] = useState<Record<string, boolean>>({});
@@ -321,6 +324,14 @@ const ModelModalContent: React.FC = () => {
     }
   }, [addPlatformModalCtrl]);
 
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    if (query.get('provider') !== 'Ollama') return;
+    addPlatformModalCtrl.open({ initialPlatform: 'Ollama' });
+    query.delete('provider');
+    navigate({ pathname: location.pathname, search: query.toString() }, { replace: true });
+  }, [location.pathname, location.search, navigate, addPlatformModalCtrl]);
+
   const [addModelModalCtrl, addModelModalContext] = AddModelModal.useModal({
     onSubmit(platform) {
       updatePlatform(platform, () => {
@@ -338,13 +349,16 @@ const ModelModalContent: React.FC = () => {
 
   const headerActions = (
     <>
+      <Button onClick={() => addPlatformModalCtrl.open({ initialPlatform: 'Ollama' })}>
+        {t('settings.ollama.setup')}
+      </Button>
       <Button type='text' size='small' onClick={clearAllHealthData} className='!text-t-secondary hover:!text-t-primary'>
         {t('settings.clearStatus')}
       </Button>
       <TalkToButlerButton
         label={t('settings.addModel')}
         chatLabel={t('settings.talkToButler.addViaChat', { defaultValue: 'Add via chat' })}
-        onManual={() => addPlatformModalCtrl.open()}
+        onManual={() => addPlatformModalCtrl.open({ initialPlatform: undefined })}
         manualLabel={t('settings.talkToButler.addManually', { defaultValue: 'Add manually' })}
         prompt={t('settings.talkToButler.prompt.addModel', {
           defaultValue: 'Help me add a new LLM provider and API key, then set it as the default model.',

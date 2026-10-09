@@ -18,7 +18,8 @@ const {
 } = vi.hoisted(() => ({
   ensureConversationRuntimeMock: vi.fn().mockResolvedValue({ recovered: false, config_options: [], runtime: null }),
   sendMessageInvokeMock: vi.fn().mockResolvedValue(undefined),
-  translateMock: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+  translateMock: (key: string, options?: { defaultValue?: string; backend?: string }) =>
+    (options?.defaultValue ?? key).replace('{{backend}}', options?.backend ?? ''),
   useTeamPermissionMock: vi.fn(),
   setSendBoxHandlerMock: vi.fn(),
   markSendFailedMock: vi.fn(),
@@ -43,11 +44,14 @@ vi.mock('@/renderer/components/chat/SendBox', () => ({
   default: ({
     onSend,
     onChange,
+    placeholder,
   }: {
     onSend: (message: string) => Promise<void>;
     onChange?: (value: string) => void;
+    placeholder?: string;
   }) => (
     <div>
+      <span data-testid='sendbox-placeholder'>{placeholder}</span>
       <button type='button' onClick={() => onChange?.('hello')}>
         change
       </button>
@@ -229,6 +233,16 @@ describe('AionrsSendBox', () => {
     vi.clearAllMocks();
     ensureConversationRuntimeMock.mockResolvedValue({ recovered: false, config_options: [], runtime: null });
     useTeamPermissionMock.mockReturnValue(null);
+  });
+
+  it.each([undefined, 'Aion CLI', 'AionCLI', 'eLLMsha'])('shows Ollama for the native connection name %s', (agent_name) => {
+    render(<AionrsSendBox conversation_id='conv-1' modelSelection={modelSelection} agent_name={agent_name} />);
+    expect(screen.getByTestId('sendbox-placeholder')).toHaveTextContent('Send message to Ollama...');
+  });
+
+  it('preserves a user-assigned assistant name', () => {
+    render(<AionrsSendBox conversation_id='conv-1' modelSelection={modelSelection} agent_name='My local assistant' />);
+    expect(screen.getByTestId('sendbox-placeholder')).toHaveTextContent('Send message to My local assistant...');
   });
 
   it('does not warm up team session when draft content changes', async () => {

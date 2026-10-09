@@ -47,6 +47,9 @@ export const BROWSER_SESSION_PARTITION = 'persist:aionui-browser';
  */
 export const BUILTIN_BROWSER_MCP_NAME = 'aionui-browser';
 
+/** Shared eLLMsha v3 memory MCP registration name. */
+export const BUILTIN_TDAI_MEMORY_NAME = 'ellmsha-tencentdb-memory';
+
 // ===== 文件处理相关常量 =====
 
 /** 临时文件时间戳分隔符 */

@@ -204,6 +204,17 @@ describe('LocalAgents', () => {
     expect(screen.getByText('My Agent')).toBeTruthy();
   });
 
+  it('finds the native agent when searching for Ollama and opens its provider setup', () => {
+    useManagedAgents.mockReturnValue({ agents: makeAgents(), refreshCatalog: vi.fn() });
+    render(<LocalAgents />);
+    fireEvent.change(screen.getByTestId('input-search-agents'), { target: { value: 'oll' } });
+    expect(screen.getByText('Aion CLI')).toBeInTheDocument();
+    expect(screen.queryByText('Claude Code')).not.toBeInTheDocument();
+    expect(screen.getByTestId('ollama-agent-setup')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('settings.ollama.setup'));
+    expect(navigate).toHaveBeenCalledWith('/settings/model?provider=Ollama');
+  });
+
   it('shows the empty state when no detected agents are present', () => {
     useManagedAgents.mockReturnValue({ agents: [], revalidate: vi.fn(), refreshCatalog: vi.fn() });
 
