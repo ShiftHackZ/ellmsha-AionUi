@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Message } from '@arco-design/web-react';
 import AgentRepairPanel from '@/renderer/pages/settings/AgentSettings/AgentRepairPanel';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
-import { acpConversation } from '@/common/adapter/ipcBridge';
+import { acpConversation, systemSettings } from '@/common/adapter/ipcBridge';
 
 vi.mock('@/common/adapter/ipcBridge', () => ({
   acpConversation: {
@@ -21,6 +21,12 @@ vi.mock('@/common/adapter/ipcBridge', () => ({
     setAgentOverrides: {
       invoke: vi.fn(),
     },
+  },
+  systemSettings: {
+    getCliRuntime: { invoke: vi.fn() },
+    setCliRuntimeSelection: { invoke: vi.fn() },
+    updateCliRuntime: { invoke: vi.fn() },
+    rollbackCliRuntime: { invoke: vi.fn() },
   },
 }));
 
@@ -233,5 +239,74 @@ describe('AgentRepairPanel', () => {
     expect(screen.queryByText('settings.repair.pathLabel')).toBeNull();
     expect(screen.queryByText('settings.repair.envLabel')).toBeNull();
     expect(screen.queryByRole('button', { name: /repair\.saveAndTest/ })).toBeNull();
+  });
+
+  it('shows the resolved managed CLI path and version and updates explicitly', async () => {
+    const user = userEvent.setup();
+    vi.mocked(acpConversation.getAgentOverrides.invoke).mockResolvedValue({ env_override: [] });
+    const runtime = {
+      name: 'codex',
+      selection: 'managed' as const,
+      selection_explicit: true,
+      available: true,
+      resolved_path: '/managed/codex/0.162.1/codex',
+      version: 'codex-cli 0.162.1',
+      bundled_version: '0.162.1',
+      active_managed_version: '0.162.1',
+    };
+    vi.mocked(systemSettings.getCliRuntime.invoke).mockResolvedValue(runtime);
+    vi.mocked(systemSettings.updateCliRuntime.invoke).mockResolvedValue(runtime);
+
+    render(
+      <AgentRepairPanel
+        agent={{ ...mockAgent, agent_source: 'builtin', backend: 'codex', command: 'codex' }}
+        onSaved={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('/managed/codex/0.162.1/codex');
+      expect(document.body.textContent).toContain('codex-cli 0.162.1');
+    });
+    expect(screen.queryByText('settings.repair.pathLabel')).toBeNull();
+
+    const runtimeButtons = [
+      screen.getByRole('button', { name: 'settings.repair.runtimeApply' }),
+      screen.getByRole('button', { name: 'settings.repair.runtimeUpdate' }),
+      screen.getByRole('button', { name: 'settings.repair.runtimeRollback' }),
+    ];
+    for (const button of runtimeButtons) {
+      expect(button).toHaveClass('!h-32px', '!rounded-8px', '!px-14px');
+    }
+    expect(runtimeButtons[2]).toBeDisabled();
+    expect(
+      screen.getByRole('radio', { name: 'settings.repair.runtimeManaged' }).closest('.arco-radio-group')
+    ).toHaveClass(
+      '[&_.arco-radio-button]:!text-t-secondary',
+      '[&_.arco-radio-button.arco-radio-checked]:!text-t-primary'
+    );
+    expect(screen.getByText('settings.repair.runtimeSessionPinHint')).toHaveClass('text-t-secondary');
+
+    await user.click(runtimeButtons[1]);
+    await waitFor(() => {
+      expect(systemSettings.updateCliRuntime.invoke).toHaveBeenCalledWith({ name: 'codex' });
+    });
+  });
+
+  it('shows a themed loading state while runtime status resolves', async () => {
+    vi.mocked(acpConversation.getAgentOverrides.invoke).mockResolvedValue({ env_override: [] });
+    vi.mocked(systemSettings.getCliRuntime.invoke).mockReturnValue(new Promise(() => {}));
+
+    render(
+      <AgentRepairPanel
+        agent={{ ...mockAgent, agent_source: 'builtin', backend: 'codex', command: 'codex' }}
+        onSaved={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('common.loading')).toBeInTheDocument();
+    });
+    expect(screen.getByText('settings.repair.runtimeTitle').parentElement).toHaveClass('bg-aou-2');
   });
 });

@@ -1351,6 +1351,21 @@ export const theme = {
   requestCurrent: bridge.buildProvider<Theme | null, void>('theme:request-current'),
 };
 
+export type CliRuntimeSelection = 'managed' | 'system' | 'custom';
+
+export type CliRuntimeInfo = {
+  name: string;
+  selection: CliRuntimeSelection;
+  selection_explicit: boolean;
+  available: boolean;
+  resolved_path?: string;
+  version?: string;
+  bundled_version: string;
+  active_managed_version?: string;
+  rollback_version?: string;
+  error?: string;
+};
+
 // ---------------------------------------------------------------------------
 // System Settings — routed to /api/settings/* unless they need Electron-native side effects.
 // ---------------------------------------------------------------------------
@@ -1387,6 +1402,24 @@ export const systemSettings = {
   getPetConfirmEnabled: bridge.buildProvider<boolean, void>('system-settings:get-pet-confirm-enabled'),
   setPetConfirmEnabled: bridge.buildProvider<void, { enabled: boolean }>('system-settings:set-pet-confirm-enabled'),
   ensureNodeRuntime: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope }>('/api/system/ensure-node-runtime'),
+  getCliRuntime: httpGet<CliRuntimeInfo, { name: string }>(
+    (p) => `/api/system/cli-runtimes/${encodeURIComponent(p.name)}`
+  ),
+  setCliRuntimeSelection: httpPut<
+    CliRuntimeInfo,
+    { name: string; selection: CliRuntimeSelection; custom_path?: string }
+  >(
+    (p) => `/api/system/cli-runtimes/${encodeURIComponent(p.name)}`,
+    (p) => ({ selection: p.selection, custom_path: p.custom_path })
+  ),
+  updateCliRuntime: httpPost<CliRuntimeInfo, { name: string; version?: string }>(
+    (p) => `/api/system/cli-runtimes/${encodeURIComponent(p.name)}/update`,
+    (p) => ({ version: p.version })
+  ),
+  rollbackCliRuntime: httpPost<CliRuntimeInfo, { name: string }>(
+    (p) => `/api/system/cli-runtimes/${encodeURIComponent(p.name)}/rollback`,
+    () => undefined
+  ),
   ensureManagedAcpTool: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope; tool_id: string }>(
     '/api/system/ensure-managed-acp-tool'
   ),
