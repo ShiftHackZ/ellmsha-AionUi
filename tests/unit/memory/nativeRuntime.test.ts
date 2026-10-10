@@ -1,10 +1,16 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ChildProcess } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:net';
 import { nativeConfig, savePrivate } from '../../../packages/desktop/src/process/memory/native/config';
-import { startNativeMemory, stopNativeMemory } from '../../../packages/desktop/src/process/memory/native';
+import {
+  startNativeMemory,
+  stopNativeMemory,
+  stopOwnedMemoryChild,
+} from '../../../packages/desktop/src/process/memory/native';
 
 const temporary: string[] = [];
 const temp = () => {
@@ -13,8 +19,56 @@ const temp = () => {
   return p;
 };
 afterEach(async () => {
+  vi.useRealTimers();
   await stopNativeMemory();
   for (const p of temporary.splice(0)) rmSync(p, { recursive: true, force: true });
+});
+
+describe('native memory process shutdown', () => {
+  const fakeChild = () => {
+    const child = new EventEmitter() as EventEmitter & { exitCode: number | null; pid: number };
+    child.exitCode = null;
+    child.pid = 42;
+    return child;
+  };
+
+  it('waits for confirmed child exit after issuing a forced termination', async () => {
+    vi.useFakeTimers();
+    const child = fakeChild();
+    const signals: NodeJS.Signals[] = [];
+    let resolved = false;
+    const stopping = stopOwnedMemoryChild(child as unknown as ChildProcess, {
+      graceMs: 10,
+      forceWaitMs: 20,
+      signal: async (signal) => {
+        signals.push(signal);
+        return 'sent';
+      },
+    }).then(() => {
+      resolved = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(10);
+    expect(signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(resolved).toBe(false);
+    child.exitCode = 137;
+    child.emit('exit', 137, 'SIGKILL');
+    await stopping;
+    expect(resolved).toBe(true);
+  });
+
+  it('rejects when forced termination is not followed by process exit', async () => {
+    vi.useFakeTimers();
+    const child = fakeChild();
+    const stopping = stopOwnedMemoryChild(child as unknown as ChildProcess, {
+      graceMs: 10,
+      forceWaitMs: 20,
+      signal: async () => 'sent',
+    });
+    const rejected = expect(stopping).rejects.toThrow('did not exit after forced termination');
+    await vi.advanceTimersByTimeAsync(30);
+    await rejected;
+  });
 });
 describe('persistent desktop memory', () => {
   it('reuses secrets and encoder settings when the application is replaced', () => {

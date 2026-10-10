@@ -58,6 +58,12 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn): 
       icon: <Lightning theme='outline' size='16' />,
       path: 'skills',
     },
+    plugins: {
+      id: 'plugins',
+      label: t('settings.plugins', { defaultValue: 'Plugins' }),
+      icon: <Puzzle theme='outline' size='16' />,
+      path: 'plugins',
+    },
     tools: {
       id: 'tools',
       label: t('settings.tools', { defaultValue: 'Tools' }),

@@ -490,8 +490,13 @@ describe('MessageTips — FeedbackButton wiring', () => {
     );
 
     const detailsToggle = screen.getByRole('button', { name: /common.technical_details/ });
+    const detailsLabel = screen.getByText('common.technical_details');
+    const detailsContent = screen.getByText(/Provider returned 401/);
     expect(detailsToggle).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/Provider returned 401/)).toBeInTheDocument();
+    expect(detailsLabel).toHaveClass('text-t-secondary');
+    expect(detailsContent).toHaveClass('text-t-secondary');
+    expect(detailsLabel).not.toHaveClass('text-t-tertiary');
+    expect(detailsContent).not.toHaveClass('text-t-tertiary');
   });
 });
 

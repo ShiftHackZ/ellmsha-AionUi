@@ -240,6 +240,18 @@ describe('buildSpawnEnv', () => {
     expect(env.AIONUI_LOG_DIR).toBe('/l');
     expect(env.PATH).toBe(process.env.PATH); // inherits
   });
+
+  it('does not inherit an ambient bootstrap secret and only passes an explicit capability', () => {
+    const previous = process.env.AIONCORE_BOOTSTRAP_SECRET;
+    process.env.AIONCORE_BOOTSTRAP_SECRET = 'ambient-secret';
+    try {
+      expect(buildSpawnEnv().AIONCORE_BOOTSTRAP_SECRET).toBeUndefined();
+      expect(buildSpawnEnv(undefined, 'explicit-secret').AIONCORE_BOOTSTRAP_SECRET).toBe('explicit-secret');
+    } finally {
+      if (previous === undefined) delete process.env.AIONCORE_BOOTSTRAP_SECRET;
+      else process.env.AIONCORE_BOOTSTRAP_SECRET = previous;
+    }
+  });
 });
 
 describe('findAvailablePort', () => {
@@ -309,6 +321,29 @@ describe('findAvailablePort', () => {
 });
 
 describe('BackendLifecycleManager.start (success path)', () => {
+  it('starts WebUI backends without local bypass and passes bootstrap capability only via env', async () => {
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore', {
+      identityMode: 'webui',
+      bootstrapSecret: 'process-only-secret',
+    });
+
+    const startPromise = mgr.start('/db/path', '/log/dir');
+    await Promise.resolve();
+    emitListening(child, 55555);
+    await startPromise;
+
+    const spawnCall = vi.mocked(spawn).mock.calls[0];
+    expect(spawnCall[1]).not.toContain('--local');
+    expect(spawnCall[1]).not.toContain('process-only-secret');
+    expect(spawnCall[2]?.env?.AIONCORE_BOOTSTRAP_SECRET).toBe('process-only-secret');
+    fetchSpy.mockRestore();
+  });
+
   it('lets aioncore choose the backend port and waits for the reported listening event', async () => {
     vi.mocked(createServer).mockImplementation(() => {
       throw new Error('launcher must not pre-bind backend ports');

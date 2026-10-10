@@ -19,6 +19,14 @@ import {
   useReplaceWithAnchorWindow,
 } from '@/renderer/pages/conversation/Messages/hooks';
 
+const realtimeMocks = vi.hoisted(() => ({
+  handler: null as null | (() => void),
+  on: vi.fn((handler: () => void) => {
+    realtimeMocks.handler = handler;
+    return vi.fn();
+  }),
+}));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     conversation: {
@@ -31,17 +39,22 @@ vi.mock('@/common', () => ({
         invoke: vi.fn(),
       },
     },
+    realtime: {
+      reconnected: {
+        on: realtimeMocks.on,
+      },
+    },
   },
 }));
 
 const CONVERSATION_ID = 'conversation-1';
 
-function createTextMessage(msgId: string, content: string): IMessageText {
+function createTextMessage(msgId: string, content: string, conversationId = CONVERSATION_ID): IMessageText {
   return {
     id: `text-${msgId}-${content}`,
     type: 'text',
     msg_id: msgId,
-    conversation_id: CONVERSATION_ID,
+    conversation_id: conversationId,
     position: 'left',
     content: {
       content,
@@ -133,6 +146,14 @@ async function flushMessageQueue(): Promise<void> {
   await act(async () => {
     vi.runAllTimers();
   });
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => {
+    resolve = resolver;
+  });
+  return { promise, resolve };
 }
 
 describe('message merging', () => {
@@ -274,5 +295,146 @@ describe('message merging', () => {
       limit: 50,
       content_mode: 'compact',
     });
+  });
+
+  it('reloads persisted messages after realtime reconnect', async () => {
+    const invoke = vi.mocked(ipcBridge.database.getConversationMessages.invoke);
+    invoke.mockReset();
+    realtimeMocks.handler = null;
+    invoke
+      .mockResolvedValueOnce({
+        items: [],
+        oldest_cursor: null,
+        newest_cursor: null,
+        has_more_before: false,
+        has_more_after: false,
+      })
+      .mockResolvedValueOnce({
+        items: [createTextMessage('missed-user-message', 'persisted while disconnected')],
+        oldest_cursor: null,
+        newest_cursor: null,
+        has_more_before: false,
+        has_more_after: false,
+      });
+
+    const { result } = renderHook(
+      () => {
+        useMessageLstCache(CONVERSATION_ID);
+        return useMessageList();
+      },
+      { wrapper: CacheWrapper }
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(realtimeMocks.handler).toBeTypeOf('function');
+
+    await act(async () => {
+      realtimeMocks.handler?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(result.current.map((message) => message.msg_id)).toContain('missed-user-message');
+  });
+
+  it('ignores a late hydration response from the previous conversation', async () => {
+    const invoke = vi.mocked(ipcBridge.database.getConversationMessages.invoke);
+    const first = deferred<Awaited<ReturnType<typeof invoke>>>();
+    const second = deferred<Awaited<ReturnType<typeof invoke>>>();
+    invoke.mockReset().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+
+    const { result, rerender } = renderHook(
+      ({ conversationId }) => {
+        useMessageLstCache(conversationId);
+        return useMessageList();
+      },
+      {
+        initialProps: { conversationId: 'conversation-a' },
+        wrapper: CacheWrapper,
+      }
+    );
+
+    rerender({ conversationId: 'conversation-b' });
+    await act(async () => {
+      second.resolve({
+        items: [createTextMessage('message-b', 'new conversation', 'conversation-b')],
+        oldest_cursor: null,
+        newest_cursor: null,
+        has_more_before: false,
+        has_more_after: false,
+      });
+      await second.promise;
+    });
+    await act(async () => {
+      first.resolve({
+        items: [createTextMessage('message-a', 'old conversation', 'conversation-a')],
+        oldest_cursor: null,
+        newest_cursor: null,
+        has_more_before: false,
+        has_more_after: false,
+      });
+      await first.promise;
+    });
+
+    expect(result.current.map((message) => message.msg_id)).toEqual(['message-b']);
+  });
+
+  it('ignores an older reconnect hydration that resolves last', async () => {
+    const invoke = vi.mocked(ipcBridge.database.getConversationMessages.invoke);
+    const older = deferred<Awaited<ReturnType<typeof invoke>>>();
+    const newer = deferred<Awaited<ReturnType<typeof invoke>>>();
+    invoke
+      .mockReset()
+      .mockResolvedValueOnce({
+        items: [],
+        oldest_cursor: null,
+        newest_cursor: null,
+        has_more_before: false,
+        has_more_after: false,
+      })
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise);
+
+    const { result } = renderHook(
+      () => {
+        useMessageLstCache(CONVERSATION_ID);
+        return useMessageList();
+      },
+      { wrapper: CacheWrapper }
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      realtimeMocks.handler?.();
+      realtimeMocks.handler?.();
+    });
+    await act(async () => {
+      newer.resolve({
+        items: [createTextMessage('newer-message', 'newest persisted state')],
+        oldest_cursor: null,
+        newest_cursor: null,
+        has_more_before: false,
+        has_more_after: false,
+      });
+      await newer.promise;
+    });
+    await act(async () => {
+      older.resolve({
+        items: [createTextMessage('older-message', 'stale persisted state')],
+        oldest_cursor: null,
+        newest_cursor: null,
+        has_more_before: false,
+        has_more_after: false,
+      });
+      await older.promise;
+    });
+
+    expect(result.current.map((message) => message.msg_id)).toEqual(['newer-message']);
   });
 });

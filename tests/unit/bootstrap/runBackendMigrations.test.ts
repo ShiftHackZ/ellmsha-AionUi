@@ -96,6 +96,22 @@ const imageServer = (): IMcpServer => ({
   ),
 });
 
+const chromeDevtoolsServer = (builtin: boolean): IMcpServer => ({
+  id: 'chrome-devtools-server-id',
+  name: 'chrome-devtools',
+  description: 'Legacy Chrome DevTools server',
+  enabled: false,
+  builtin,
+  transport: {
+    type: 'stdio',
+    command: 'npx',
+    args: ['-y', 'chrome-devtools-mcp@latest'],
+  },
+  created_at: 1,
+  updated_at: 1,
+  original_json: '{}',
+});
+
 const configFile = {
   get: configFileGetMock,
   set: configFileSetMock,
@@ -214,5 +230,35 @@ describe('runBackendMigrations', () => {
       'yes',
       'yes'
     );
+  });
+
+  it('routes the obsolete built-in Chrome server through the pinned in-app browser proxy', async () => {
+    listServersMock.mockResolvedValue([imageServer(), chromeDevtoolsServer(true)]);
+
+    await runBackendMigrations(configFile as never);
+
+    expect(updateServerMock).toHaveBeenCalledWith({
+      id: 'chrome-devtools-server-id',
+      data: expect.objectContaining({
+        description: 'Legacy browser alias routed through the pinned in-app browser engine.',
+        transport: {
+          type: 'stdio',
+          command: 'node',
+          args: ['/mock/builtin-mcp-browser.js'],
+        },
+      }),
+    });
+    expect(testMcpConnectionMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves a user-created Chrome DevTools MCP entry', async () => {
+    listServersMock.mockResolvedValue([imageServer(), chromeDevtoolsServer(false)]);
+
+    await runBackendMigrations(configFile as never);
+
+    expect(updateServerMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'chrome-devtools-server-id' })
+    );
+    expect(testMcpConnectionMock).not.toHaveBeenCalled();
   });
 });

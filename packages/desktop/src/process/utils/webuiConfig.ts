@@ -259,6 +259,7 @@ export async function startDesktopWebUI(opts: { port?: number; allowRemote?: boo
     backend: {
       kind: 'useExistingBackend',
       port: backendPort,
+      identityMode: 'local',
     },
   });
 

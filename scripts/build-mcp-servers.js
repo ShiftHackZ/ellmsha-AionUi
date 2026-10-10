@@ -12,9 +12,33 @@
  */
 
 const esbuild = require('esbuild');
+const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
+const INTEGRATION_ROOT = path.resolve(ROOT, '..');
+
+function resolveChromeDevtoolsRuntime(options = {}) {
+  const env = options.env ?? process.env;
+  const runtimeRoot =
+    env.ELLM_SHA_CHROME_DEVTOOLS_MCP_RUNTIME ||
+    path.join(INTEGRATION_ROOT, '.data', 'chrome-devtools-mcp-runtime');
+  const preparationPath = path.join(INTEGRATION_ROOT, 'scripts', 'prepare-chrome-devtools-mcp.js');
+  if (!fs.existsSync(preparationPath)) {
+    throw new Error(`Chrome DevTools MCP preparation is missing: ${preparationPath}`);
+  }
+  const preparation = require(preparationPath);
+  const source = env.ELLM_SHA_CHROME_DEVTOOLS_MCP_RUNTIME
+    ? undefined
+    : preparation.prepareChromeDevtoolsMcpRuntime({ repositoryRoot: INTEGRATION_ROOT });
+
+  preparation.verifyChromeDevtoolsMcpRuntime({
+    runtimeRoot,
+    sourceCommit: source?.commit,
+    sourceDigest: preparation.CHROME_DEVTOOLS_MCP_SOURCE_DIGEST,
+  });
+  return runtimeRoot;
+}
 
 const SHARED_OPTIONS = {
   bundle: true,
@@ -39,13 +63,35 @@ async function main() {
     }),
     esbuild.build({
       ...SHARED_OPTIONS,
+      entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/chromeDevtoolsServer.ts')],
+      outfile: path.join(ROOT, 'out/main/builtin-mcp-chrome-devtools.js'),
+    }),
+    esbuild.build({
+      ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/tencentMemoryServer.ts')],
       outfile: path.join(ROOT, 'out/main/builtin-mcp-tencent-memory.js'),
     }),
+    esbuild.build({
+      ...SHARED_OPTIONS,
+      entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/chatHistoryServer.ts')],
+      outfile: path.join(ROOT, 'out/main/builtin-mcp-chat-history.js'),
+    }),
   ]);
+
+  // The browser proxy must be able to start offline from app.asar.unpacked.
+  // Copy the pinned, already-bundled upstream engine beside our launcher so
+  // runtime startup never invokes npx or touches a user-level npm cache.
+  const chromeDevtoolsSource = resolveChromeDevtoolsRuntime();
+  const chromeDevtoolsOutput = path.join(ROOT, 'out/main/chrome-devtools-mcp');
+  fs.rmSync(chromeDevtoolsOutput, { recursive: true, force: true });
+  fs.cpSync(chromeDevtoolsSource, chromeDevtoolsOutput, { recursive: true });
 }
 
-main().catch((err) => {
-  console.error('MCP server build failed:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('MCP server build failed:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { main, resolveChromeDevtoolsRuntime };

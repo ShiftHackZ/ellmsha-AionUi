@@ -19,7 +19,8 @@
  *   AIONUI_OPEN_BROWSER   : "1"/"true" to force open, "0"/"false" to disable
  */
 
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
+import { randomBytes } from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -188,9 +189,11 @@ function augmentPathWithNvm(): void {
  * fallback — useful when the backend is unreachable or the SQLite users row
  * has not been seeded yet.
  */
-async function fetchAdminUsername(backendPort: number): Promise<string> {
+async function fetchAdminUsername(backendPort: number, bootstrapSecret: string): Promise<string> {
   try {
-    const res = await fetch(`http://127.0.0.1:${backendPort}/api/auth/internal/users/system`);
+    const res = await fetch(`http://127.0.0.1:${backendPort}/api/auth/internal/users/system`, {
+      headers: { 'x-aioncore-bootstrap-secret': bootstrapSecret },
+    });
     if (!res.ok) return 'admin';
     const json = (await res.json()) as { data?: { username?: string } };
     return json.data?.username || 'admin';
@@ -202,10 +205,35 @@ async function fetchAdminUsername(backendPort: number): Promise<string> {
 async function main(): Promise<void> {
   augmentPathWithNvm();
   runPackageIfNeeded();
+  const integrationRoot = path.resolve(repoRoot, '..');
+  execFileSync('node', [path.join(integrationRoot, 'scripts', 'prepare-mobile-mcp.js')], { stdio: 'inherit' });
+  execFileSync('node', [path.join(integrationRoot, 'scripts', 'prepare-open-computer-use.js')], { stdio: 'inherit' });
   process.env.AIONUI_TDAI_MEMORY_MCP_PATH ||= path.join(repoRoot, 'out', 'main', 'builtin-mcp-tencent-memory.js');
+  process.env.AIONUI_CHAT_HISTORY_MCP_PATH ||= path.join(repoRoot, 'out', 'main', 'builtin-mcp-chat-history.js');
   process.env.ELLM_SHA_BMAD_SKILLS_DIR ||= path.resolve(repoRoot, '../bmad-method/ellmsha-skills');
   process.env.ELLM_SHA_PONYTAIL_SKILLS_DIR ||= path.resolve(repoRoot, '../ponytail/skills');
   process.env.ELLM_SHA_SKILLS_DIR ||= path.join(repoRoot, 'resources', 'ellmsha-skills');
+  process.env.ELLM_SHA_BUILTIN_PLUGINS_PATH ||= path.join(integrationRoot, 'plugins');
+  process.env.ELLM_SHA_MOBILE_MCP_ENTRY ||= path.join(
+    integrationRoot,
+    '.data',
+    'mobile-mcp-runtime',
+    'lib',
+    'index.js'
+  );
+  const computerUseEntries: Partial<Record<NodeJS.Platform, string>> = {
+    darwin: path.join('Open Computer Use.app', 'Contents', 'MacOS', 'OpenComputerUse'),
+    linux: 'open-computer-use',
+    win32: 'open-computer-use.exe',
+  };
+  const computerUseEntry = computerUseEntries[process.platform];
+  if (!computerUseEntry) throw new Error(`Open Computer Use does not support ${process.platform}`);
+  process.env.ELLM_SHA_OPEN_COMPUTER_USE_ENTRY ||= path.join(
+    integrationRoot,
+    '.data',
+    'open-computer-use-runtime',
+    computerUseEntry
+  );
   const port = resolvePort();
   const allowRemote = resolveAllowRemote();
   const autoOpenBrowser = shouldAutoOpenBrowser({
@@ -221,6 +249,7 @@ async function main(): Promise<void> {
   const staticDir = resolveStaticDir();
   const backendBin = resolveBackendBinary();
   const logDir = process.env.AIONUI_LOG_DIR ?? path.join(workDir, 'logs');
+  const bootstrapSecret = randomBytes(32).toString('hex');
 
   console.log('[webui] work dir   :', workDir);
   console.log('[webui] static dir :', staticDir);
@@ -250,6 +279,8 @@ async function main(): Promise<void> {
     backend: {
       kind: 'ownBackend',
       resolveBackend: () => backendBin,
+      identityMode: 'webui',
+      bootstrapSecret,
     },
   });
 
@@ -272,12 +303,13 @@ async function main(): Promise<void> {
       if (status.needs_setup === true) {
         const resetRes = await fetch(`http://127.0.0.1:${handle.backendPort}/api/webui/reset-password`, {
           method: 'POST',
+          headers: { 'x-aioncore-bootstrap-secret': bootstrapSecret },
         });
         if (resetRes.ok) {
           const payload = (await resetRes.json()) as { data?: { new_password?: string } };
           const initialPassword = payload.data?.new_password;
           if (initialPassword) {
-            const adminUsername = await fetchAdminUsername(handle.backendPort);
+            const adminUsername = await fetchAdminUsername(handle.backendPort, bootstrapSecret);
             console.log('');
             console.log(`Initial admin username: ${adminUsername}`);
             console.log(`Initial admin password: ${initialPassword}`);
@@ -286,7 +318,7 @@ async function main(): Promise<void> {
         }
       } else {
         // Credentials already exist; just remind the user what username to use.
-        const adminUsername = await fetchAdminUsername(handle.backendPort);
+        const adminUsername = await fetchAdminUsername(handle.backendPort, bootstrapSecret);
         console.log('');
         console.log(`Login username: ${adminUsername}`);
         console.log('(forgot the password? run `bun run resetpass` to generate a new one)');

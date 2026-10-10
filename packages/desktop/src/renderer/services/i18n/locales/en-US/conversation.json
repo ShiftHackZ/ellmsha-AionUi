@@ -79,7 +79,15 @@
     "deleting": "Deleting...",
     "reorderPinned": "Drag to reorder pinned conversation",
     "forkedFrom": "Forked from “{{name}}”",
-    "forkedConversation": "Forked conversation"
+    "forkedConversation": "Forked conversation",
+    "subagentStatus": {
+      "pending_init": "Starting",
+      "running": "Running",
+      "completed": "Completed",
+      "errored": "Failed",
+      "interrupted": "Interrupted",
+      "shutdown": "Stopped"
+    }
   },
   "historySearch": {
     "tooltip": "Search messages",

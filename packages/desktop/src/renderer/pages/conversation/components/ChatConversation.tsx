@@ -12,10 +12,12 @@ import { CronJobManager } from '@/renderer/pages/cron';
 import { resolveCronJobId } from '@/renderer/pages/cron/cronUtils';
 import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/agent/useAcpConfigOptions';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
+import { useOptionalConversationHistoryContext } from '@/renderer/hooks/context/ConversationHistoryContext';
 import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import { iconColors } from '@/renderer/styles/colors';
 import { Button, Dropdown, Menu, Message, Tooltip, Typography } from '@arco-design/web-react';
-import { History } from '@icon-park/react';
+import { ArrowLeft, History } from '@icon-park/react';
+import classNames from 'classnames';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -36,6 +38,7 @@ import { isLegacyReadOnlyConversationType } from '../utils/conversationRuntime';
 import { resolveConversationBackend } from '../utils/conversationAssistantIdentity';
 import LegacyReadOnlyConversation from '../platforms/legacy/LegacyReadOnlyConversation';
 import { useActiveLease } from '../hooks/useActiveLease';
+import { getSubagentMetadata } from '../GroupedHistory/types';
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
 const configErrorMessageKey = (error: unknown) => {
@@ -44,6 +47,53 @@ const configErrorMessageKey = (error: unknown) => {
   if (errorKind === 'confirmation_timeout') return 'agent.config.timeout';
   if (errorKind === 'config_update_in_progress') return 'agent.config.busy';
   return 'agent.config.failed';
+};
+
+const EMPTY_CONVERSATIONS: TChatConversation[] = [];
+
+const SubagentBackButton: React.FC<{ parentConversationId: string }> = ({ parentConversationId }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  return (
+    <Tooltip content={t('common.back')}>
+      <Button
+        size='mini'
+        type='text'
+        shape='circle'
+        aria-label={t('common.back')}
+        icon={<ArrowLeft theme='outline' size='16' />}
+        onClick={() => void navigate(`/conversation/${parentConversationId}`)}
+      />
+    </Tooltip>
+  );
+};
+
+const SubagentIndicator: React.FC<{
+  conversationId: string;
+  label: string;
+  status: string;
+  statusLabel: string;
+}> = ({ conversationId, label, status, statusLabel }) => {
+  const navigate = useNavigate();
+  return (
+    <Tooltip content={`${label} · ${statusLabel}`}>
+      <Button
+        size='mini'
+        type='secondary'
+        shape='circle'
+        aria-label={`${label} · ${statusLabel}`}
+        className={classNames('!w-28px !h-28px !min-w-28px !p-0 !text-11px !font-600 !border-2px !border-solid', {
+          '!border-[rgb(var(--primary-6))]': status === 'pending_init' || status === 'running',
+          '!border-[rgb(var(--success-6))]': status === 'completed',
+          '!border-[rgb(var(--danger-6))]': status === 'errored',
+          '!border-[var(--color-border-3)]': status === 'interrupted' || status === 'shutdown',
+        })}
+        onClick={() => void navigate(`/conversation/${conversationId}`)}
+      >
+        {label.trim().slice(0, 2).toLocaleUpperCase()}
+      </Button>
+    </Tooltip>
+  );
 };
 
 const _AssociatedConversation: React.FC<{ conversation_id: string }> = ({ conversation_id }) => {
@@ -258,15 +308,26 @@ const ChatConversation: React.FC<{
   hideSendBox?: boolean;
 }> = ({ conversation, hideSendBox }) => {
   const { t } = useTranslation();
-  useActiveLease({ type: 'conversation', id: conversation?.id });
+  const conversations = useOptionalConversationHistoryContext()?.conversations ?? EMPTY_CONVERSATIONS;
+  const subagent = getSubagentMetadata(conversation);
+  useActiveLease({ type: 'conversation', id: subagent ? undefined : conversation?.id });
   const workspaceEnabled = Boolean(conversation?.extra?.workspace) && !conversation?.project_id;
   const cronJobId = resolveCronJobId(conversation?.extra);
   const layout = useLayoutContext();
   const isMobile = Boolean(layout?.isMobile);
 
   const isAionrsConversation = conversation?.type === 'aionrs';
-  const isLegacyReadOnlyConversation = isLegacyReadOnlyConversationType(conversation?.type);
-  const resolvedHideSendBox = hideSendBox || isLegacyReadOnlyConversationType(conversation?.type);
+  const childConversations = useMemo(
+    () =>
+      conversation && !subagent
+        ? conversations.filter(
+            (candidate) => getSubagentMetadata(candidate)?.parent_conversation_id === conversation.id
+          )
+        : [],
+    [conversation, conversations, subagent]
+  );
+  const isLegacyReadOnlyConversation = Boolean(subagent) || isLegacyReadOnlyConversationType(conversation?.type);
+  const resolvedHideSendBox = hideSendBox || isLegacyReadOnlyConversation;
 
   // 使用统一的 Hook 获取预设助手信息（ACP/Codex 会话）
   // Use unified hook for preset assistant info (ACP/Codex conversations)
@@ -376,12 +437,29 @@ const ChatConversation: React.FC<{
 
   const headerExtraNode = (
     <div className='flex items-center gap-8px'>
-      {conversation && (
+      {subagent && <SubagentBackButton parentConversationId={subagent.parent_conversation_id} />}
+      {!subagent &&
+        childConversations.map((child) => {
+          const metadata = getSubagentMetadata(child)!;
+          const status = metadata.status ?? 'running';
+          const statusLabel = t(`conversation.history.subagentStatus.${status}`, { defaultValue: status });
+          const label = metadata.label ?? child.name;
+          return (
+            <SubagentIndicator
+              key={child.id}
+              conversationId={child.id}
+              label={label}
+              status={status}
+              statusLabel={statusLabel}
+            />
+          );
+        })}
+      {!subagent && conversation && (
         <div className='shrink-0'>
           <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
         </div>
       )}
-      {modelSelector && <div className='shrink-0'>{modelSelector}</div>}
+      {!subagent && modelSelector && <div className='shrink-0'>{modelSelector}</div>}
     </div>
   );
 

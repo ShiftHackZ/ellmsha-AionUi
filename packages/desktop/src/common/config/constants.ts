@@ -30,6 +30,9 @@
  */
 export const BROWSER_SESSION_PARTITION = 'persist:aionui-browser';
 
+/** Each browser tab owns a webview process, so keep the shared cap bounded. */
+export const MAX_BROWSER_TABS = 10;
+
 /**
  * 内置浏览器 MCP 的注册名。
  *

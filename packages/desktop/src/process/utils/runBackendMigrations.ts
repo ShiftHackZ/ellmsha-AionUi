@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
@@ -26,7 +25,7 @@ type ConfigFile = typeof ProcessConfigType;
 type MigrationStepResult = boolean;
 type McpImportServer = Partial<IMcpServer> & Pick<IMcpServer, 'name' | 'transport'>;
 type BackendClientPreferences = Record<string, unknown>;
-const BUILTIN_CHROME_DEVTOOLS_NAME = 'chrome-devtools';
+const LEGACY_BUILTIN_CHROME_DEVTOOLS_NAME = 'chrome-devtools';
 const BUILTIN_TDAI_MEMORY_SCRIPT = 'builtin-mcp-tencent-memory';
 
 /**
@@ -257,96 +256,37 @@ function buildTencentMemoryServer(): McpImportServer | null {
 }
 
 function buildDefaultMcpServers(): McpImportServer[] {
-  const chromeConfig = {
-    command: 'npx',
-    args: ['-y', 'chrome-devtools-mcp@latest'],
-  };
-
   return [
-    {
-      name: BUILTIN_CHROME_DEVTOOLS_NAME,
-      description: 'Default MCP server: chrome-devtools',
-      enabled: false,
-      builtin: true,
-      transport: {
-        type: 'stdio',
-        command: chromeConfig.command,
-        args: chromeConfig.args,
-      },
-      original_json: JSON.stringify({ mcpServers: { [BUILTIN_CHROME_DEVTOOLS_NAME]: chromeConfig } }, null, 2),
-    },
     buildBuiltinBrowserServer(),
     ...[buildTencentMemoryServer()].filter((server): server is McpImportServer => server !== null),
   ];
 }
 
-async function isCommandAvailable(command: string): Promise<boolean> {
-  return await new Promise((resolve) => {
-    execFile(command, ['--version'], { timeout: 3000 }, (error) => {
-      if (!error) {
-        resolve(true);
-        return;
-      }
-
-      const err = error as NodeJS.ErrnoException;
-      if (err.code === 'ENOENT') {
-        resolve(false);
-        return;
-      }
-
-      resolve(true);
-    });
-  });
-}
-
-async function ensureBuiltinChromeDevtoolsAvailability(server?: IMcpServer): Promise<void> {
-  if (
-    !server ||
-    server.name !== BUILTIN_CHROME_DEVTOOLS_NAME ||
-    server.transport.type !== 'stdio' ||
-    server.transport.command !== 'npx'
-  ) {
-    return;
-  }
-
-  const hasNpx = await isCommandAvailable(server.transport.command);
-  if (hasNpx) {
-    return;
-  }
-
-  try {
-    await mcpService.testMcpConnection.invoke(server);
-  } catch (error) {
-    console.warn('[Migration] chrome-devtools MCP preflight failed', error);
-  }
-}
-
-function buildOriginalJsonFromTransport(server: Pick<IMcpServer, 'name' | 'description' | 'transport'>): string {
-  const transport_config =
-    server.transport.type === 'stdio'
-      ? {
-          command: server.transport.command,
-          args: server.transport.args || [],
-          env: server.transport.env || {},
-        }
-      : {
-          type: server.transport.type,
-          url: server.transport.url,
-          ...(server.transport.headers ? { headers: server.transport.headers } : {}),
-        };
-
-  return JSON.stringify(
-    {
-      mcpServers: {
-        [server.name]: {
-          ...(server.description ? { description: server.description } : {}),
-          ...transport_config,
-        },
-      },
-    },
-    null,
-    2
+function isObsoleteBuiltinChromeDevtools(server: IMcpServer): boolean {
+  return (
+    server.name === LEGACY_BUILTIN_CHROME_DEVTOOLS_NAME &&
+    server.builtin === true &&
+    server.transport.type === 'stdio' &&
+    server.transport.command === 'npx' &&
+    areStringArraysEqual(server.transport.args, ['-y', 'chrome-devtools-mcp@latest'])
   );
+}
+
+function buildPinnedLegacyChromeDevtoolsServer(): McpImportServer {
+  const scriptPath = getBuiltinMcpScriptPath(BUILTIN_BROWSER_SCRIPT);
+  const serverConfig = { command: 'node', args: [scriptPath] };
+  return {
+    name: LEGACY_BUILTIN_CHROME_DEVTOOLS_NAME,
+    description: 'Legacy browser alias routed through the pinned in-app browser engine.',
+    enabled: false,
+    builtin: true,
+    transport: { type: 'stdio', ...serverConfig },
+    original_json: JSON.stringify(
+      { mcpServers: { [LEGACY_BUILTIN_CHROME_DEVTOOLS_NAME]: serverConfig } },
+      null,
+      2
+    ),
+  };
 }
 
 async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<void> {
@@ -391,26 +331,18 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
     if (enabledChanged) await mcpService.toggleServer.invoke({ id: existingMemoryServer.id });
   }
 
-  const existingChromeDevtools = existingByName.get(BUILTIN_CHROME_DEVTOOLS_NAME);
-  if (
-    existingChromeDevtools &&
-    (existingChromeDevtools.builtin !== true ||
-      !existingChromeDevtools.original_json ||
-      existingChromeDevtools.original_json.trim() === '' ||
-      existingChromeDevtools.original_json.trim() === '{}')
-  ) {
+  const existingChromeDevtools = existingByName.get(LEGACY_BUILTIN_CHROME_DEVTOOLS_NAME);
+  if (existingChromeDevtools && isObsoleteBuiltinChromeDevtools(existingChromeDevtools)) {
+    const replacement = buildPinnedLegacyChromeDevtoolsServer();
     await mcpService.updateServer.invoke({
       id: existingChromeDevtools.id,
       data: {
-        builtin: true,
-        original_json: buildOriginalJsonFromTransport(existingChromeDevtools),
+        description: replacement.description,
+        transport: replacement.transport,
+        original_json: replacement.original_json,
       },
     });
   }
-
-  const refreshedServers = await mcpService.listServers.invoke();
-  const chromeDevtoolsServer = refreshedServers.find((server) => server.name === BUILTIN_CHROME_DEVTOOLS_NAME);
-  await ensureBuiltinChromeDevtoolsAvailability(chromeDevtoolsServer);
 
   if (
     imageEnvResolution.ok === true &&

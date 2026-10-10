@@ -168,9 +168,9 @@ const MessageTips: React.FC<{ message: IMessageTips }> = ({ message }) => {
                 <Collapse bordered={false} className='bg-transparent' defaultActiveKey={['technical-details']}>
                   <Collapse.Item
                     name='technical-details'
-                    header={<span className='text-12px text-t-tertiary'>{t('common.technical_details')}</span>}
+                    header={<span className='text-12px text-t-secondary'>{t('common.technical_details')}</span>}
                   >
-                    <div className='text-t-tertiary text-12px whitespace-break-spaces [word-break:break-word]'>
+                    <div className='text-t-secondary text-12px whitespace-break-spaces [word-break:break-word]'>
                       {detailParts.join('\n')}
                     </div>
                   </Collapse.Item>

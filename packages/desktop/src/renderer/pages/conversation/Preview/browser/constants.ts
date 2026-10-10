@@ -16,7 +16,7 @@
  * Re-exported from common so browser code can reach it locally. It is defined in
  * common because the main process needs the same value when clearing sign-in state.
  */
-export { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
+export { BROWSER_SESSION_PARTITION, MAX_BROWSER_TABS } from '@/common/config/constants';
 
 /** 新建浏览器 tab 的初始地址 / Initial address for a freshly opened browser tab. */
 export const BROWSER_BLANK_URL = 'about:blank';
@@ -34,8 +34,6 @@ export const BROWSER_TAB_FALLBACK_TITLE = 'New Tab';
  * Cap on browser tabs: each tab is a separate webview process, so an unbounded
  * count would exhaust memory. Beyond this the user is asked to close old tabs.
  */
-export const MAX_BROWSER_TABS = 10;
-
 /** 默认搜索引擎，地址栏输入非 URL 时使用 / Default search engine for non-URL input. */
 const SEARCH_URL_TEMPLATE = 'https://www.bing.com/search?q={query}';
 

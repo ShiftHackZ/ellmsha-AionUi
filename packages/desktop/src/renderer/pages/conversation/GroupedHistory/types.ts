@@ -13,6 +13,32 @@ export type WorkspaceGroup = {
   conversations: TChatConversation[];
 };
 
+export type SubagentMetadata = {
+  parent_conversation_id: string;
+  ref: string;
+  parent_ref?: string;
+  label?: string;
+  status?: 'pending_init' | 'running' | 'completed' | 'errored' | 'interrupted' | 'shutdown';
+};
+
+export const getSubagentMetadata = (conversation?: TChatConversation): SubagentMetadata | undefined => {
+  const metadata = (conversation?.extra as { subagent?: SubagentMetadata } | undefined)?.subagent;
+  return metadata?.parent_conversation_id && metadata.ref ? metadata : undefined;
+};
+
+export const isSubagentConversation = (conversation?: TChatConversation): boolean =>
+  Boolean(getSubagentMetadata(conversation));
+
+export const isSubagentRunning = (conversation?: TChatConversation): boolean => {
+  const metadata = getSubagentMetadata(conversation);
+  if (!metadata) return false;
+  const status = metadata.status ?? 'running';
+  return status === 'pending_init' || status === 'running';
+};
+
+export const isConversationRuntimeActive = (conversation?: TChatConversation): boolean =>
+  conversation?.runtime?.is_processing === true;
+
 export type TimelineItem = {
   type: 'workspace' | 'conversation';
   time: number;

@@ -14,6 +14,9 @@ const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { prepareMobileMcpRuntime } = require('../../scripts/prepare-mobile-mcp.js');
+const { prepareChromeDevtoolsMcpRuntime } = require('../../scripts/prepare-chrome-devtools-mcp.js');
+const { prepareOpenComputerUseRuntime } = require('../../scripts/prepare-open-computer-use.js');
 
 // DMG retry logic for macOS: detects DMG creation failures by checking artifacts
 // (.app exists but .dmg missing) and retries only the DMG step using
@@ -703,6 +706,7 @@ let buildFailed = false;
 
 try {
   restorePackageVersionOverride = applyDebugAutoUpdateVersionOverride(packageJsonPath);
+  prepareChromeDevtoolsMcpRuntime({ repositoryRoot: path.resolve(__dirname, '../..') });
 
   // 1. Ensure package.json main entry is correct for electron-vite
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -767,6 +771,8 @@ try {
     throw new Error('Tencent desktop runtime requires a native build for each target OS and architecture');
   }
   execSync(`node "${path.join(__dirname, 'memory/prepare.cjs')}"`, { stdio: 'inherit', env: process.env });
+  prepareMobileMcpRuntime({ repositoryRoot: path.resolve(__dirname, '../..') });
+  prepareOpenComputerUseRuntime({ repositoryRoot: path.resolve(__dirname, '../..') });
 
   // 5. Prepare aioncore binary (for packaged runtime usage)
   const { prepareAioncore } = require('../packages/shared-scripts/src/prepare-aioncore.js');
@@ -872,7 +878,7 @@ try {
   try {
     buildWithDmgRetry(builderCommand, targetArch);
   } catch (error) {
-    const winExePath = path.join(outDir, 'win-unpacked', 'AionUi.exe');
+    const winExePath = path.join(outDir, 'win-unpacked', 'eLLMsha.exe');
     const firstError = formatExecError(error);
     const canRetryWithoutExecutableEdit =
       process.platform === 'win32' && isWindowsBuild && process.env.CI !== 'true' && fs.existsSync(winExePath);

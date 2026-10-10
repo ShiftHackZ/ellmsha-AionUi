@@ -7,6 +7,7 @@
 import type { Theme } from '@/common/theme/types';
 import { configService } from '@/common/config/configService';
 import { ipcBridge } from '@/common';
+import { isWebUiBrowserMode } from '@/common/adapter/httpBridge';
 import { resolveActiveTheme } from '@/common/theme/resolveTheme';
 import { BUILTIN_THEMES } from '@renderer/theme/builtinThemes';
 import { processCustomCss } from './customCssProcessor';
@@ -43,11 +44,14 @@ export function applyTheme(theme: Theme, root: Document = document): void {
   upsertStyle(DECORATION_STYLE_ID, theme.css ? processCustomCss(theme.css) : null, root);
 }
 
-/** Resolve `activeId` locally, apply, persist, and publish to main for cross-window broadcast. */
-export async function setActiveTheme(activeId: string): Promise<void> {
+/** Resolve `activeId`, apply and persist it, then publish through the native relay when available. */
+export async function setActiveTheme(activeId: string): Promise<Theme> {
   const userThemes = (configService.get('theme.userThemes') as Theme[] | undefined) ?? [];
   const resolved = resolveActiveTheme(activeId, [...BUILTIN_THEMES, ...userThemes], getSystemPrefersDark());
   applyTheme(resolved);
   await configService.set('theme.activeId', activeId);
-  await ipcBridge.theme.setActive.invoke(resolved);
+  if (!isWebUiBrowserMode()) {
+    await ipcBridge.theme.setActive.invoke(resolved);
+  }
+  return resolved;
 }

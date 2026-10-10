@@ -7,6 +7,7 @@ const appRoot = path.resolve(__dirname, '../..');
 const source = path.resolve(appRoot, '../tencentdb-agent-memory');
 const target = path.join(appRoot, 'resources/tencent-memory', `${process.platform}-${process.arch}`);
 const version = '22.20.0';
+const locks = path.join(__dirname, 'locks');
 const nodeName = process.platform === 'win32' ? 'node.exe' : 'node';
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, {
@@ -76,10 +77,18 @@ async function main() {
     pkg.dependencies.tsx = '^4.21.0';
     const manifest = JSON.stringify(pkg, null, 2);
     const stamp = path.join(dest, '.dependency-manifest');
-    if (!fs.existsSync(stamp) || fs.readFileSync(stamp, 'utf8') !== manifest) {
+    const lock = fs.readFileSync(path.join(locks, `${name}.json`), 'utf8');
+    const fingerprint = crypto.createHash('sha256').update(manifest).update(lock).digest('hex');
+    if (
+      !fs.existsSync(path.join(dest, 'node_modules')) ||
+      !fs.existsSync(stamp) ||
+      fs.readFileSync(stamp, 'utf8') !== fingerprint
+    ) {
       fs.writeFileSync(path.join(dest, 'package.json'), manifest);
-      run(node, [npmCli, 'install', '--omit=dev', '--legacy-peer-deps', '--no-audit', '--no-fund'], dest);
-      fs.writeFileSync(stamp, manifest);
+      fs.writeFileSync(path.join(dest, 'package-lock.json'), lock);
+      // npm ci fails if upstream dependency declarations drift from our release lock.
+      run(node, [npmCli, 'ci', '--omit=dev', '--legacy-peer-deps', '--no-audit', '--no-fund'], dest);
+      fs.writeFileSync(stamp, fingerprint);
     }
     for (const entry of ['src', 'index.ts', 'openapi.yaml', 'templates', 'prompts']) {
       if (!fs.existsSync(path.join(src, entry))) continue;
@@ -91,7 +100,18 @@ async function main() {
     }
   }
   const web = path.join(source, 'MemoryPanel/web');
-  if (!fs.existsSync(path.join(web, 'node_modules'))) run(node, [npmCli, 'install', '--no-audit', '--no-fund'], web);
+  const webLock = fs.readFileSync(path.join(locks, 'web.json'));
+  const webFingerprint = crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(path.join(web, 'package.json')))
+    .update(webLock)
+    .digest('hex');
+  const webStamp = path.join(web, 'node_modules/.ellmsha-release-lock');
+  if (!fs.existsSync(webStamp) || fs.readFileSync(webStamp, 'utf8') !== webFingerprint) {
+    fs.writeFileSync(path.join(web, 'package-lock.json'), webLock);
+    run(node, [npmCli, 'ci', '--no-audit', '--no-fund'], web);
+    fs.writeFileSync(webStamp, webFingerprint);
+  }
   run(node, [npmCli, 'run', 'build'], web);
   fs.cpSync(path.join(web, 'dist'), path.join(target, 'MemoryPanel/web/dist'), { recursive: true });
   fs.copyFileSync(path.join(__dirname, 'runner.mjs'), path.join(target, 'runner.mjs'));

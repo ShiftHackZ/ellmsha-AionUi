@@ -19,6 +19,7 @@
     {
       "name": "AionRS",
       "url": "https://github.com/iOfficeAI/aionrs",
+      "forkUrl": "https://github.com/ShiftHackZ/ellmsha-aionrs",
       "upstream": "v0.2.8",
       "commit": "4bd4f3254f6d875f122b648dd55116516c380d31",
       "patch": 1
@@ -42,6 +43,28 @@
       "url": "https://github.com/DietrichGebert/ponytail",
       "upstream": "v5.1.0 \u00b7 9cc65d0",
       "commit": "9cc65d03aa2da1db7121b912d03596409ee340b8",
+      "patch": 0
+    },
+    {
+      "name": "Mobile MCP",
+      "url": "https://github.com/mobile-next/mobile-mcp",
+      "upstream": "v1.0.8",
+      "commit": "65953016441e1f519d47c98d7bcc742647249c95",
+      "patch": 2
+    },
+    {
+      "name": "Chrome DevTools MCP",
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "upstream": "chrome-devtools-mcp-v0.16.0",
+      "commit": "4f7b06898327ab5be42c85bd98bd176f33d55d89",
+      "patch": 2
+    },
+    {
+      "name": "Open Computer Use",
+      "url": "https://github.com/iFurySt/open-codex-computer-use",
+      "forkUrl": "https://github.com/ShiftHackZ/ellmsha-open-codex-computer-use",
+      "upstream": "0.3.6",
+      "commit": "83a521e546102564efd002f61a6763912081e5c7",
       "patch": 0
     }
   ]

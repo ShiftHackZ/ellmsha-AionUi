@@ -174,7 +174,11 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
             <Checkbox checked={checked} />
           </span>
         )}
-        <span className='size-22px flex items-center justify-center shrink-0 relative'>
+        <span
+          className='size-22px flex items-center justify-center shrink-0 relative'
+          role={isGenerating && !batchMode ? 'status' : undefined}
+          aria-label={isGenerating && !batchMode ? t('conversation.history.subagentStatus.running') : undefined}
+        >
           {isGenerating && !batchMode ? <Spin size={16} /> : renderLeadingIcon()}
           {/* Hover overlay on the leading icon: drag handle for sortable pinned rows, pushpin marker otherwise */}
           {!batchMode &&

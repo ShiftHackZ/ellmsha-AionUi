@@ -5,6 +5,15 @@ const crypto = require('crypto');
 const { execSync } = require('child_process');
 const { prepareAioncore } = require('../packages/shared-scripts/src/prepare-aioncore.js');
 const { resolveAioncoreVersion } = require('./resolveAioncoreVersion.js');
+const { prepareMobileMcpRuntime, verifyMobileMcpRuntime } = require('../../scripts/prepare-mobile-mcp.js');
+const {
+  prepareChromeDevtoolsMcpRuntime,
+  verifyChromeDevtoolsMcpRuntime,
+} = require('../../scripts/prepare-chrome-devtools-mcp.js');
+const {
+  prepareOpenComputerUseRuntime,
+  verifyOpenComputerUseRuntime,
+} = require('../../scripts/prepare-open-computer-use.js');
 
 const projectRoot = path.resolve(__dirname, '..');
 const platform = process.env.PACK_PLATFORM || process.platform;
@@ -30,6 +39,18 @@ prepareAioncore({
   platform,
   arch,
   version: resolveAioncoreVersion(projectRoot),
+});
+const integrationRoot = path.resolve(projectRoot, '..');
+const mobileMcp = prepareMobileMcpRuntime({
+  repositoryRoot: integrationRoot,
+  targetPlatform: platform,
+  targetArch: arch,
+});
+const chromeDevtoolsMcp = prepareChromeDevtoolsMcpRuntime({ repositoryRoot: integrationRoot });
+const computerUse = prepareOpenComputerUseRuntime({
+  repositoryRoot: integrationRoot,
+  targetPlatform: platform,
+  targetArch: arch,
 });
 
 // 2. Create staging dir
@@ -93,6 +114,15 @@ fs.copyFileSync(
   path.join(projectRoot, 'out/main/builtin-mcp-tencent-memory.js'),
   path.join(mcpDest, 'builtin-mcp-tencent-memory.js')
 );
+fs.copyFileSync(
+  path.join(projectRoot, 'out/main/builtin-mcp-chat-history.js'),
+  path.join(mcpDest, 'builtin-mcp-chat-history.js')
+);
+for (const name of ['builtin-mcp-browser.js', 'builtin-mcp-chrome-devtools.js']) {
+  fs.copyFileSync(path.join(projectRoot, 'out', 'main', name), path.join(mcpDest, name));
+}
+fs.cpSync(chromeDevtoolsMcp.runtimeRoot, path.join(mcpDest, 'chrome-devtools-mcp'), { recursive: true });
+verifyChromeDevtoolsMcpRuntime({ runtimeRoot: path.join(mcpDest, 'chrome-devtools-mcp') });
 for (const [name, source] of [
   ['bmad', path.resolve(projectRoot, '../bmad-method/ellmsha-skills')],
   ['ponytail', path.resolve(projectRoot, '../ponytail/skills')],
@@ -102,6 +132,19 @@ for (const [name, source] of [
     fs.cpSync(source, path.join(tarballContentDir, 'global-skills', name), { recursive: true });
   }
 }
+fs.cpSync(path.join(integrationRoot, 'plugins'), path.join(tarballContentDir, 'plugins'), { recursive: true });
+fs.cpSync(mobileMcp.runtimeRoot, path.join(tarballContentDir, 'mobile-mcp'), { recursive: true });
+verifyMobileMcpRuntime({
+  runtimeRoot: path.join(tarballContentDir, 'mobile-mcp'),
+  targetPlatform: platform,
+  targetArch: arch,
+});
+fs.cpSync(computerUse.runtimeRoot, path.join(tarballContentDir, 'open-computer-use'), { recursive: true });
+verifyOpenComputerUseRuntime({
+  runtimeRoot: path.join(tarballContentDir, 'open-computer-use'),
+  targetPlatform: platform,
+  targetArch: arch,
+});
 
 // 8. Create tarball
 fs.mkdirSync(distDir, { recursive: true });

@@ -1,6 +1,12 @@
 import type { WebHostOptions, WebHostHandle } from './types.js';
 
-export type { AppMetadata, BackendBinaryResolver, WebHostOptions, WebHostHandle } from './types.js';
+export type {
+  AppMetadata,
+  BackendBinaryResolver,
+  BackendIdentityMode,
+  WebHostOptions,
+  WebHostHandle,
+} from './types.js';
 export { startStaticServer, stopStaticServer } from './static-server.js';
 export type { StaticServerOptions, StaticServerHandle } from './static-server.js';
 
@@ -25,6 +31,10 @@ export type { BackendDirConfig, BackendLaunchOptions, BackendHandle, BackendStar
  * of truth (Electron ProcessConfig, CLI flags, env vars).
  */
 export async function startWebHost(opts: WebHostOptions): Promise<WebHostHandle> {
+  if (opts.allowRemote === true && opts.backend.identityMode === 'local') {
+    throw new Error('Refusing remote WebUI exposure with a local-identity backend');
+  }
+
   const { startBackend } = await import('./backend-launcher.js');
   const { startStaticServer } = await import('./static-server.js');
 
@@ -37,6 +47,8 @@ export async function startWebHost(opts: WebHostOptions): Promise<WebHostHandle>
       dataDir: opts.dataDir,
       logDir: opts.logDir,
       dirs: opts.dirs,
+      identityMode: opts.backend.identityMode,
+      bootstrapSecret: opts.backend.bootstrapSecret,
     });
   } else {
     // useExistingBackend: create a fake handle

@@ -12,12 +12,14 @@ import { watchSystemPrefersDark } from './systemAppearance';
 /**
  * While "Follow System" is the active selection, re-resolve and re-apply the theme
  * whenever the OS appearance changes. Reuses the normal select pipeline, so the
- * change persists and broadcasts to all windows. Returns an unsubscribe function.
+ * change persists and reaches the active platform's theme consumers. Returns an unsubscribe function.
  */
-export function startSystemThemeWatcher(): () => void {
+export function startSystemThemeWatcher(
+  applySystemTheme: () => Promise<unknown> = () => setActiveTheme(SYSTEM_THEME_ID)
+): () => void {
   return watchSystemPrefersDark(() => {
     const activeId = configService.get('theme.activeId') as string | undefined;
     if (activeId !== SYSTEM_THEME_ID) return;
-    void setActiveTheme(SYSTEM_THEME_ID).catch((e) => console.error('re-apply system theme failed', e));
+    void applySystemTheme().catch((e) => console.error('re-apply system theme failed', e));
   });
 }

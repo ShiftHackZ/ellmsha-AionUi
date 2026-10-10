@@ -1,9 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-// M6: CSRF removed with legacy webserver — stub functions for compatibility, re-implement in M7
-const withCsrfToken = <T extends Record<string, unknown>>(data: T): T => data;
-const hasValidCsrfToken = (): boolean => true;
-const clearCookie = (_name: string, _path?: string): void => {};
-const CSRF_COOKIE_NAME = 'csrf-token';
+import { getWebUiCsrfHeaders, getWebUiCsrfToken } from '@/common/adapter/httpBridge';
+
+const CSRF_COOKIE_NAME = 'aionui-csrf-token';
+const hasValidCsrfToken = (): boolean => Boolean(getWebUiCsrfToken());
+const clearCookie = (name: string, path = '/'): void => {
+  document.cookie = `${name}=; Path=${path}; Max-Age=0; SameSite=Strict`;
+};
 
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
@@ -163,7 +165,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(withCsrfToken({ username, password, remember })),
+        body: JSON.stringify({ username, password, remember }),
       });
 
       const data = (await response.json()) as {
@@ -256,9 +258,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         // Logout also needs CSRF token / 登出同样需要 CSRF Token
         headers: {
           'Content-Type': 'application/json',
+          ...getWebUiCsrfHeaders(),
         },
         credentials: 'include',
-        body: JSON.stringify(withCsrfToken({})),
+        body: JSON.stringify({}),
       });
     } catch (error) {
       console.error('Logout request failed:', error);

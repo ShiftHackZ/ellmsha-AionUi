@@ -22,7 +22,7 @@ type AuthStatusResponse = {
   is_authenticated?: boolean;
 };
 
-export async function ensureAdminUser(backendPort: number): Promise<void> {
+export async function ensureAdminUser(backendPort: number, bootstrapSecret?: string): Promise<void> {
   try {
     // 1. Ask backend whether SQLite already has a real user.
     const statusRes = await fetch(`http://127.0.0.1:${backendPort}/api/auth/status`);
@@ -55,7 +55,10 @@ export async function ensureAdminUser(backendPort: number): Promise<void> {
     });
     const seedRes = await fetch(`http://127.0.0.1:${backendPort}/api/auth/internal/users/system/credentials`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(bootstrapSecret ? { 'x-aioncore-bootstrap-secret': bootstrapSecret } : {}),
+      },
       body,
     });
     if (!seedRes.ok) {

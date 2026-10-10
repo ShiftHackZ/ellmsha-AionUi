@@ -76,7 +76,15 @@
     "deleting": "Siliniyor...",
     "reorderPinned": "Sabitlenmiş sohbetin sırasını değiştirmek için sürükleyin",
     "forkedFrom": "“{{name}}” konuşmasından çatallandı",
-    "forkedConversation": "Çatallanmış konuşma"
+    "forkedConversation": "Çatallanmış konuşma",
+    "subagentStatus": {
+      "pending_init": "Başlatılıyor",
+      "running": "Çalışıyor",
+      "completed": "Tamamlandı",
+      "errored": "Başarısız",
+      "interrupted": "Kesildi",
+      "shutdown": "Durduruldu"
+    }
   },
   "historySearch": {
     "tooltip": "Mesajları ara",

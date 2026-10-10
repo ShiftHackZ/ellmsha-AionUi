@@ -25,7 +25,16 @@ const shortcutMocks = vi.hoisted(() => ({
 const featureMocks = vi.hoisted(() => ({
   teamModeEnabled: false,
 }));
+const previewMocks = vi.hoisted(() => ({
+  value: {
+    closePreview: vi.fn(),
+    isOpen: false,
+    tabs: [] as Array<{ content_type: string }>,
+    activeTab: null as null | { content_type: string },
+  },
+}));
 vi.mock('react-router-dom', () => ({
+  NavigationType: { Pop: 'POP', Push: 'PUSH', Replace: 'REPLACE' },
   useNavigate: () => navigate,
   useLocation: () => ({ pathname: currentPathname, search: '', hash: '' }),
   useNavigationType: () => 'POP',
@@ -52,6 +61,14 @@ vi.mock('@/common/config/constants', () => ({
 }));
 vi.mock('@/renderer/components/layout/PwaPullToRefresh', () => ({ default: () => null }));
 vi.mock('@/renderer/components/layout/Titlebar', () => ({ default: () => null }));
+vi.mock('@/renderer/components/layout/CheremshaMark', () => ({
+  default: () => (
+    <>
+      <div className='bg-black' />
+      <span>AionUi</span>
+    </>
+  ),
+}));
 vi.mock('@/renderer/components/settings/UpdateModal', () => ({ default: () => null }));
 vi.mock('@renderer/hooks/system/useDeepLink', () => ({ useDeepLink: () => {} }));
 vi.mock('@renderer/hooks/system/notification/useNotificationClick', () => ({ useNotificationClick: () => {} }));
@@ -66,8 +83,9 @@ vi.mock('@renderer/hooks/ui/useConversationShortcuts', () => ({
   },
 }));
 vi.mock('@renderer/utils/platform', () => ({ isElectronDesktop: platformMocks.isElectronDesktopMock }));
-vi.mock('@renderer/pages/conversation/Preview/context/PreviewContext', () => ({
-  usePreviewContext: () => ({ closePreview: () => {} }),
+vi.mock('@renderer/pages/conversation/Preview', () => ({
+  usePreviewContext: () => previewMocks.value,
+  PreviewPanel: () => null,
 }));
 
 import Layout from '@renderer/components/layout/Layout';
@@ -96,6 +114,12 @@ describe('Layout sider brand Home button', () => {
     platformMocks.isElectronDesktopMock.mockReturnValue(false);
     shortcutMocks.params = undefined;
     featureMocks.teamModeEnabled = false;
+    previewMocks.value = {
+      closePreview: vi.fn(),
+      isOpen: false,
+      tabs: [],
+      activeTab: null,
+    };
     sessionStorage.clear();
     currentPathname = '/guid';
   });
@@ -162,6 +186,72 @@ describe('Layout sider brand Home button', () => {
     const wordmark = screen.getByText('AionUi');
     fireEvent.click(wordmark);
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('shows an active foreground browser on the guide route', () => {
+    previewMocks.value = {
+      closePreview: vi.fn(),
+      isOpen: true,
+      tabs: [{ content_type: 'browser' }],
+      activeTab: { content_type: 'browser' },
+    };
+
+    const { container } = renderLayout();
+    const region = container.querySelector('[data-project-preview-region]') as HTMLElement;
+
+    expect(region).toBeTruthy();
+    expect(region.style.visibility).toBe('');
+    expect(region.style.position).toBe('');
+  });
+
+  it('keeps a background browser mounted in the hidden runtime host on the guide route', () => {
+    previewMocks.value = {
+      closePreview: vi.fn(),
+      isOpen: false,
+      tabs: [{ content_type: 'browser' }],
+      activeTab: { content_type: 'browser' },
+    };
+
+    const { container } = renderLayout();
+    const region = container.querySelector('[data-project-preview-region]') as HTMLElement;
+
+    expect(region).toBeTruthy();
+    expect(region.style.visibility).toBe('hidden');
+    expect(region.style.position).toBe('fixed');
+  });
+
+  it('keeps restored browser tabs across the startup redirect to the guide route', () => {
+    const closePreview = vi.fn();
+    previewMocks.value = {
+      closePreview,
+      isOpen: true,
+      tabs: [{ content_type: 'browser' }],
+      activeTab: { content_type: 'browser' },
+    };
+    currentPathname = '/';
+
+    const { rerender } = renderLayout();
+    currentPathname = '/guid';
+    rerender(<Layout sider={<div>sider</div>} />);
+
+    expect(closePreview).not.toHaveBeenCalled();
+  });
+
+  it('still closes the preview when leaving a workspace route', () => {
+    const closePreview = vi.fn();
+    previewMocks.value = {
+      closePreview,
+      isOpen: true,
+      tabs: [{ content_type: 'browser' }],
+      activeTab: { content_type: 'browser' },
+    };
+    currentPathname = '/conversation/abc';
+
+    const { rerender } = renderLayout();
+    currentPathname = '/guid';
+    rerender(<Layout sider={<div>sider</div>} />);
+
+    expect(closePreview).toHaveBeenCalledTimes(1);
   });
 
   it('does not navigate when the wordmark is clicked in a non-settings route', () => {

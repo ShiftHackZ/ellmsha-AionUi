@@ -11,10 +11,10 @@ import { useCronJobsMap } from '@/renderer/pages/cron';
 import { restrictToVerticalAxis } from '@/renderer/utils/ui/dndModifiers';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Button, Dropdown, Empty, Input, Menu, Modal, Tooltip } from '@arco-design/web-react';
+import { Button, Dropdown, Empty, Input, Menu, Modal, Spin, Tooltip } from '@arco-design/web-react';
 import { Delete, MoreOne, Plus, Right } from '@icon-park/react';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -25,7 +25,12 @@ import { useBatchSelection } from './hooks/useBatchSelection';
 import { useConversationActions } from './hooks/useConversationActions';
 import { useConversations } from './hooks/useConversations';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
-import type { ConversationRowProps, WorkspaceGroupedHistoryProps } from './types';
+import {
+  getSubagentMetadata,
+  isSubagentRunning,
+  type ConversationRowProps,
+  type WorkspaceGroupedHistoryProps,
+} from './types';
 
 const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   onSessionClick,
@@ -53,6 +58,11 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     collapsedSections,
     toggleSection,
   } = useConversations();
+
+  const topLevelConversations = useMemo(
+    () => conversations.filter((conversation) => !getSubagentMetadata(conversation)),
+    [conversations]
+  );
 
   const SectionLabel = useCallback(
     ({ sectionKey, label, trailing }: { sectionKey: string; label: string; trailing?: React.ReactNode }) => {
@@ -98,7 +108,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     allSelected,
     toggleSelectedConversation,
     handleToggleSelectAll,
-  } = useBatchSelection(batchMode, conversations);
+  } = useBatchSelection(batchMode, topLevelConversations);
 
   const {
     renameModalVisible,
@@ -199,6 +209,130 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   const renderConversation = (conversation: TChatConversation, dimIcon = false) => {
     const rowProps = getConversationRowProps(conversation);
     return <ConversationRow key={conversation.id} {...rowProps} dimIcon={dimIcon} />;
+  };
+
+  const subagentsByParent = useMemo(() => {
+    const map = new Map<string, TChatConversation[]>();
+    for (const conversation of conversations) {
+      const metadata = getSubagentMetadata(conversation);
+      if (!metadata) continue;
+      const siblings = map.get(metadata.parent_conversation_id) ?? [];
+      siblings.push(conversation);
+      map.set(metadata.parent_conversation_id, siblings);
+    }
+    for (const children of map.values()) {
+      children.sort((a, b) => a.created_at - b.created_at);
+    }
+    return map;
+  }, [conversations]);
+
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!id) return;
+    const active = conversations.find((conversation) => conversation.id === id);
+    const parentId = getSubagentMetadata(active)?.parent_conversation_id;
+    if (!parentId) return;
+    setExpandedTasks((previous) => {
+      if (previous.has(parentId)) return previous;
+      const next = new Set(previous);
+      next.add(parentId);
+      return next;
+    });
+  }, [conversations, id]);
+
+  const renderConversationTree = (conversation: TChatConversation, dimIcon = false, parentNode?: React.ReactNode) => {
+    const children = subagentsByParent.get(conversation.id) ?? [];
+    const renderedParent = parentNode ?? renderConversation(conversation, dimIcon);
+    const hasChildren = children.length > 0;
+    const expanded = hasChildren && expandedTasks.has(conversation.id);
+    return (
+      <div key={conversation.id} className='min-w-0'>
+        <div
+          className={classNames(
+            'relative min-w-0',
+            !collapsed && (dimIcon ? '[&_.conversation-item]:!pl-54px' : '[&_.conversation-item]:!pl-30px')
+          )}
+        >
+          {renderedParent}
+          {!collapsed && hasChildren && (
+            <Tooltip content={expanded ? t('common.collapse') : t('common.expand')} position='top'>
+              <Button
+                type='text'
+                size='mini'
+                shape='circle'
+                aria-label={expanded ? t('common.collapse') : t('common.expand')}
+                className={classNames(
+                  '!absolute !top-7px !w-20px !h-20px !min-w-20px text-t-secondary',
+                  dimIcon ? '!left-30px' : '!left-6px'
+                )}
+                icon={
+                  <Right
+                    theme='outline'
+                    size={12}
+                    className={classNames('transition-transform duration-150', { 'rotate-90': expanded })}
+                  />
+                }
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setExpandedTasks((previous) => {
+                    const next = new Set(previous);
+                    if (next.has(conversation.id)) next.delete(conversation.id);
+                    else next.add(conversation.id);
+                    return next;
+                  });
+                }}
+              />
+            </Tooltip>
+          )}
+        </div>
+        {hasChildren && expanded && !collapsed && (
+          <div
+            className={classNames(
+              'pl-8px border-l border-solid border-[var(--color-border-2)] flex flex-col gap-2px min-w-0',
+              dimIcon ? 'ml-66px' : 'ml-42px'
+            )}
+          >
+            {children.map((child) => {
+              const metadata = getSubagentMetadata(child)!;
+              const status = metadata.status ?? 'running';
+              const isRunning = isSubagentRunning(child);
+              const statusLabel = t(`conversation.history.subagentStatus.${status}`, { defaultValue: status });
+              return (
+                <Tooltip key={child.id} content={`${metadata.label ?? child.name} · ${statusLabel}`} position='right'>
+                  <Button
+                    id={`c-${child.id}`}
+                    type='text'
+                    long
+                    aria-label={`${metadata.label ?? child.name} · ${statusLabel}`}
+                    className={classNames(
+                      '!flex !w-full !min-w-0 !max-w-full !h-30px !px-8px !items-center !justify-start !overflow-hidden !text-left !rounded-6px !text-13px !text-t-secondary hover:!text-t-primary',
+                      { '!bg-fill-2 !text-t-primary': id === child.id }
+                    )}
+                    onClick={() => handleConversationClick(child)}
+                  >
+                    <span aria-hidden='true' className='w-16px h-16px flex items-center shrink-0'>
+                      {isRunning ? (
+                        <Spin size={12} />
+                      ) : (
+                        <span
+                          className={classNames('size-8px rounded-full shrink-0', {
+                            'bg-[rgb(var(--success-6))]': status === 'completed',
+                            'bg-[rgb(var(--danger-6))]': status === 'errored',
+                            'bg-[var(--color-text-4)]': status === 'interrupted' || status === 'shutdown',
+                          })}
+                        />
+                      )}
+                    </span>
+                    <span className='block min-w-0 flex-1 truncate text-left'>{metadata.label ?? child.name}</span>
+                  </Button>
+                </Tooltip>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Collect all sortable IDs for the pinned section
@@ -383,11 +517,12 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                   <div className='min-w-0'>
                     {pinnedConversations.map((conversation) => {
                       const props = getConversationRowProps(conversation);
-                      return isDragEnabled ? (
+                      const parentNode = isDragEnabled ? (
                         <SortableConversationRow key={conversation.id} {...props} />
                       ) : (
                         <ConversationRow key={conversation.id} {...props} />
                       );
+                      return renderConversationTree(conversation, false, parentNode);
                     })}
                   </div>
                 </SortableContext>
@@ -482,7 +617,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                       }
                     >
                       <div className={classNames('flex flex-col min-w-0', { 'mt-1px': !collapsed })}>
-                        {group.conversations.map((conversation) => renderConversation(conversation, true))}
+                        {group.conversations.map((conversation) => renderConversationTree(conversation, true))}
                       </div>
                     </WorkspaceCollapse>
                   </div>
@@ -506,7 +641,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                     </div>
                   )}
                   {section.items.map((item) =>
-                    item.type === 'conversation' && item.conversation ? renderConversation(item.conversation) : null
+                    item.type === 'conversation' && item.conversation ? renderConversationTree(item.conversation) : null
                   )}
                 </div>
               ))}

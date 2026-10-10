@@ -88,6 +88,23 @@ describe('static-server', () => {
     expect(json.path).toBe('/api/anything');
   });
 
+  it('strips the process-only bootstrap capability from public proxy requests', async () => {
+    const backend = await startMockBackend((req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ bootstrap: req.headers['x-aioncore-bootstrap-secret'] ?? null }));
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const response = await fetch(`${handle.localUrl}/api/webui/reset-password`, {
+      method: 'POST',
+      headers: { 'x-aioncore-bootstrap-secret': 'attacker-supplied' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ bootstrap: null });
+  });
+
   it('forwards generation callback bearer and body without requiring browser cookies', async () => {
     const callbackPath = '/api/runtime/tencent/v1/chat/completions';
     const payload = { model: 'selected-model', messages: [{ role: 'user', content: 'Summarize this source.' }] };

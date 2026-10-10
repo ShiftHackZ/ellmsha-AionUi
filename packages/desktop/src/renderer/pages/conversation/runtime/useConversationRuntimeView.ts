@@ -77,25 +77,33 @@ export const useConversationRuntimeView = (conversation_id: string): UseConversa
     }
 
     let cancelled = false;
-    flushRuntimeViewLogs(hydrateStarted(conversation_id));
+    let requestSequence = 0;
+    const hydrateRuntime = () => {
+      const sequence = ++requestSequence;
+      flushRuntimeViewLogs(hydrateStarted(conversation_id));
 
-    void getConversationOrNull(conversation_id)
-      .then((conversation) => {
-        if (cancelled) {
-          return;
-        }
-        flushRuntimeViewLogs(hydrateSucceeded(conversation_id, getRuntimeOrNull(conversation?.runtime)));
-      })
-      .catch((error: unknown) => {
-        if (cancelled) {
-          return;
-        }
-        const reason = error instanceof Error ? error.message : String(error);
-        flushRuntimeViewLogs(hydrateFailed(conversation_id, normalizeReason(reason)));
-      });
+      void getConversationOrNull(conversation_id)
+        .then((conversation) => {
+          if (cancelled || sequence !== requestSequence) {
+            return;
+          }
+          flushRuntimeViewLogs(hydrateSucceeded(conversation_id, getRuntimeOrNull(conversation?.runtime)));
+        })
+        .catch((error: unknown) => {
+          if (cancelled || sequence !== requestSequence) {
+            return;
+          }
+          const reason = error instanceof Error ? error.message : String(error);
+          flushRuntimeViewLogs(hydrateFailed(conversation_id, normalizeReason(reason)));
+        });
+    };
+
+    hydrateRuntime();
+    const disposeReconnect = ipcBridge.realtime.reconnected.on(hydrateRuntime);
 
     return () => {
       cancelled = true;
+      disposeReconnect();
     };
   }, [conversation_id]);
 

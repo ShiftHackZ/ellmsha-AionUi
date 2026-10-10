@@ -76,7 +76,15 @@
     "deleting": "Видалення...",
     "reorderPinned": "Перетягніть, щоб змінити порядок закріплених розмов",
     "forkedFrom": "Відгалуження від «{{name}}»",
-    "forkedConversation": "Відгалужена розмова"
+    "forkedConversation": "Відгалужена розмова",
+    "subagentStatus": {
+      "pending_init": "Запускається",
+      "running": "Працює",
+      "completed": "Завершено",
+      "errored": "Помилка",
+      "interrupted": "Перервано",
+      "shutdown": "Зупинено"
+    }
   },
   "historySearch": {
     "tooltip": "Пошук повідомлень",

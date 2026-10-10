@@ -28,6 +28,7 @@ export const BUILTIN_TAB_IDS = [
   'agent',
   'model',
   'skills',
+  'plugins',
   'tools',
   'memory',
   'appearance',
@@ -95,6 +96,12 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
         label: t('settings.skills', { defaultValue: 'Skills' }),
         icon: <Lightning />,
         path: 'skills',
+      },
+      plugins: {
+        id: 'plugins',
+        label: t('settings.plugins', { defaultValue: 'Plugins' }),
+        icon: <Puzzle />,
+        path: 'plugins',
       },
       tools: {
         id: 'tools',

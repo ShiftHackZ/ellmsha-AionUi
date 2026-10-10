@@ -18,7 +18,7 @@
 
 import { Button, Input, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
 import type { ProjectIndexCatalog } from '@/common/types/platform/electron';
-import { FolderPlus } from '@icon-park/react';
+import { DatabaseCode, FolderPlus } from '@icon-park/react';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -411,9 +411,17 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
               a Dropdown (it would resolve a non-DOM node and crash); wrapping a
               plain Button like this is safe. */}
           {memoryProject && (
-            <Button type='text' size='small' onClick={() => setIndexOpen(true)}>
-              {t('conversation.explorer.codeIndex.title')}
-            </Button>
+            <Tooltip content={t('conversation.explorer.codeIndex.title')} mini>
+              <Button
+                type='text'
+                size='small'
+                className={`!h-28px !w-28px !min-w-28px !p-0 flex items-center justify-center ${indexOpen ? '!text-t-primary !bg-2' : '!text-t-secondary'}`}
+                icon={<DatabaseCode theme='outline' size='16' />}
+                aria-label={t('conversation.explorer.codeIndex.title')}
+                aria-pressed={indexOpen}
+                onClick={() => setIndexOpen(true)}
+              />
+            </Tooltip>
           )}
           <Tooltip content={t('conversation.explorer.addFolder')} mini>
             <Button

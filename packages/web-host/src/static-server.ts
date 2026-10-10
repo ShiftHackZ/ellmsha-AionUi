@@ -44,12 +44,16 @@ function getLanIP(): string | null {
 }
 
 function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort: number): void {
+  const headers = { ...req.headers };
+  // This process-only capability is used for first-run setup over the direct
+  // loopback backend connection. It must never be accepted from WebUI clients.
+  delete headers['x-aioncore-bootstrap-secret'];
   const options: http.RequestOptions = {
     hostname: '127.0.0.1',
     port: backendPort,
     path: req.url,
     method: req.method,
-    headers: { ...req.headers, host: `127.0.0.1:${backendPort}` },
+    headers: { ...headers, host: `127.0.0.1:${backendPort}` },
   };
   const proxy = http.request(options, (proxyRes) => {
     res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);

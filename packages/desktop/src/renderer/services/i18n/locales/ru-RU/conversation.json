@@ -76,7 +76,15 @@
     "deleting": "Удаление...",
     "reorderPinned": "Перетащите, чтобы изменить порядок закреплённых бесед",
     "forkedFrom": "Ответвление от «{{name}}»",
-    "forkedConversation": "Ответвлённая беседа"
+    "forkedConversation": "Ответвлённая беседа",
+    "subagentStatus": {
+      "pending_init": "Запускается",
+      "running": "Работает",
+      "completed": "Завершён",
+      "errored": "Ошибка",
+      "interrupted": "Прерван",
+      "shutdown": "Остановлен"
+    }
   },
   "historySearch": {
     "tooltip": "Поиск сообщений",

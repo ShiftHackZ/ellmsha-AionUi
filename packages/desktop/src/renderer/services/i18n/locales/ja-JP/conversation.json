@@ -76,7 +76,15 @@
     "deleting": "削除中...",
     "reorderPinned": "ドラッグしてピン留め会話の順序を変更",
     "forkedFrom": "「{{name}}」から分岐",
-    "forkedConversation": "分岐した会話"
+    "forkedConversation": "分岐した会話",
+    "subagentStatus": {
+      "pending_init": "起動中",
+      "running": "実行中",
+      "completed": "完了",
+      "errored": "失敗",
+      "interrupted": "中断",
+      "shutdown": "停止"
+    }
   },
   "historySearch": {
     "tooltip": "メッセージを検索",

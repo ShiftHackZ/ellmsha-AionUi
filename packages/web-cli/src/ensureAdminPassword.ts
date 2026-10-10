@@ -39,6 +39,8 @@ export type EnsureAdminPasswordOptions = {
    * = `bun run resetpass`. Defaults to the packaged form.
    */
   resetCommand?: string;
+  /** Process-only capability shared with the loopback backend for first-run setup. */
+  bootstrapSecret: string;
 };
 
 type AuthStatus = {
@@ -78,9 +80,15 @@ async function waitForStatus(
   throw lastErr instanceof Error ? lastErr : new Error('/api/auth/status did not come up in time');
 }
 
-async function fetchAdminUsername(deps: EnsureAdminPasswordDeps, backendPort: number): Promise<string> {
+async function fetchAdminUsername(
+  deps: EnsureAdminPasswordDeps,
+  backendPort: number,
+  bootstrapSecret: string
+): Promise<string> {
   try {
-    const res = await deps.fetch(`http://127.0.0.1:${backendPort}/api/auth/internal/users/system`);
+    const res = await deps.fetch(`http://127.0.0.1:${backendPort}/api/auth/internal/users/system`, {
+      headers: { 'x-aioncore-bootstrap-secret': bootstrapSecret },
+    });
     if (!res.ok) return 'admin';
     const json = (await res.json()) as SystemUserResponse;
     return json.data?.username || 'admin';
@@ -115,13 +123,16 @@ export async function ensureAdminPassword(
   const needsSetup = status.needs_setup ?? status.data?.needs_setup ?? false;
 
   if (!needsSetup) {
-    const username = await fetchAdminUsername(deps, opts.backendPort);
+    const username = await fetchAdminUsername(deps, opts.backendPort, opts.bootstrapSecret);
     deps.log(`[aionui-web] Log in with username "${username}". Forgot the password? Run \`${resetCmd}\`.`);
     return;
   }
 
   try {
-    const resetRes = await deps.fetch(`${base}/api/webui/reset-password`, { method: 'POST' });
+    const resetRes = await deps.fetch(`${base}/api/webui/reset-password`, {
+      method: 'POST',
+      headers: { 'x-aioncore-bootstrap-secret': opts.bootstrapSecret },
+    });
     if (!resetRes.ok) {
       deps.warn(`[aionui-web] /api/webui/reset-password returned ${resetRes.status} — run \`${resetCmd}\``);
       return;
@@ -132,7 +143,7 @@ export async function ensureAdminPassword(
       deps.warn(`[aionui-web] /api/webui/reset-password returned no new_password — run \`${resetCmd}\``);
       return;
     }
-    const username = await fetchAdminUsername(deps, opts.backendPort);
+    const username = await fetchAdminUsername(deps, opts.backendPort, opts.bootstrapSecret);
     deps.log(`[aionui-web] Generated initial admin password: ${newPassword}`);
     deps.log(`[aionui-web] Log in with username "${username}" and change it from the UI.`);
   } catch (err) {

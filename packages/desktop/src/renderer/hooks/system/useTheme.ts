@@ -6,13 +6,15 @@
 
 import { configService } from '@/common/config/configService';
 import { ipcBridge } from '@/common';
+import { isWebUiBrowserMode } from '@/common/adapter/httpBridge';
+import { SYSTEM_THEME_ID } from '@/common/theme/constants';
 import { resolveActiveTheme } from '@/common/theme/resolveTheme';
 import { applyTheme, setActiveTheme } from '@/renderer/utils/theme/applyTheme';
 import { getSystemPrefersDark } from '@/renderer/utils/theme/systemAppearance';
 import { startSystemThemeWatcher } from '@/renderer/utils/theme/systemThemeWatcher';
 import { BUILTIN_THEMES } from '@renderer/theme/builtinThemes';
 import type { Theme } from '@/common/theme/types';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const APPEARANCE_CACHE_KEY = '__aionui_theme';
 
@@ -33,7 +35,9 @@ async function initActiveTheme(): Promise<Theme> {
       /* noop */
     }
     // Seed the main-process relay so other surfaces (markdown shadow DOM, pet windows) can pull it.
-    void ipcBridge.theme.setActive.invoke(resolved).catch(() => {});
+    if (!isWebUiBrowserMode()) {
+      void ipcBridge.theme.setActive.invoke(resolved).catch(() => {});
+    }
     return resolved;
   } catch (e) {
     console.error('init theme failed', e);
@@ -54,23 +58,49 @@ if (typeof window !== 'undefined') initialPromise = initActiveTheme();
 const useTheme = (): [Theme | null, (activeId: string) => Promise<void>, string | null] => {
   const [active, setActive] = useState<Theme | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const mountedRef = useRef(false);
+  const intentGenerationRef = useRef(0);
+  const requestedActiveIdRef = useRef<string | null>(null);
+  const updateQueueRef = useRef<Promise<unknown>>(initialPromise ?? Promise.resolve());
+
+  const select = useCallback(async (nextActiveId: string) => {
+    requestedActiveIdRef.current = nextActiveId;
+    const generation = ++intentGenerationRef.current;
+    const run = () => setActiveTheme(nextActiveId);
+    const result = updateQueueRef.current.then(run, run);
+    updateQueueRef.current = result.catch((): void => {});
+    const resolved = await result;
+
+    if (!mountedRef.current || generation !== intentGenerationRef.current) return;
+    if (isWebUiBrowserMode()) {
+      setActive(resolved);
+      try {
+        localStorage.setItem(APPEARANCE_CACHE_KEY, resolved.appearance);
+      } catch {
+        /* noop */
+      }
+    }
+    setActiveId(nextActiveId);
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
     initialPromise
       ?.then((t) => {
-        if (mounted) {
+        if (mountedRef.current && intentGenerationRef.current === 0) {
+          requestedActiveIdRef.current = getPersistedActiveId();
           setActive(t);
-          setActiveId(getPersistedActiveId());
+          setActiveId(requestedActiveIdRef.current);
         }
       })
       .catch((e) => console.error('init theme failed', e));
     const off = ipcBridge.theme.changed.on((t: Theme) => {
       applyTheme(t);
-      if (mounted) {
+      if (mountedRef.current) {
+        requestedActiveIdRef.current = (configService.get('theme.activeId') as string) || t.id;
         setActive((prev) => (prev?.id === t.id ? prev : t));
         // Best-effort: config was persisted before the broadcast, fall back to the resolved id.
-        setActiveId((configService.get('theme.activeId') as string) || t.id);
+        setActiveId(requestedActiveIdRef.current);
       }
       try {
         localStorage.setItem(APPEARANCE_CACHE_KEY, t.appearance);
@@ -78,18 +108,16 @@ const useTheme = (): [Theme | null, (activeId: string) => Promise<void>, string 
         /* noop */
       }
     });
-    const offSystemWatch = startSystemThemeWatcher();
+    const offSystemWatch = startSystemThemeWatcher(() => {
+      if (requestedActiveIdRef.current !== SYSTEM_THEME_ID) return Promise.resolve();
+      return select(SYSTEM_THEME_ID);
+    });
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       off?.();
       offSystemWatch();
     };
-  }, []);
-
-  const select = useCallback(async (activeId: string) => {
-    await setActiveTheme(activeId);
-    setActiveId(activeId);
-  }, []);
+  }, [select]);
 
   return [active, select, activeId];
 };

@@ -35,6 +35,7 @@ export type NotificationPayload = {
   body: string;
   conversationId?: string;
   kind: NotificationKind;
+  notificationId?: string;
 };
 
 export type BrowserNotificationDeps = {
@@ -58,6 +59,8 @@ export type BrowserNotificationDeps = {
  */
 export type StreamMessage = {
   type?: string;
+  data?: unknown;
+  msg_id?: string;
   conversation_id?: string;
   turn_id?: string;
 };
@@ -67,17 +70,48 @@ export type StreamMessage = {
 // and `permission`.
 const PERMISSION_TYPES = new Set(['acp_permission', 'permission']);
 
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+
+const nonEmptyString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
+/** Return the backend confirmation ID carried by a real permission stream frame. */
+export const getPermissionRequestId = (message: StreamMessage): string | undefined => {
+  if (!message.type || !PERMISSION_TYPES.has(message.type)) return undefined;
+
+  const data = asRecord(message.data);
+  const toolCall = asRecord(data?.tool_call);
+  return nonEmptyString(toolCall?.tool_call_id) ?? nonEmptyString(data?.id) ?? nonEmptyString(data?.call_id);
+};
+
+export const getConfirmationNotificationId = (conversationId: string, requestId: string): string =>
+  JSON.stringify([conversationId, requestId]);
+
 export const createBrowserNotificationController = (deps: BrowserNotificationDeps) => {
   // Track the last turn we actually notified for, so repeated finish events
   // for the same turn don't fire duplicate notifications.
   let lastNotifiedTurnId: string | null = null;
+  const notifiedConfirmationIds = new Set<string>();
 
   const onStreamMessage = (message: StreamMessage): void => {
     if (!message?.type) return;
 
     if (PERMISSION_TYPES.has(message.type)) {
+      const conversationId = message.conversation_id;
+      const requestId = getPermissionRequestId(message);
+      if (!conversationId || !requestId) return;
+
+      const notificationId = getConfirmationNotificationId(conversationId, requestId);
+      if (notifiedConfirmationIds.has(notificationId)) return;
       if (!deps.shouldShow()) return;
-      deps.show({ body: deps.bodyFor('confirmation'), conversationId: message.conversation_id, kind: 'confirmation' });
+      notifiedConfirmationIds.add(notificationId);
+      deps.show({
+        body: deps.bodyFor('confirmation'),
+        conversationId,
+        kind: 'confirmation',
+        notificationId,
+      });
       return;
     }
 
@@ -93,5 +127,11 @@ export const createBrowserNotificationController = (deps: BrowserNotificationDep
     }
   };
 
-  return { onStreamMessage };
+  const onConfirmationRemoved = (confirmation: { conversation_id: string; id: string }): string => {
+    const notificationId = getConfirmationNotificationId(confirmation.conversation_id, confirmation.id);
+    notifiedConfirmationIds.delete(notificationId);
+    return notificationId;
+  };
+
+  return { onStreamMessage, onConfirmationRemoved };
 };

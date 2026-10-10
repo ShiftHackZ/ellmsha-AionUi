@@ -1,6 +1,7 @@
 import { startWebHost, startStaticServer } from '@aionui/web-host';
 import type { WebHostHandle, StaticServerHandle } from '@aionui/web-host';
 import { setTimeout as delay } from 'node:timers/promises';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -33,10 +34,27 @@ function resolveCliRoot(): string {
 }
 
 const cliRoot = resolveCliRoot();
+const packagedLayout = ['aionui-web', 'aionui-web.exe'].includes(path.basename(process.execPath).toLowerCase());
+const integrationRoot = packagedLayout ? cliRoot : path.resolve(cliRoot, '../../..');
 process.env.AIONUI_TDAI_MEMORY_MCP_PATH ||= path.join(cliRoot, 'mcp', 'builtin-mcp-tencent-memory.js');
+process.env.AIONUI_CHAT_HISTORY_MCP_PATH ||= path.join(cliRoot, 'mcp', 'builtin-mcp-chat-history.js');
 process.env.ELLM_SHA_BMAD_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'bmad');
 process.env.ELLM_SHA_PONYTAIL_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'ponytail');
 process.env.ELLM_SHA_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'ellmsha');
+process.env.ELLM_SHA_BUILTIN_PLUGINS_PATH ||= path.join(integrationRoot, 'plugins');
+process.env.ELLM_SHA_MOBILE_MCP_ENTRY ||= packagedLayout
+  ? path.join(cliRoot, 'mobile-mcp', 'lib', 'index.js')
+  : path.join(integrationRoot, '.data', 'mobile-mcp-runtime', 'lib', 'index.js');
+const computerUseEntries: Partial<Record<NodeJS.Platform, string>> = {
+  darwin: path.join('Open Computer Use.app', 'Contents', 'MacOS', 'OpenComputerUse'),
+  linux: 'open-computer-use',
+  win32: 'open-computer-use.exe',
+};
+const computerUseEntry = computerUseEntries[process.platform];
+if (!computerUseEntry) throw new Error(`Open Computer Use does not support ${process.platform}`);
+process.env.ELLM_SHA_OPEN_COMPUTER_USE_ENTRY ||= packagedLayout
+  ? path.join(cliRoot, 'open-computer-use', computerUseEntry)
+  : path.join(integrationRoot, '.data', 'open-computer-use-runtime', computerUseEntry);
 
 // `isPackaged` mirrors AppMetadata.isPackaged: true when running as the
 // bun-compiled single-file binary inside a release tarball. Only the
@@ -48,10 +66,7 @@ process.env.ELLM_SHA_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'ellmsha
 // `xattr -dr com.apple.quarantine <path>` manually or use `install-web.sh`,
 // which does it for them. Until we sign + notarize, there is nothing the
 // binary itself can do about first-launch quarantine.
-const isPackaged = (() => {
-  const exeName = path.basename(process.execPath).toLowerCase();
-  return exeName === 'aionui-web' || exeName === 'aionui-web.exe';
-})();
+const isPackaged = packagedLayout;
 
 const BACKEND_BINARY = process.platform === 'win32' ? 'aioncore.exe' : 'aioncore';
 const DEFAULT_PORT = 25808;
@@ -200,6 +215,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
     console.log('');
     console.log('Press Ctrl+C to stop.');
   } else {
+    const bootstrapSecret = randomBytes(32).toString('hex');
     const handle = await startWebHost({
       app: {
         version,
@@ -220,6 +236,8 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
       backend: {
         kind: 'ownBackend',
         resolveBackend: () => backendBin,
+        identityMode: 'webui',
+        bootstrapSecret,
       },
     });
 
@@ -234,7 +252,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
     // backend and print plaintext credentials. Failure must not abort startup —
     // the user can always fall back to running resetpass manually.
     await ensureAdminPassword(
-      { backendPort: handle.backendPort, resetCommand: RESET_COMMAND },
+      { backendPort: handle.backendPort, resetCommand: RESET_COMMAND, bootstrapSecret },
       {
         fetch: (...args) => fetch(...args),
         log: (msg) => console.log(msg),
@@ -311,7 +329,7 @@ async function runResetPassword(flags: Map<string, string | true>): Promise<void
     dataDir,
     logDir,
     dirs: { cacheDir: dataDir, workDir: dataDir, logDir },
-    backend: { kind: 'ownBackend', resolveBackend: () => backendBin },
+    backend: { kind: 'ownBackend', resolveBackend: () => backendBin, identityMode: 'local' },
   });
   currentHandle = handle;
 

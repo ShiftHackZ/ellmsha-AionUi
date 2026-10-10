@@ -64,11 +64,12 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(calls[0].url).toBe('http://127.0.0.1:25808/api/auth/status');
     expect(calls[1].url).toBe('http://127.0.0.1:25808/api/webui/reset-password');
     expect(calls[1].init?.method).toBe('POST');
+    expect(new Headers(calls[1].init?.headers).get('x-aioncore-bootstrap-secret')).toBe('bootstrap-test');
     expect(logs).toContain('[aionui-web] Generated initial admin password: SuperSecret123');
     expect(logs.some((m) => m.includes('Log in with username "admin"'))).toBe(true);
     expect(warns).toEqual([]);
@@ -83,7 +84,7 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(logs).toContain('[aionui-web] Generated initial admin password: FromTopLevel');
   });
@@ -97,7 +98,7 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(calls).toHaveLength(3);
     expect(logs.some((m) => m.includes('custom-admin'))).toBe(true);
@@ -111,7 +112,7 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(calls).toHaveLength(2);
     expect(calls[1].url).toBe('http://127.0.0.1:25808/api/auth/internal/users/system');
@@ -142,7 +143,12 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808, statusTimeoutMs: 10_000, statusPollIntervalMs: 100 }, deps);
+    await ensureAdminPassword({
+      backendPort: 25808,
+      bootstrapSecret: 'bootstrap-test',
+      statusTimeoutMs: 10_000,
+      statusPollIntervalMs: 100,
+    }, deps);
 
     expect(statusAttempts).toBe(3);
     expect(sleeps.length).toBeGreaterThanOrEqual(2);
@@ -154,7 +160,12 @@ describe('ensureAdminPassword', () => {
       handlers: [() => mockResponse(500, 'oops')],
     });
 
-    await ensureAdminPassword({ backendPort: 25808, statusTimeoutMs: 1_000, statusPollIntervalMs: 250 }, deps);
+    await ensureAdminPassword({
+      backendPort: 25808,
+      bootstrapSecret: 'bootstrap-test',
+      statusTimeoutMs: 1_000,
+      statusPollIntervalMs: 250,
+    }, deps);
 
     expect(warns.some((w) => w.includes('could not verify admin credentials'))).toBe(true);
     expect(logs).toEqual([]);
@@ -165,7 +176,7 @@ describe('ensureAdminPassword', () => {
       handlers: [() => mockResponse(200, { needs_setup: true }), () => mockResponse(500, 'boom')],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(warns.some((w) => w.includes('/api/webui/reset-password returned 500'))).toBe(true);
     expect(logs).toEqual([]);
@@ -176,7 +187,7 @@ describe('ensureAdminPassword', () => {
       handlers: [() => mockResponse(200, { needs_setup: true }), () => mockResponse(200, { data: {} })],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(warns.some((w) => w.includes('returned no new_password'))).toBe(true);
     expect(logs).toEqual([]);
@@ -191,7 +202,7 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(logs.some((m) => m.includes('Log in with username "admin"'))).toBe(true);
   });
@@ -204,7 +215,11 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808, resetCommand: 'bun run resetpass' }, deps);
+    await ensureAdminPassword({
+      backendPort: 25808,
+      bootstrapSecret: 'bootstrap-test',
+      resetCommand: 'bun run resetpass',
+    }, deps);
 
     expect(logs.some((m) => m.includes('bun run resetpass'))).toBe(true);
     expect(logs.every((m) => !m.includes('aionui-web resetpass'))).toBe(true);
@@ -218,7 +233,7 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({ backendPort: 25808 }, deps);
+    await ensureAdminPassword({ backendPort: 25808, bootstrapSecret: 'bootstrap-test' }, deps);
 
     expect(logs.some((m) => m.includes('aionui-web resetpass'))).toBe(true);
   });
@@ -228,7 +243,11 @@ describe('ensureAdminPassword', () => {
       handlers: [() => mockResponse(200, { needs_setup: true }), () => mockResponse(500, 'boom')],
     });
 
-    await ensureAdminPassword({ backendPort: 25808, resetCommand: 'bun run resetpass' }, deps);
+    await ensureAdminPassword({
+      backendPort: 25808,
+      bootstrapSecret: 'bootstrap-test',
+      resetCommand: 'bun run resetpass',
+    }, deps);
 
     expect(warns.some((w) => w.includes('bun run resetpass'))).toBe(true);
   });

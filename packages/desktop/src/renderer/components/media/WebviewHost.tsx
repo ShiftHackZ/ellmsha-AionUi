@@ -23,6 +23,8 @@ export interface WebviewHostProps {
   className?: string;
   /** Extra styles for root container */
   style?: React.CSSProperties;
+  /** Stable target identity when this host is an agent-controllable browser tab. */
+  browserTarget?: { tabId: string; active: boolean };
   /** Called when the page finishes loading */
   onDidFinishLoad?: (webview: Electron.WebviewTag) => void;
   /** Called when the page fails to load */
@@ -64,6 +66,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   partition,
   className,
   style,
+  browserTarget,
   onDidFinishLoad,
   onDidFailLoad,
   onUrlChange,
@@ -92,6 +95,21 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [zoomFactor, setZoomFactor] = useState(1);
   const [webviewReady, setWebviewReady] = useState(false);
+
+  const reportBrowserTarget = useCallback(() => {
+    if (!browserTarget) return;
+    const webContentsId = webviewRef.current?.getWebContentsId?.();
+    if (typeof webContentsId !== 'number') return;
+    void ipcBridge.application.reportBrowserWebContentsId
+      .invoke({ tabId: browserTarget.tabId, webContentsId, active: browserTarget.active })
+      .then((result) => {
+        if (!result.success && result.msg) console.warn('[browser] agent control unavailable:', result.msg);
+      });
+  }, [browserTarget?.active, browserTarget?.tabId]);
+
+  useEffect(() => {
+    if (webviewReady) reportBrowserTarget();
+  }, [reportBrowserTarget, webviewReady]);
 
   // 最近由本组件内部触发的导航地址集合。
   //
@@ -301,26 +319,8 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       syncNavState();
       injectClickInterceptor();
 
-      /**
-       * 把这个 webview 的 webContents id 报给主进程，让单目标 CDP 通道附加到它。
-       *
-       * 放在 dom-ready 里：此时 getWebContentsId() 才可用，而且每次导航/切 tab 后都会
-       * 再触发一次，正好让通道跟着用户当前看的页面走。失败只记日志不打扰用户 ——
-       * Agent 操作浏览器本就是可选能力，不该因为它挡住正常浏览。
-       *
-       * Report this webview's webContents id so the single-target CDP bridge can attach.
-       * Done on dom-ready because getWebContentsId() is only valid by then, and because it
-       * fires again after navigation or a tab switch, which keeps the bridge pointed at the
-       * page the user is actually viewing. Failures are logged only: agent browser control
-       * is optional and must not block ordinary browsing.
-       */
       try {
-        const webContentsId = webviewEl.getWebContentsId?.();
-        if (typeof webContentsId === 'number') {
-          void ipcBridge.application.reportBrowserWebContentsId.invoke({ webContentsId }).then((res) => {
-            if (!res.success && res.msg) console.warn('[browser] agent control unavailable:', res.msg);
-          });
-        }
+        reportBrowserTarget();
       } catch (error) {
         console.warn('[browser] could not report webContents id:', error);
       }
@@ -459,7 +459,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       webviewEl.removeEventListener('page-title-updated', handlePageTitleUpdated as EventListener);
       webviewEl.removeEventListener('page-favicon-updated', handlePageFaviconUpdated as EventListener);
     };
-  }, [navigateToWithHistory, currentUrl, onDidFinishLoad, onDidFailLoad, isStarOfficeUrl]);
+  }, [navigateToWithHistory, currentUrl, onDidFinishLoad, onDidFailLoad, isStarOfficeUrl, reportBrowserTarget]);
 
   // Resize observer for content area
   useEffect(() => {

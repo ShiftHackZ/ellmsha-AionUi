@@ -1,3 +1,45 @@
+<!-- ELLMSHA FORK INTRO -->
+# AionUI — eLLMsha integration fork
+
+**Electron and React desktop, settings, browser surface and WebUI.**
+
+| Provenance | Value |
+| --- | --- |
+| Original project | [AionUI](https://github.com/iOfficeAI/AionUi) |
+| Upstream baseline | `v2.1.47-final` |
+| Baseline revision | `42be46dbf5a7d45042d0a691dea590f76cba8e24` |
+| Harness patch label | 1 |
+
+## Why this fork exists
+
+eLLMsha branding; persistent desktop memory; plugin/account settings; multi-root projects and visible subagent activity.
+
+```mermaid
+flowchart LR
+  Harness[eLLMsha harness] --> Component[AionUI]
+  Component --> Work[Project work]
+```
+
+## Build and integration
+
+Build in the parent eLLMsha checkout with `node scripts/release/build.mjs`; use the local backend fork.
+
+The parent repository's installer and integration checks are authoritative for the bundled product. A passing upstream test suite alone does not prove eLLMsha integration acceptance. This local documentation update does not publish a release or make unpublished revisions available remotely.
+
+## Contributing
+
+Keep changes focused, preserve upstream licenses and notices, and separate an upstream version update from a harness patch. Record both in the parent application's About provenance. Do not commit credentials, user profiles or commercial project contents. Validate behavior on the platform being changed.
+
+## License and credits
+
+See [LICENSE](LICENSE). Original authors and their license terms remain unchanged. **Moroz Inc.** maintains the eLLMsha integration.
+
+---
+
+## Upstream documentation
+
+<!-- END ELLMSHA FORK INTRO -->
+
 <p align="center">
   <img src="./resources/aionui-banner-1.png" alt="AionUi - Cowork with AI Agents" width="100%">
 </p>

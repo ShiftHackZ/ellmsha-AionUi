@@ -21,6 +21,7 @@ import { registerMemoryIdentityBridge } from './process/memory/registerMemoryIde
 import fixPath from 'fix-path';
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomBytes } from 'crypto';
 import { initMainAdapterWithWindow } from './common/adapter/main';
 import { ipcBridge } from './common';
 import { initializeProcess } from './process';
@@ -34,6 +35,11 @@ import type { BackendStartupFailureInfo } from './common/types/platform/electron
 import { registerWindowMaximizeListeners } from '@process/bridge';
 import { BackendLifecycleManager } from '@aionui/web-host';
 import { resolveBinaryPath } from '@process/backend';
+import {
+  resolveBuiltinPluginsPath,
+  resolveMobileMcpEntryPath,
+  resolveOpenComputerUseEntryPath,
+} from '@process/backend/pluginResourcePath';
 import './process/bridge/feedbackBridge';
 import { wasLaunchedAtLogin } from '@process/bridge/applicationBridge';
 import { onLanguageChanged } from './process/bridge/systemSettingsBridge';
@@ -185,6 +191,7 @@ const isWebUIMode = hasSwitch('webui');
 const isRemoteMode = hasSwitch('remote');
 const isResetPasswordMode = hasCommand('--resetpass');
 const isVersionMode = hasCommand('--version') || hasCommand('-v');
+const backendBootstrapSecret = isWebUIMode ? randomBytes(32).toString('hex') : undefined;
 
 // Flag to distinguish intentional quit from unexpected exit in WebUI mode
 let isExplicitQuit = false;
@@ -204,7 +211,11 @@ const backendManager = new BackendLifecycleManager(
     resourcesPath: process.resourcesPath,
     userDataPath: app.getPath('userData'),
   },
-  resolveBinaryPath
+  resolveBinaryPath,
+  {
+    identityMode: isWebUIMode ? 'webui' : 'local',
+    bootstrapSecret: backendBootstrapSecret,
+  }
 );
 let disposeCronResumeListener: (() => void) | null = null;
 
@@ -239,10 +250,10 @@ ipcMain.handle('backend:recover-corrupted-database', async () => {
   await recoverCorruptedDatabaseAfterUserConfirmation({
     getFailure: () => backendStartupFailureInfo,
     stopBackend: async () => {
-    await backendManager.stop();
-    await stopEmbeddingJob();
-    await stopNativeMemory();
-  },
+      await backendManager.stop();
+      await stopEmbeddingJob();
+      await stopNativeMemory();
+    },
     startBackendWithRecovery: async () => {
       try {
         const { getDataPath } = await import('./process/utils/utils');
@@ -360,13 +371,33 @@ function ensureAdminUserOnce(backendPort: number): Promise<void> {
     ensureAdminUserPromise = (async () => {
       try {
         const { ensureAdminUser } = await import('./process/utils/ensureAdminUser');
-        await ensureAdminUser(backendPort);
+        await ensureAdminUser(backendPort, backendBootstrapSecret);
       } catch (err) {
         console.error('[WebUI] ensureAdminUser failed:', err);
       }
     })();
   }
   return ensureAdminUserPromise;
+}
+
+async function ensureHeadlessWebUiPassword(backendPort: number): Promise<void> {
+  if (!backendBootstrapSecret) return;
+  const statusResponse = await fetch(`http://127.0.0.1:${backendPort}/api/auth/status`);
+  if (!statusResponse.ok) throw new Error(`[WebUI] /api/auth/status returned ${statusResponse.status}`);
+  const status = (await statusResponse.json()) as { needs_setup?: boolean; data?: { needs_setup?: boolean } };
+  if (!(status.needs_setup ?? status.data?.needs_setup ?? false)) return;
+
+  const resetResponse = await fetch(`http://127.0.0.1:${backendPort}/api/webui/reset-password`, {
+    method: 'POST',
+    headers: { 'x-aioncore-bootstrap-secret': backendBootstrapSecret },
+  });
+  if (!resetResponse.ok) throw new Error(`[WebUI] /api/webui/reset-password returned ${resetResponse.status}`);
+  const payload = (await resetResponse.json()) as { data?: { new_password?: string }; new_password?: string };
+  const password = payload.data?.new_password ?? payload.new_password;
+  if (!password) throw new Error('[WebUI] reset-password response missing new_password');
+  console.log(`[WebUI] Initial admin username: admin`);
+  console.log(`[WebUI] Initial admin password: ${password}`);
+  console.log('[WebUI] Change the password after first login.');
 }
 
 function markBackendReady(backendPort: number, source: string): void {
@@ -672,7 +703,7 @@ const handleAppReady = async (): Promise<void> => {
   }
 
   /**
-   * 启动单目标 CDP 通道，并把端口/口令写进自己的 env。
+   * 启动应用内浏览器 CDP 通道，并把端口/口令写进自己的 env。
    *
    * ⚠️ 必须在 startBackendOrExit() 之前 —— 这是硬顺序，不是风格问题。
    *
@@ -686,7 +717,7 @@ const handleAppReady = async (): Promise<void> => {
    * 这里只起一个 node http/ws 服务，不碰 Electron 的 app.ready 相关能力，
    * 附加目标是后续渲染进程通过 IPC 报上来的，所以放在这个位置是安全的。
    *
-   * Start the single-target CDP bridge and publish port/token into our own env.
+   * Start the in-app browser CDP bridge and publish port/token into our own env.
    *
    * ⚠️ MUST run before startBackendOrExit(). This ordering is a hard requirement, not
    * style. Both values reach the agent by process inheritance (aioncore is our child; the
@@ -706,7 +737,9 @@ const handleAppReady = async (): Promise<void> => {
     try {
       const { startCdpBridge } = await import('./process/resources/builtinMcp/cdpBridge');
       const { setCdpBridgeHandle } = await import('./process/utils/cdpBridgeRegistry');
-      const bridge = await startCdpBridge();
+      const bridge = await startCdpBridge({
+        sendTabCommand: (command) => ipcBridge.application.browserTabCommand.emit(command),
+      });
       setCdpBridgeHandle(bridge);
       /**
        * 回填真实端口，让设置页显示的是「连得上的地址」。
@@ -720,7 +753,7 @@ const handleAppReady = async (): Promise<void> => {
       setActiveCdpPort(bridge.port);
       process.env.AIONUI_CDP_ACTIVE_PORT = String(bridge.port);
       process.env.AIONUI_CDP_BRIDGE_TOKEN = bridge.token;
-      console.log(`[CDP] Single-target bridge listening on 127.0.0.1:${bridge.port} (token required)`);
+      console.log(`[CDP] In-app browser bridge listening on 127.0.0.1:${bridge.port} (token required)`);
       app.once('will-quit', () => {
         void bridge.close();
         setCdpBridgeHandle(null);
@@ -736,21 +769,35 @@ const handleAppReady = async (): Promise<void> => {
        * read port/token (see browserServer.ts) and never falls back to spawning its own
        * separate Chrome — the exact behaviour we are eliminating.
        */
-      console.error('[CDP] Failed to start single-target bridge; agent browser control stays off.', error);
+      console.error('[CDP] Failed to start in-app browser bridge; agent browser control stays off.', error);
     }
   }
 
-  if (!isWebUIMode && !isResetPasswordMode && process.env.AIONUI_E2E_TEST !== '1' && process.env.ELLM_SHA_MEMORY_MODE !== 'external') {
-    const resourceRoot = app.isPackaged && !process.env.ELECTRON_RENDERER_URL ? process.resourcesPath : path.resolve(process.cwd(), 'resources');
+  if (
+    !isWebUIMode &&
+    !isResetPasswordMode &&
+    process.env.AIONUI_E2E_TEST !== '1' &&
+    process.env.ELLM_SHA_MEMORY_MODE !== 'external'
+  ) {
+    const resourceRoot =
+      app.isPackaged && !process.env.ELECTRON_RENDERER_URL
+        ? process.resourcesPath
+        : path.resolve(process.cwd(), 'resources');
     const memoryBundle = path.join(resourceRoot, 'tencent-memory', `${process.platform}-${process.arch}`);
     await startNativeMemory(memoryBundle, app.getPath('userData'));
     configureEmbeddingRuntime(memoryBundle, app.getPath('userData'));
   }
 
   const debugBackendStartupFailure = resolveDebugBackendStartupFailure();
+  // Publish app-owned MCP entrypoints before spawning the backend. AionCore uses
+  // the browser path as an in-memory provenance check before handing the live CDP
+  // bridge values to Codex's restricted MCP child environment.
+  process.env.AIONUI_BUILTIN_BROWSER_MCP_PATH = getBuiltinMcpScriptPath('builtin-mcp-browser');
   // The backend registers memory for every session, including delegated agents.
-  // Publish the unpacked MCP entry before spawning it so the child inherits it.
   process.env.AIONUI_TDAI_MEMORY_MCP_PATH = getBuiltinMcpScriptPath('builtin-mcp-tencent-memory');
+  // History is injected per session so its short-lived runtime token and current
+  // conversation scope never enter the persisted MCP catalog.
+  process.env.AIONUI_CHAT_HISTORY_MCP_PATH = getBuiltinMcpScriptPath('builtin-mcp-chat-history');
   process.env.ELLM_SHA_BMAD_SKILLS_DIR ||=
     app.isPackaged && !process.env.ELECTRON_RENDERER_URL
       ? path.join(process.resourcesPath, 'global-skills', 'bmad')
@@ -763,6 +810,29 @@ const handleAppReady = async (): Promise<void> => {
     app.isPackaged && !process.env.ELECTRON_RENDERER_URL
       ? path.join(process.resourcesPath, 'ellmsha-skills')
       : path.resolve(process.cwd(), 'resources/ellmsha-skills');
+  const builtinPluginsPath = resolveBuiltinPluginsPath({
+    configuredPath: process.env.ELLM_SHA_BUILTIN_PLUGINS_PATH,
+    isPackaged: app.isPackaged,
+    rendererUrl: process.env.ELECTRON_RENDERER_URL,
+    resourcesPath: process.resourcesPath,
+  });
+  if (builtinPluginsPath) {
+    process.env.ELLM_SHA_BUILTIN_PLUGINS_PATH = builtinPluginsPath;
+  }
+  process.env.ELLM_SHA_MOBILE_MCP_ENTRY = resolveMobileMcpEntryPath({
+    configuredPath: process.env.ELLM_SHA_MOBILE_MCP_ENTRY,
+    isPackaged: app.isPackaged,
+    rendererUrl: process.env.ELECTRON_RENDERER_URL,
+    repositoryRoot: path.resolve(process.cwd(), '..'),
+    resourcesPath: process.resourcesPath,
+  });
+  process.env.ELLM_SHA_OPEN_COMPUTER_USE_ENTRY = resolveOpenComputerUseEntryPath({
+    configuredPath: process.env.ELLM_SHA_OPEN_COMPUTER_USE_ENTRY,
+    isPackaged: app.isPackaged,
+    rendererUrl: process.env.ELECTRON_RENDERER_URL,
+    repositoryRoot: path.resolve(process.cwd(), '..'),
+    resourcesPath: process.resourcesPath,
+  });
   if (debugBackendStartupFailure) {
     applyDebugBackendStartupFailure(debugBackendStartupFailure);
     mark(`debugBackendStartupFailure:${debugBackendStartupFailure.reason}`);
@@ -883,6 +953,13 @@ const handleAppReady = async (): Promise<void> => {
     const resolvedPort = resolveWebUIPort(userConfigInfo.config, getSwitchValue);
     const allowRemote = resolveRemoteAccess(userConfigInfo.config, isRemoteMode);
     try {
+      const existingBackendPort = (globalThis as typeof globalThis & { __backendPort?: number }).__backendPort;
+      if (!existingBackendPort) {
+        throw new Error('[WebUI] Cannot start: aioncore is not running (globalThis.__backendPort unset)');
+      }
+      // Complete one-time credential setup over the direct loopback backend
+      // before opening the user-facing listener.
+      await ensureHeadlessWebUiPassword(existingBackendPort);
       // Inside Electron (`AionUi --webui` or packaged `aionui-web` mode that
       // launches via the Electron shell), reuse the desktop app's data-dir so
       // that conversations / cron jobs created in any path show up everywhere.
@@ -917,15 +994,10 @@ const handleAppReady = async (): Promise<void> => {
         },
         backend: {
           kind: 'useExistingBackend',
-          port: (() => {
-            // Reuse the backend already spawned by backendManager.start() above.
-            // Spawning a second backend here would race the first on SQLite.
-            const port = (globalThis as typeof globalThis & { __backendPort?: number }).__backendPort;
-            if (!port) {
-              throw new Error('[WebUI] Cannot start: aioncore is not running (globalThis.__backendPort unset)');
-            }
-            return port;
-          })(),
+          identityMode: 'webui',
+          // Reuse the backend already spawned by backendManager.start() above.
+          // Spawning a second backend here would race the first on SQLite.
+          port: existingBackendPort,
         },
       });
       console.log(`[WebUI] Headless server started (port=${handle.port}, backendPort=${handle.backendPort})`);

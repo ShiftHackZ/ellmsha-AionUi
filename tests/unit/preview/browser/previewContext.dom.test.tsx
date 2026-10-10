@@ -19,12 +19,30 @@ import React from 'react';
 import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { browserTabCommandHandlers, reportBrowserTabCommandFailureMock, reportBrowserTabInventoryMock } = vi.hoisted(
+  () => ({
+    browserTabCommandHandlers: new Set<(command: unknown) => void>(),
+    reportBrowserTabCommandFailureMock: vi.fn().mockResolvedValue({ success: true }),
+    reportBrowserTabInventoryMock: vi.fn().mockResolvedValue({ success: true }),
+  })
+);
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     fileStream: { contentUpdate: { on: () => () => {} } },
     preview: { open: { on: () => () => {} } },
     conversation: { responseStream: { on: () => () => {} } },
     fs: { getFileContent: { invoke: vi.fn() }, writeFile: { invoke: vi.fn() } },
+    application: {
+      reportBrowserTabCommandFailure: { invoke: reportBrowserTabCommandFailureMock },
+      reportBrowserTabInventory: { invoke: reportBrowserTabInventoryMock },
+      browserTabCommand: {
+        on: (handler: (command: unknown) => void) => {
+          browserTabCommandHandlers.add(handler);
+          return () => browserTabCommandHandlers.delete(handler);
+        },
+      },
+    },
   },
 }));
 
@@ -57,7 +75,14 @@ const browserTabs = () => ctx.tabs.filter((tab) => tab.content_type === 'browser
 
 beforeEach(() => {
   localStorage.clear();
+  browserTabCommandHandlers.clear();
+  reportBrowserTabCommandFailureMock.mockClear();
+  reportBrowserTabInventoryMock.mockClear();
 });
+
+const emitBrowserTabCommand = (command: unknown) => {
+  for (const handler of browserTabCommandHandlers) handler(command);
+};
 
 describe('PreviewContext browser tabs', () => {
   it('opens a blank browser tab with the placeholder title', () => {
@@ -135,8 +160,220 @@ describe('PreviewContext browser tabs', () => {
   });
 });
 
+describe('PreviewContext agent browser lifecycle', () => {
+  it('creates a tab with the stable id supplied by the main-process bridge', () => {
+    renderProvider();
+
+    act(() =>
+      emitBrowserTabCommand({
+        action: 'create',
+        tabId: 'browser-agent-stable',
+        url: 'https://github.com/login',
+        activate: true,
+      })
+    );
+
+    expect(browserTabs()[0].id).toBe('browser-agent-stable');
+    expect(browserTabs()[0].content).toBe('https://github.com/login');
+    expect(ctx.activeTabId).toBe('browser-agent-stable');
+  });
+
+  it('creates a background tab without changing the selected tab', () => {
+    renderProvider();
+    act(() => ctx.openBrowserTab('https://visible.example/'));
+    const visibleId = ctx.activeTabId;
+
+    act(() =>
+      emitBrowserTabCommand({
+        action: 'create',
+        tabId: 'browser-agent-background',
+        url: 'https://background.example/',
+        activate: false,
+      })
+    );
+
+    expect(browserTabs().map((tab) => tab.id)).toContain('browser-agent-background');
+    expect(ctx.activeTabId).toBe(visibleId);
+  });
+
+  it('activates and closes only the requested stable tab id', () => {
+    renderProvider();
+    act(() => ctx.openBrowserTab('https://first.example/', { tabId: 'browser-1' }));
+    act(() => ctx.openBrowserTab('https://second.example/', { tabId: 'browser-2' }));
+
+    act(() => emitBrowserTabCommand({ action: 'activate', tabId: 'browser-1' }));
+    expect(ctx.activeTabId).toBe('browser-1');
+
+    act(() => emitBrowserTabCommand({ action: 'close', tabId: 'browser-1' }));
+    expect(browserTabs().map((tab) => tab.id)).toEqual(['browser-2']);
+  });
+
+  it('closes the final browser tab and closes the preview surface', () => {
+    renderProvider();
+    act(() => ctx.openBrowserTab('https://only.example/', { tabId: 'browser-only' }));
+
+    act(() => emitBrowserTabCommand({ action: 'close', tabId: 'browser-only' }));
+
+    expect(browserTabs()).toHaveLength(0);
+    expect(ctx.activeTabId).toBeNull();
+    expect(ctx.isOpen).toBe(false);
+  });
+
+  it('rejects agent creation at the renderer cap without replacing a user tab', () => {
+    renderProvider();
+    for (let i = 0; i < MAX_BROWSER_TABS; i += 1) {
+      act(() => ctx.openBrowserTab(`https://user.example/${i}`, { tabId: `browser-user-${i}` }));
+    }
+    const before = browserTabs().map((tab) => ({ id: tab.id, content: tab.content }));
+
+    act(() =>
+      emitBrowserTabCommand({
+        action: 'create',
+        tabId: 'browser-agent-overflow',
+        url: 'https://agent.example/',
+        activate: true,
+      })
+    );
+
+    expect(browserTabs().map((tab) => ({ id: tab.id, content: tab.content }))).toEqual(before);
+    expect(reportBrowserTabCommandFailureMock).toHaveBeenCalledWith({
+      tabId: 'browser-agent-overflow',
+      reason: `The in-app browser already has its maximum of ${MAX_BROWSER_TABS} tabs.`,
+    });
+  });
+});
+
 describe('PreviewContext browser tab persistence', () => {
   const readScope = (scope: string) => JSON.parse(localStorage.getItem(`aionui_preview:${scope}`) ?? '{}');
+
+  it('declares an empty loaded scope ready even when its tab array does not change', () => {
+    renderProvider();
+
+    act(() => ctx.closePreviewIfScopeChanged('project-empty'));
+
+    expect(reportBrowserTabInventoryMock).toHaveBeenLastCalledWith({ ready: true, tabIds: [] });
+  });
+
+  it('restores the sole persisted scope at startup and declares its browser inventory', async () => {
+    localStorage.setItem(
+      'aionui_preview:project-restored',
+      JSON.stringify({
+        isOpen: true,
+        tabs: [
+          {
+            id: 'browser-restored',
+            title: 'Restored',
+            content: 'https://restored.example/',
+            content_type: 'browser',
+          },
+        ],
+        activeTabId: 'browser-restored',
+      })
+    );
+
+    renderProvider();
+
+    expect(browserTabs().map((tab) => tab.id)).toEqual(['browser-restored']);
+    expect(localStorage.getItem('aionui_preview:last_scope')).toBe('project-restored');
+    expect(reportBrowserTabInventoryMock).toHaveBeenCalledWith({
+      ready: true,
+      tabIds: ['browser-restored'],
+    });
+  });
+
+  it('migrates the only legacy scope containing browser tabs when several scopes exist', () => {
+    localStorage.setItem(
+      'aionui_preview:project-browser',
+      JSON.stringify({
+        isOpen: true,
+        tabs: [
+          {
+            id: 'browser-legacy',
+            title: 'Legacy',
+            content: 'https://legacy.example/',
+            content_type: 'browser',
+          },
+        ],
+        activeTabId: 'browser-legacy',
+      })
+    );
+    localStorage.setItem(
+      'aionui_preview:project-files',
+      JSON.stringify({
+        isOpen: true,
+        tabs: [{ id: 'code-1', title: 'Code', content: 'const x = 1', content_type: 'code' }],
+        activeTabId: 'code-1',
+      })
+    );
+
+    renderProvider();
+
+    expect(browserTabs().map((tab) => tab.id)).toEqual(['browser-legacy']);
+    expect(localStorage.getItem('aionui_preview:last_scope')).toBe('project-browser');
+    expect(reportBrowserTabInventoryMock).toHaveBeenLastCalledWith({
+      ready: true,
+      tabIds: ['browser-legacy'],
+    });
+  });
+
+  it('allows a clean guide startup to create an isolated agent browser scope', () => {
+    renderProvider();
+    expect(reportBrowserTabInventoryMock).toHaveBeenLastCalledWith({ ready: true, tabIds: [] });
+
+    act(() =>
+      emitBrowserTabCommand({
+        action: 'create',
+        tabId: 'browser-agent-guide',
+        url: 'https://guide.example/',
+        activate: true,
+      })
+    );
+
+    expect(browserTabs().map((tab) => tab.id)).toEqual(['browser-agent-guide']);
+    expect(localStorage.getItem('aionui_preview:last_scope')).toBe('__agent_browser__');
+  });
+
+  it('persists and restores guide-created agent tabs across a provider restart', async () => {
+    vi.useFakeTimers();
+    try {
+      const first = renderProvider();
+      act(() =>
+        emitBrowserTabCommand({
+          action: 'create',
+          tabId: 'browser-agent-a',
+          url: 'https://example.com/',
+          activate: true,
+        })
+      );
+      act(() =>
+        emitBrowserTabCommand({
+          action: 'create',
+          tabId: 'browser-agent-b',
+          url: 'https://example.net/',
+          activate: false,
+        })
+      );
+      await act(async () => vi.advanceTimersByTimeAsync(150));
+
+      expect(readScope('__agent_browser__').tabs.map((tab: { id: string }) => tab.id)).toEqual([
+        'browser-agent-a',
+        'browser-agent-b',
+      ]);
+      first.unmount();
+      reportBrowserTabInventoryMock.mockClear();
+
+      renderProvider();
+
+      expect(browserTabs().map((tab) => tab.id)).toEqual(['browser-agent-a', 'browser-agent-b']);
+      expect(ctx.activeTabId).toBe('browser-agent-a');
+      expect(reportBrowserTabInventoryMock).toHaveBeenCalledWith({
+        ready: true,
+        tabIds: ['browser-agent-a', 'browser-agent-b'],
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('persists browser tabs per project so switching projects restores the right pages', async () => {
     renderProvider();

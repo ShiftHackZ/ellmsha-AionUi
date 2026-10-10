@@ -76,7 +76,15 @@
     "deleting": "Wird gelöscht...",
     "reorderPinned": "Ziehen, um angeheftete Unterhaltung neu anzuordnen",
     "forkedFrom": "Verzweigt von „{{name}}“",
-    "forkedConversation": "Verzweigte Unterhaltung"
+    "forkedConversation": "Verzweigte Unterhaltung",
+    "subagentStatus": {
+      "pending_init": "Wird gestartet",
+      "running": "Wird ausgeführt",
+      "completed": "Abgeschlossen",
+      "errored": "Fehlgeschlagen",
+      "interrupted": "Unterbrochen",
+      "shutdown": "Beendet"
+    }
   },
   "historySearch": {
     "tooltip": "Nachrichten durchsuchen",

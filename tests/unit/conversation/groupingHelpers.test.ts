@@ -71,4 +71,26 @@ describe('buildGroupedHistory', () => {
 
     expect(result.timelineSections).toEqual([]);
   });
+
+  it('keeps persisted subagent histories out of the top-level timeline', () => {
+    const result = buildGroupedHistory(
+      [
+        conversation('parent', { backend: 'codex' }, 100),
+        conversation(
+          'child',
+          {
+            backend: 'codex',
+            subagent: { parent_conversation_id: 'parent', ref: 'thread-child', status: 'running' },
+          } as TChatConversation['extra'],
+          101
+        ),
+      ],
+      t
+    );
+
+    const ids = result.timelineSections.flatMap((section) =>
+      section.items.flatMap((item) => (item.type === 'conversation' && item.conversation ? [item.conversation.id] : []))
+    );
+    expect(ids).toEqual(['parent']);
+  });
 });

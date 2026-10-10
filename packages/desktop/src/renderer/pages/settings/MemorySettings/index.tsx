@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import WebviewHost from '@/renderer/components/media/WebviewHost';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import SettingsPageWrapper from '../components/SettingsPageWrapper';
+import { createMemoryThemePayload } from './memoryTheme';
 
 const defaultPanelUrl =
   (import.meta as ImportMeta & { env: { VITE_TDAI_PANEL_URL?: string } }).env.VITE_TDAI_PANEL_URL ||
@@ -13,7 +14,7 @@ const defaultPanelUrl =
 
 const MemorySettings: React.FC = () => {
   const { t } = useTranslation();
-  const { theme } = useThemeContext();
+  const { theme, activeTheme } = useThemeContext();
   const initialTheme = useRef(theme);
   const [panelUrl, setPanelUrl] = useState(defaultPanelUrl);
   useEffect(() => {
@@ -22,23 +23,27 @@ const MemorySettings: React.FC = () => {
   const panelOrigin = new URL(panelUrl).origin;
   const localPanel = ['127.0.0.1', 'localhost'].includes(new URL(panelUrl).hostname);
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const currentThemePayload = useCallback(() => createMemoryThemePayload(theme), [activeTheme, theme]);
   const syncTheme = useCallback(
     (webview: Electron.WebviewTag) => {
       if (new URL(webview.getURL()).origin !== panelOrigin) return;
       void webview
         .executeJavaScript(
-          `window.dispatchEvent(new CustomEvent('ellmsha-theme', { detail: ${JSON.stringify(theme)} }))`
+          `window.dispatchEvent(new CustomEvent('ellmsha-theme', { detail: ${JSON.stringify(currentThemePayload())} }))`
         )
         .catch(console.error);
     },
-    [panelOrigin, theme]
+    [currentThemePayload, panelOrigin]
   );
   useEffect(() => {
     if (webviewRef.current) syncTheme(webviewRef.current);
-  }, [syncTheme]);
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'ellmsha-theme', detail: currentThemePayload() },
+      panelOrigin
+    );
+  }, [currentThemePayload, panelOrigin, syncTheme]);
   const refreshPanel = useCallback(() => webviewRef.current?.reload(), []);
-  const themedUrl = new URL(panelUrl);
-  themedUrl.searchParams.set('theme', theme);
   const initialPanelUrl = new URL(panelUrl);
   initialPanelUrl.searchParams.set('theme', initialTheme.current);
   const [userKey, setUserKey] = useState('');
@@ -164,8 +169,15 @@ const MemorySettings: React.FC = () => {
             />
           ) : (
             <iframe
+              ref={iframeRef}
               title='TencentDB Agent Memory Panel'
-              src={themedUrl.toString()}
+              src={initialPanelUrl.toString()}
+              onLoad={() => {
+                iframeRef.current?.contentWindow?.postMessage(
+                  { type: 'ellmsha-theme', detail: currentThemePayload() },
+                  panelOrigin
+                );
+              }}
               className='w-full h-full border-0'
             />
           )}

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useConversationHistoryContext } from '@/renderer/hooks/context/ConversationHistoryContext';
 import type { TimelineSection } from '../types';
+import { getSubagentMetadata } from '../types';
 import {
   dispatchWorkspaceExpansionChange,
   readExpandedWorkspaces,
@@ -103,7 +104,9 @@ export const useConversations = () => {
 
     if (revealedIdRef.current === id) return;
 
-    const location = locateConversation(id, pinnedConversations, timelineSections);
+    const activeConversation = conversations.find((conversation) => conversation.id === id);
+    const parentId = getSubagentMetadata(activeConversation)?.parent_conversation_id;
+    const location = locateConversation(parentId ?? id, pinnedConversations, timelineSections);
     if (!location) return; // data not loaded yet; effect re-runs when it arrives
     revealedIdRef.current = id;
 
@@ -137,7 +140,7 @@ export const useConversations = () => {
       cancelAnimationFrame(outerRafId);
       cancelAnimationFrame(innerRafId);
     };
-  }, [clearCompletionUnread, id, setActiveConversation, pinnedConversations, timelineSections]);
+  }, [clearCompletionUnread, conversations, id, setActiveConversation, pinnedConversations, timelineSections]);
 
   // Persist workspace expansion state
   useEffect(() => {

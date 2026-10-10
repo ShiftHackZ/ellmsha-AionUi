@@ -16,11 +16,12 @@ describe('startWebHost', () => {
 
   test('Returns handle without initialPassword', async () => {
     // Mock backend-launcher
+    const startBackend = vi.fn().mockResolvedValue({
+      port: 55555,
+      stop: vi.fn().mockResolvedValue(undefined),
+    });
     vi.doMock('../src/backend-launcher.js', () => ({
-      startBackend: vi.fn().mockResolvedValue({
-        port: 55555,
-        stop: vi.fn().mockResolvedValue(undefined),
-      }),
+      startBackend,
     }));
 
     // Mock static-server
@@ -46,6 +47,8 @@ describe('startWebHost', () => {
       backend: {
         kind: 'ownBackend',
         resolveBackend: () => '/bin/backend',
+        identityMode: 'webui',
+        bootstrapSecret: 'process-only-secret',
       },
     });
 
@@ -54,11 +57,32 @@ describe('startWebHost', () => {
     expect('initialPassword' in handle).toBe(false);
     expect(handle.port).toBe(33000);
     expect(handle.backendPort).toBe(55555);
+    expect(startBackend).toHaveBeenCalledWith(
+      expect.objectContaining({ identityMode: 'webui', bootstrapSecret: 'process-only-secret' })
+    );
 
     await handle.stop();
 
     vi.doUnmock('../src/backend-launcher.js');
     vi.doUnmock('../src/static-server.js');
+  });
+
+  test('refuses remote exposure when an existing backend uses local identity', async () => {
+    const { startWebHost } = await import('../src/index.js');
+
+    await expect(
+      startWebHost({
+        app: {
+          version: '1.0.0',
+          isPackaged: false,
+          resourcesPath: '/app',
+          userDataPath: '/tmp/test-data',
+        },
+        staticDir: '/tmp/static',
+        allowRemote: true,
+        backend: { kind: 'useExistingBackend', port: 55555, identityMode: 'local' },
+      })
+    ).rejects.toThrow('Refusing remote WebUI exposure with a local-identity backend');
   });
 
   test.todo('Backend port conflict: throws and does not leak resources');

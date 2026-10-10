@@ -101,3 +101,12 @@ describe('conversation scheduled-task menu item', () => {
     expect(screen.queryByText('conversation.history.createCronTask')).not.toBeInTheDocument();
   });
 });
+
+describe('conversation activity indicator', () => {
+  it('exposes the running spinner as an accessible status without changing its fixed icon slot', () => {
+    render(<ConversationRow {...makeProps({ isGenerating: true, menuVisible: false })} />);
+
+    const status = screen.getByRole('status', { name: 'conversation.history.subagentStatus.running' });
+    expect(status).toHaveClass('size-22px', 'shrink-0');
+  });
+});

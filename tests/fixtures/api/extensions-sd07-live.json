@@ -1,0 +1,47 @@
+[
+  {
+    "name": "clockify",
+    "version": "1.0.0",
+    "display_name": "Clockify",
+    "description": "Independent Clockify API-key identities for bounded reports and approval-gated time entry changes.",
+    "enabled": true,
+    "source": "builtin",
+    "package_format": "native"
+  },
+  {
+    "name": "linear",
+    "version": "1.0.0",
+    "display_name": "Linear",
+    "description": "Independent Linear OAuth identities for issues, projects, comments, and attachments.",
+    "enabled": true,
+    "source": "builtin",
+    "package_format": "native"
+  },
+  {
+    "name": "mobile",
+    "version": "1.0.8",
+    "display_name": "Mobile Next",
+    "description": "Mobile automation for Android and iOS devices, emulators, and simulators.",
+    "enabled": true,
+    "source": "builtin",
+    "package_format": "native"
+  },
+  {
+    "name": "plugin-dev",
+    "version": "1.0.0",
+    "display_name": "Plugin Authoring",
+    "description": "Create, validate, install, update, and remove eLLMsha, Agent Plugins, Codex, and Claude-compatible plugin packages.",
+    "enabled": true,
+    "source": "builtin",
+    "package_format": "native"
+  },
+  {
+    "name": "sd07-live-qa",
+    "version": "1.0.0",
+    "description": "Disposable SD07 live QA plugin with one skill and one side-effect-free MCP tool.",
+    "enabled": true,
+    "source": "local",
+    "package_format": "agent_plugin",
+    "supported_components": ["skills", "mcp_servers"]
+  }
+]

@@ -172,7 +172,12 @@ const Layout: React.FC<{
   // Use closePreview directly — closePreviewIfScopeChanged skips the call
   // when lastScopeRef is already null (e.g. on team routes where it was
   // never updated), which would leave the panel open.
-  const { closePreview: closePreviewOnRouteChange, isOpen: isPreviewOpen } = usePreviewContext();
+  const {
+    closePreview: closePreviewOnRouteChange,
+    isOpen: isPreviewOpen,
+    tabs: previewTabs,
+    activeTab: previewActiveTab,
+  } = usePreviewContext();
   // Layout-level explorer column width engine (stage3 FULL / P2): measure the
   // [content | explorer] row, clamp the explorer width so chat (+ preview) keep
   // their reserve. Active only when a project is bound and on desktop.
@@ -200,20 +205,24 @@ const Layout: React.FC<{
   // P4 (②B): hoist the preview region to the Layout host for project
   // conversations so it is structurally persistent (no remount on same-project
   // switches). ChatLayout renders chat only in that case (previewHosted).
-  const previewRegionActive = Boolean(currentProject) && !isMobile && isPreviewOpen;
+  const unscopedBrowserVisible =
+    !workspaceAvailable && !isMobile && isPreviewOpen && previewActiveTab?.content_type === 'browser';
+  const previewRegionActive = !isMobile && isPreviewOpen && (Boolean(currentProject) || unscopedBrowserVisible);
+  const hiddenBrowserRuntimeActive =
+    !workspaceAvailable && !unscopedBrowserVisible && previewTabs.some((tab) => tab.content_type === 'browser');
   const { widthPx: previewWidthPx, createDragHandle: createPreviewRegionDragHandle } = useProjectPreviewRegionWidth(
     mainRowWidth,
     explorerCollapsed ? 0 : explorerWidthPx,
     previewRegionActive
   );
-  const routeLayoutMountedRef = useRef(false);
+  const previousWorkspaceAvailableRef = useRef(workspaceAvailable);
   useEffect(() => {
-    if (!routeLayoutMountedRef.current) {
-      routeLayoutMountedRef.current = true;
-      return; // skip initial mount — preview starts closed, don't wipe persisted tabs
+    const leftWorkspace = previousWorkspaceAvailableRef.current && !workspaceAvailable;
+    previousWorkspaceAvailableRef.current = workspaceAvailable;
+    if (leftWorkspace) {
+      closePreviewOnRouteChange();
     }
     if (!workspaceAvailable) {
-      closePreviewOnRouteChange();
       // Leaving every project-bearing route (conversation + team) → no active
       // project → hide the Explorer host. Within /conversation/* and /team/* the
       // route itself publishes project_id, so we only clear when leaving both.
@@ -225,7 +234,7 @@ const Layout: React.FC<{
     if (!workspaceAvailable) {
       setCurrentConversation(null);
     }
-  }, [location.pathname, workspaceAvailable, closePreviewOnRouteChange]);
+  }, [workspaceAvailable, closePreviewOnRouteChange]);
 
   const collapsedRef = useRef(collapsed);
   const dragStateRef = useRef<{ active: boolean; startX: number; startWidth: number }>({
@@ -525,32 +534,44 @@ const Layout: React.FC<{
               {/* Hoisted preview region (project conversations only). Structurally
                   persistent: lives above the per-conversation subtree, so a
                   same-project conversation switch does not remount it. */}
-              {previewRegionActive && (
+              {(previewRegionActive || hiddenBrowserRuntimeActive) && (
                 <div
                   data-project-preview-region
                   className='preview-panel flex flex-col relative overflow-visible'
-                  style={{
-                    width: `${Math.round(previewWidthPx)}px`,
-                    flexGrow: 0,
-                    flexShrink: 0,
-                    // 只保留左边框作为与会话区的分界；上/右/下不留边距，
-                    // 否则窗口底色会从缝隙里透出来（深色模式下尤其突兀）。
-                    // Left border only, as the divider from the chat area. No outer
-                    // margins: any gap would expose the window's own background,
-                    // which is jarring in dark mode.
-                    borderLeft: '1px solid var(--bg-3)',
-                    minWidth: `${MIN_PREVIEW_PANEL_PX}px`,
-                    boxSizing: 'border-box',
-                  }}
+                  style={
+                    previewRegionActive
+                      ? {
+                          width: `${Math.round(previewWidthPx)}px`,
+                          flexGrow: 0,
+                          flexShrink: 0,
+                          // 只保留左边框作为与会话区的分界；上/右/下不留边距，
+                          // 否则窗口底色会从缝隙里透出来（深色模式下尤其突兀）。
+                          // Left border only, as the divider from the chat area. No outer
+                          // margins: any gap would expose the window's own background,
+                          // which is jarring in dark mode.
+                          borderLeft: '1px solid var(--bg-3)',
+                          minWidth: `${MIN_PREVIEW_PANEL_PX}px`,
+                          boxSizing: 'border-box',
+                        }
+                      : {
+                          position: 'fixed',
+                          width: '1px',
+                          height: '1px',
+                          overflow: 'hidden',
+                          visibility: 'hidden',
+                          pointerEvents: 'none',
+                        }
+                  }
                 >
-                  {createPreviewRegionDragHandle({
-                    className: 'absolute top-0 bottom-0 z-30',
-                    style: { width: '20px', left: '-20px' },
-                    reverse: true,
-                    linePlacement: 'end',
-                    lineClassName: 'opacity-30 group-hover:opacity-100 group-active:opacity-100',
-                    lineStyle: { width: '2px' },
-                  })}
+                  {previewRegionActive &&
+                    createPreviewRegionDragHandle({
+                      className: 'absolute top-0 bottom-0 z-30',
+                      style: { width: '20px', left: '-20px' },
+                      reverse: true,
+                      linePlacement: 'end',
+                      lineClassName: 'opacity-30 group-hover:opacity-100 group-active:opacity-100',
+                      lineStyle: { width: '2px' },
+                    })}
                   <div className='h-full w-full overflow-hidden'>
                     <PreviewPanel />
                   </div>

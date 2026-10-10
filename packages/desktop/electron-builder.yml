@@ -61,6 +61,8 @@ files:
   - '!**/node_modules/tree-sitter-*/**/*.cc'
   - '!**/node_modules/tree-sitter-*/**/*.c'
   # Exclude dev/test files
+  - '!**/.env'
+  - '!**/.env.*'
   - '!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}'
   - '!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}'
   - '!**/node_modules/*/{*.test.js,*.spec.js,*.test.ts,*.spec.ts}'
@@ -103,6 +105,31 @@ files:
     to: static
 
 extraResources:
+  - from: ../LICENSE
+    to: licenses/ellmsha/LICENSE
+  - from: ../LICENSING.md
+    to: licenses/ellmsha/LICENSING.md
+  - from: ../aionui/LICENSE
+    to: licenses/aionui/LICENSE
+  - from: ../aioncore/LICENSE
+    to: licenses/aioncore/LICENSE
+  - from: ../aionrs/LICENSE
+    to: licenses/aionrs/LICENSE
+  - from: ../tencentdb-agent-memory/LICENSE
+    to: licenses/tencentdb-agent-memory/LICENSE
+  - from: ../bmad-method/LICENSE
+    to: licenses/bmad-method/LICENSE
+  - from: ../ponytail/LICENSE
+    to: licenses/ponytail/LICENSE
+  - from: ../mobile-mcp/LICENSE
+    to: licenses/mobile-mcp/LICENSE
+  - from: ../chrome-devtools-mcp/LICENSE
+    to: licenses/chrome-devtools-mcp/LICENSE
+  - from: ../open-codex-computer-use/LICENSE
+    to: licenses/open-codex-computer-use/LICENSE
+  # Preserve provenance excluded by electron-builder's main-file defaults.
+  - from: out/main/chrome-devtools-mcp/package-lock.json
+    to: app.asar.unpacked/out/main/chrome-devtools-mcp/package-lock.json
   - from: resources/tencent-memory
     to: tencent-memory
   - from: public
@@ -117,6 +144,15 @@ extraResources:
     to: global-skills/bmad
   - from: ../ponytail/skills
     to: global-skills/ponytail
+  - from: ../plugins
+    to: plugins
+  - from: ../.data/mobile-mcp-runtime
+    to: mobile-mcp
+  # electron-builder excludes a source root's node_modules; copy it explicitly.
+  - from: ../.data/mobile-mcp-runtime/node_modules
+    to: mobile-mcp/node_modules
+  - from: ../.data/open-computer-use-runtime
+    to: open-computer-use
   # aioncore binary (pre-compiled per platform/arch, ships its own bun runtime)
   - from: resources/bundled-aioncore
     to: bundled-aioncore
@@ -177,11 +213,12 @@ afterSign: scripts/afterSign.js
 linux:
   target:
     - deb
+    - flatpak
   icon: resources/app.png
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
   category: Utility
-  maintainer: aionui
-  vendor: aionui
+  maintainer: Moroz Inc.
+  vendor: Moroz Inc.
   synopsis: ${description}
   description: ${description}
   desktop:
@@ -191,6 +228,24 @@ linux:
       Icon: eLLMsha
       Categories: Office;Utility;
       MimeType: x-scheme-handler/aionui;
+
+flatpak:
+  runtime: org.freedesktop.Platform
+  sdk: org.freedesktop.Sdk
+  runtimeVersion: '26.08'
+  base: org.electronjs.Electron2.BaseApp
+  baseVersion: '26.08'
+  branch: stable
+  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+  finishArgs:
+    - --socket=wayland
+    - --socket=fallback-x11
+    - --share=ipc
+    - --share=network
+    - --device=dri
+    - --filesystem=home
+    - --talk-name=org.freedesktop.Notifications
+    - --talk-name=org.kde.StatusNotifierWatcher
 
 npmRebuild: false
 buildDependenciesFromSource: false
@@ -217,7 +272,10 @@ asarUnpack:
   # Builtin MCP server scripts must be unpacked so external node processes can execute them
   - 'out/main/builtin-mcp-image-gen.js'
   - 'out/main/builtin-mcp-browser.js'
+  - 'out/main/builtin-mcp-chrome-devtools.js'
+  - 'out/main/chrome-devtools-mcp/**/*'
   - 'out/main/builtin-mcp-tencent-memory.js'
+  - 'out/main/builtin-mcp-chat-history.js'
   - 'out/main/team-mcp-stdio.js'
 
 # Compression level: normal for faster builds, maximum for smallest size

@@ -1,47 +1,10 @@
 import type { ConfigKey, ConfigKeyMap } from './configKeys';
+import { httpRequest } from '@/common/adapter/httpBridge';
 
 type Subscriber = (value: unknown) => void;
 
-declare global {
-  interface Window {
-    __backendPort?: number;
-  }
-}
-
-function getBaseUrl(): string {
-  // WebUI browser mode: no preload, fetch same-origin so web-host's
-  // static-server reverse-proxies /api/* to the backend.
-  if (typeof window !== 'undefined' && typeof document !== 'undefined' && !(window as Window).__backendPort) {
-    return '';
-  }
-  const port = typeof window !== 'undefined' ? (window as Window).__backendPort || 13400 : 13400;
-  return `http://127.0.0.1:${port}`;
-}
-
 async function fetchJson<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const url = `${getBaseUrl()}${path}`;
-  const headers: Record<string, string> = {};
-  if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`ConfigService ${method} ${path} failed (${response.status}): ${errorBody}`);
-  }
-  const contentType = response.headers.get('Content-Type');
-  if (!contentType?.includes('application/json')) {
-    return undefined as T;
-  }
-  const json = await response.json();
-  if (json && typeof json === 'object' && 'data' in json) {
-    return json.data as T;
-  }
-  return json as T;
+  return httpRequest<T>(method, path, body);
 }
 
 class ConfigServiceImpl {

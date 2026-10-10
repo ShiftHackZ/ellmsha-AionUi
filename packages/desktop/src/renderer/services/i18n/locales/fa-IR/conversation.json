@@ -76,7 +76,15 @@
     "deleting": "در حال حذف...",
     "reorderPinned": "برای تغییر ترتیب گفتگوی سنجاق‌شده بکشید",
     "forkedFrom": "انشعاب از «{{name}}»",
-    "forkedConversation": "گفتگوی منشعب"
+    "forkedConversation": "گفتگوی منشعب",
+    "subagentStatus": {
+      "pending_init": "در حال شروع",
+      "running": "در حال اجرا",
+      "completed": "تکمیل‌شده",
+      "errored": "ناموفق",
+      "interrupted": "متوقف‌شده",
+      "shutdown": "خاموش"
+    }
   },
   "historySearch": {
     "tooltip": "جستجوی پیام‌ها",

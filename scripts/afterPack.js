@@ -9,6 +9,9 @@ const {
   getModulesToRebuild,
 } = require('./rebuildNativeModules');
 const { verifyBundledAioncoreResources } = require('../packages/shared-scripts/src/verify-bundled-aioncore-resources');
+const { verifyMobileMcpRuntime } = require('../../scripts/prepare-mobile-mcp.js');
+const { verifyChromeDevtoolsMcpRuntime } = require('../../scripts/prepare-chrome-devtools-mcp.js');
+const { verifyOpenComputerUseRuntime } = require('../../scripts/prepare-open-computer-use.js');
 
 /**
  * afterPack hook for electron-builder
@@ -34,7 +37,34 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
     throw new Error(`Packaged app is missing required bundled resource(s): ${result.missing.join(', ')}`);
   }
 
-  console.log(`   ✓ Bundled resources verified for ${result.runtimeKey} (${result.checked.length} checks)`);
+  const integrationResources = [
+    'plugins/mobile/aion-extension.json',
+    'plugins/computer-use/aion-extension.json',
+    'plugins/clockify/aion-extension.json',
+  ];
+  const missingIntegrations = integrationResources.filter(
+    (relativePath) => !fs.existsSync(path.join(resourcesDir, relativePath))
+  );
+  if (missingIntegrations.length > 0) {
+    throw new Error(`Packaged app is missing required integration resource(s): ${missingIntegrations.join(', ')}`);
+  }
+  const mobile = verifyMobileMcpRuntime({
+    runtimeRoot: path.join(resourcesDir, 'mobile-mcp'),
+    targetPlatform: electronPlatformName,
+    targetArch,
+  });
+  const chromeDevtools = verifyChromeDevtoolsMcpRuntime({
+    runtimeRoot: path.join(resourcesDir, 'app.asar.unpacked', 'out', 'main', 'chrome-devtools-mcp'),
+  });
+  const computerUse = verifyOpenComputerUseRuntime({
+    runtimeRoot: path.join(resourcesDir, 'open-computer-use'),
+    targetPlatform: electronPlatformName,
+    targetArch,
+  });
+
+  console.log(
+    `   ✓ Bundled resources verified for ${result.runtimeKey} (${result.checked.length + integrationResources.length + mobile.checked.length + chromeDevtools.checked.length + computerUse.checked.length} checks)`
+  );
 }
 
 module.exports = async function afterPack(context) {

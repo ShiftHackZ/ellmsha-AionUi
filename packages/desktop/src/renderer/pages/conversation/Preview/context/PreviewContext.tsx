@@ -65,6 +65,10 @@ export interface OpenPreviewOptions {
    * tab to avoid losing changes).
    */
   replace?: boolean;
+  /** Stable id supplied by the browser bridge for an agent-created tab. */
+  tabId?: string;
+  /** Keep the current tab visible while mounting this tab in the background. */
+  activate?: boolean;
 }
 
 /**
@@ -101,7 +105,7 @@ export interface PreviewContextValue {
    * 打开浏览器 tab，省略 url 则开空白页。
    * Open a browser tab; blank page when url is omitted.
    */
-  openBrowserTab: (url?: string) => void;
+  openBrowserTab: (url?: string, options?: Pick<OpenPreviewOptions, 'tabId' | 'activate'>) => void;
   closePreview: () => void;
   closeTab: (tabId: string) => void;
   switchTab: (tabId: string) => void;
@@ -148,6 +152,8 @@ const PreviewContext = createContext<PreviewContextValue | null>(null);
 // `previewScope.ts`), so each project restores its own open tabs + visibility
 // when switching conversations / projects. Key: `aionui_preview:<scope>`.
 const previewScopeStorageKey = (scope: string): string => `aionui_preview:${scope}`;
+const LAST_PREVIEW_SCOPE_STORAGE_KEY = 'aionui_preview:last_scope';
+const AGENT_BROWSER_SCOPE = '__agent_browser__';
 
 /** Persisted per-scope preview state. */
 type PersistedScopeState = { isOpen: boolean; tabs: PreviewTab[]; activeTabId: string | null };
@@ -222,6 +228,31 @@ const loadScopeState = (scope: string): PersistedScopeState => {
   }
 };
 
+const loadInitialScopeState = (): { scope: PreviewScopeKey; state: PersistedScopeState; ready: boolean } => {
+  try {
+    const remembered = localStorage.getItem(LAST_PREVIEW_SCOPE_STORAGE_KEY);
+    if (remembered && localStorage.getItem(previewScopeStorageKey(remembered))) {
+      return { scope: remembered, state: loadScopeState(remembered), ready: true };
+    }
+    if (remembered) localStorage.removeItem(LAST_PREVIEW_SCOPE_STORAGE_KEY);
+
+    const scopes = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+      .filter((key): key is string => !!key?.startsWith('aionui_preview:') && key !== LAST_PREVIEW_SCOPE_STORAGE_KEY)
+      .map((key) => key.slice('aionui_preview:'.length));
+    const stored = scopes.map((scope) => ({ scope, state: loadScopeState(scope) }));
+    const browserScopes = stored.filter(({ state }) => state.tabs.some((tab) => tab.content_type === 'browser'));
+    const selected = browserScopes.length === 1 ? browserScopes[0] : stored.length === 1 ? stored[0] : undefined;
+    if (selected) {
+      localStorage.setItem(LAST_PREVIEW_SCOPE_STORAGE_KEY, selected.scope);
+      return { ...selected, ready: true };
+    }
+    if (browserScopes.length === 0) return { scope: null, state: EMPTY_SCOPE_STATE, ready: true };
+  } catch {
+    // Storage unavailable: stay not-ready until a conversation establishes a scope.
+  }
+  return { scope: null, state: EMPTY_SCOPE_STATE, ready: false };
+};
+
 /** Persist a scope's preview state (lightweight text tabs + active tab + visibility). */
 const persistScopeState = (scope: string, state: PersistedScopeState): void => {
   try {
@@ -233,14 +264,17 @@ const persistScopeState = (scope: string, state: PersistedScopeState): void => {
   }
 };
 
+const browserTabIds = (tabs: PreviewTab[]): string[] =>
+  tabs.filter((tab) => tab.content_type === 'browser').map((tab) => tab.id);
+
 export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // State starts empty; the active scope's persisted state is loaded on the first
-  // `closePreviewIfScopeChanged` (per-project restore, see switchScope below).
-  const [isOpen, setIsOpen] = useState(false);
-  const [tabs, setTabs] = useState<PreviewTab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [initialScope] = useState(loadInitialScopeState);
+  const [isOpen, setIsOpen] = useState(initialScope.state.isOpen);
+  const [tabs, setTabs] = useState<PreviewTab[]>(initialScope.state.tabs);
+  const [activeTabId, setActiveTabId] = useState<string | null>(initialScope.state.activeTabId);
   // The preview scope currently loaded into state (project id / workspace / null).
-  const currentScopeRef = useRef<PreviewScopeKey>(null);
+  const currentScopeRef = useRef<PreviewScopeKey>(initialScope.scope);
+  const browserInventoryReadyRef = useRef(initialScope.ready);
   // Mirror activeTabId in a ref so setTabs updaters can read the latest value
   // without adding activeTabId to their dependencies.
   const activeTabIdRef = useRef<string | null>(null);
@@ -267,6 +301,20 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, 150);
     return () => clearTimeout(timer);
   }, [tabs, activeTabId, isOpen]);
+
+  useEffect(() => {
+    void ipcBridge.application.reportBrowserTabInventory.invoke({
+      ready: browserInventoryReadyRef.current,
+      tabIds: browserTabIds(tabs),
+    });
+  }, [tabs]);
+
+  useEffect(
+    () => () => {
+      void ipcBridge.application.reportBrowserTabInventory.invoke({ ready: false, tabIds: [] });
+    },
+    []
+  );
 
   // 追踪是否正在保存（避免与流式更新冲突）/ Track if currently saving (to avoid conflicts with streaming updates)
   const savingFilesRef = useRef<Set<string>>(new Set());
@@ -389,6 +437,9 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type === 'browser' &&
         currentTabs.filter((tab) => tab.content_type === 'browser').length >= MAX_BROWSER_TABS;
       if (atBrowserTabLimit) setBrowserTabLimitHitAt(Date.now());
+      // Explicit IDs are lifecycle requests from the agent. Never satisfy one by
+      // replacing a user tab, because that would make the returned stable ID lie.
+      if (atBrowserTabLimit && options?.tabId) return;
 
       // Tab 标题：优先使用文件名，并从 title 中提取实际文件名
       // Tab title: Prefer file_name and extract actual filename from title
@@ -421,8 +472,9 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         : null;
 
       // 生成唯一 ID / Generate unique ID
-      const newTabId = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      const targetTabId = existingTab?.id ?? replaceTarget?.id ?? cappedTarget?.id ?? newTabId;
+      const newTabId = options?.tabId || `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const targetTabId =
+        existingTab?.id ?? replaceTarget?.id ?? (cappedTarget && !options?.tabId ? cappedTarget.id : newTabId);
 
       setTabs((prevTabs) => {
         if (existingTab) {
@@ -458,7 +510,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return prevTabs.map((tab) => (tab.id === replaceTarget.id ? replacedTab : tab));
         }
 
-        if (cappedTarget) {
+        if (cappedTarget && !options?.tabId) {
           return prevTabs.map((tab) =>
             tab.id === cappedTarget.id ? { ...tab, content: new_content, title, metadata: meta } : tab
           );
@@ -467,7 +519,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return [...prevTabs, newTab];
       });
 
-      setActiveTabId(targetTabId);
+      if (options?.activate !== false || activeTabIdRef.current === null) setActiveTabId(targetTabId);
       setIsOpen(true);
     },
     [extractFileName, findPreviewTabInList]
@@ -486,8 +538,8 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
    * points, and they must agree on the blank address and fallback title.
    */
   const openBrowserTab = useCallback(
-    (url?: string) => {
-      openPreview(url?.trim() || BROWSER_BLANK_URL, 'browser');
+    (url?: string, options?: Pick<OpenPreviewOptions, 'tabId' | 'activate'>) => {
+      openPreview(url?.trim() || BROWSER_BLANK_URL, 'browser', undefined, options);
     },
     [openPreview]
   );
@@ -508,14 +560,27 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     (scopeKey: PreviewScopeKey) => {
       const prev = currentScopeRef.current;
       if (prev === scopeKey) return;
+      void ipcBridge.application.reportBrowserTabInventory.invoke({ ready: false, tabIds: [] });
       if (prev != null) persistScopeState(prev, { isOpen, tabs, activeTabId });
       currentScopeRef.current = scopeKey;
+      browserInventoryReadyRef.current = scopeKey !== null;
+      if (scopeKey != null) {
+        try {
+          localStorage.setItem(LAST_PREVIEW_SCOPE_STORAGE_KEY, scopeKey);
+        } catch {
+          // storage unavailable — the loaded in-memory scope still works
+        }
+      }
       const loaded = scopeKey != null ? loadScopeState(scopeKey) : EMPTY_SCOPE_STATE;
       setTabs(loaded.tabs);
       setActiveTabId(loaded.activeTabId);
       activeTabIdRef.current = loaded.activeTabId;
       setIsOpen(loaded.isOpen);
       setDomSnippets([]);
+      void ipcBridge.application.reportBrowserTabInventory.invoke({
+        ready: browserInventoryReadyRef.current,
+        tabIds: browserTabIds(loaded.tabs),
+      });
     },
     [isOpen, tabs, activeTabId]
   );
@@ -551,6 +616,51 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     },
     [activeTabId]
   );
+
+  useEffect(() => {
+    return ipcBridge.application.browserTabCommand.on((command) => {
+      const existing = tabsRef.current.find((tab) => tab.id === command.tabId && tab.content_type === 'browser');
+
+      if (command.action === 'create') {
+        const browserCount = tabsRef.current.filter((tab) => tab.content_type === 'browser').length;
+        if (!existing && browserCount >= MAX_BROWSER_TABS) {
+          void ipcBridge.application.reportBrowserTabCommandFailure.invoke({
+            tabId: command.tabId,
+            reason: `The in-app browser already has its maximum of ${MAX_BROWSER_TABS} tabs.`,
+          });
+        } else if (!existing) {
+          if (currentScopeRef.current === null && browserInventoryReadyRef.current) {
+            currentScopeRef.current = AGENT_BROWSER_SCOPE;
+            try {
+              localStorage.setItem(LAST_PREVIEW_SCOPE_STORAGE_KEY, AGENT_BROWSER_SCOPE);
+            } catch {
+              // The tab still works for this renderer lifetime when storage is unavailable.
+            }
+          }
+          openBrowserTab(command.url, { tabId: command.tabId, activate: command.activate });
+        } else if (command.activate) {
+          setActiveTabId(command.tabId);
+          setIsOpen(true);
+        }
+        return;
+      }
+
+      if (!existing) {
+        void ipcBridge.application.reportBrowserTabCommandFailure.invoke({
+          tabId: command.tabId,
+          reason: `No such in-app browser tab: ${command.tabId}`,
+        });
+        return;
+      }
+      if (command.action === 'activate') {
+        setActiveTabId(command.tabId);
+        setIsOpen(true);
+        return;
+      }
+
+      closeTab(command.tabId);
+    });
+  }, [closeTab, openBrowserTab]);
 
   const closePreviewByIdentity = useCallback(
     (type: PreviewContentType, content?: string, meta?: PreviewMetadata) => {

@@ -42,13 +42,19 @@ const AboutModalContent: React.FC = () => {
               type='text'
               className='!text-t-primary !px-0'
               icon={<Github size={18} className='mr-8px' />}
-              onClick={() => void openExternalUrl(component.url)}
+              onClick={() => void openExternalUrl(component.forkUrl ?? component.url)}
             >
               {component.name}
             </Button>
             <div className='flex items-center gap-8px'>
               <Tooltip content={component.commit}>
-                <Tag bordered>{t('settings.upstreamVersion', { version: component.upstream })}</Tag>
+                {component.forkUrl ? (
+                  <Button type='text' size='mini' className='!px-0' onClick={() => void openExternalUrl(component.url)}>
+                    <Tag bordered>{t('settings.upstreamVersion', { version: component.upstream })}</Tag>
+                  </Button>
+                ) : (
+                  <Tag bordered>{t('settings.upstreamVersion', { version: component.upstream })}</Tag>
+                )}
               </Tooltip>
               <Tag bordered>{t('settings.componentPatch', { patch: component.patch })}</Tag>
             </div>

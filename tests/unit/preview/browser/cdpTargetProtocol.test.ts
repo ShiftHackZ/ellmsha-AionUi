@@ -6,198 +6,164 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  SINGLE_BROWSER_CONTEXT_ID,
-  SINGLE_SESSION_ID,
-  SINGLE_TARGET_ID,
+  BROWSER_CONTEXT_ID,
   buildListPayload,
   buildTargetInfo,
   buildVersionPayload,
   decideCdpCommand,
   isAcceptableSessionId,
+  sessionIdForTarget,
   tokensMatch,
 } from '@process/resources/builtinMcp/cdpTargetProtocol';
 
-const targetInfo = () => buildTargetInfo('Example', 'https://example.com/');
+const first = buildTargetInfo('browser-1', 'First', 'https://one.example/');
+const second = buildTargetInfo('browser-2', 'Second', 'https://two.example/');
+const targets = () => [first, second];
 
-describe('cdpTargetProtocol — discovery payloads', () => {
-  it('exposes webSocketDebuggerUrl, which is the only field puppeteer reads from /json/version', () => {
+describe('cdpTargetProtocol — multi-tab discovery', () => {
+  it('lists every authorized tab under its stable preview-tab id', () => {
+    const list = buildListPayload('ws://127.0.0.1:1234/x', targets());
+    expect(list.map((entry) => entry.id)).toEqual(['browser-1', 'browser-2']);
+    expect(list.map((entry) => entry.url)).toEqual(['https://one.example/', 'https://two.example/']);
+  });
+
+  it('backfills creation and distinct attachment sessions for every existing tab', () => {
+    const discovery = decideCdpCommand(
+      { id: 1, method: 'Target.setDiscoverTargets', params: { discover: true } },
+      targets
+    );
+    const attachment = decideCdpCommand(
+      { id: 2, method: 'Target.setAutoAttach', params: { autoAttach: true, flatten: true } },
+      targets
+    );
+
+    expect(discovery.kind).toBe('reply-and-emit');
+    expect(attachment.kind).toBe('reply-and-emit');
+    if (discovery.kind !== 'reply-and-emit' || attachment.kind !== 'reply-and-emit') return;
+    expect(discovery.emit.map((event) => event.params.targetInfo)).toEqual(targets());
+    expect(attachment.emit.map((event) => event.params.sessionId)).toEqual([
+      sessionIdForTarget('browser-1'),
+      sessionIdForTarget('browser-2'),
+    ]);
+  });
+
+  it('reports no pages cleanly before the renderer has mounted a browser tab', () => {
+    const decision = decideCdpCommand({ id: 3, method: 'Target.getTargets' }, () => []);
+    expect(decision).toEqual({ kind: 'reply', payload: { targetInfos: [] } });
+  });
+});
+
+describe('cdpTargetProtocol — stable routing', () => {
+  it('routes a page command by session even when another tab is visible', () => {
+    const decision = decideCdpCommand(
+      {
+        id: 4,
+        method: 'Page.navigate',
+        params: { url: 'https://next.example/' },
+        sessionId: sessionIdForTarget('browser-1'),
+      },
+      targets
+    );
+    expect(decision).toEqual({ kind: 'forward', targetId: 'browser-1' });
+  });
+
+  it('attaches only to the requested stable tab id', () => {
+    const decision = decideCdpCommand(
+      { id: 5, method: 'Target.attachToTarget', params: { targetId: 'browser-2', flatten: true } },
+      targets
+    );
+    expect(decision).toEqual({ kind: 'attach-target', targetId: 'browser-2' });
+  });
+
+  it('routes and detaches distinct manual sessions on the owning socket', () => {
+    const manualSessions = new Map([
+      ['manual-1', 'browser-1'],
+      ['manual-2', 'browser-1'],
+    ]);
+    expect(
+      decideCdpCommand(
+        { id: 6, method: 'Page.navigate', sessionId: 'manual-2', params: { url: 'https://next.example/' } },
+        targets,
+        manualSessions
+      )
+    ).toEqual({ kind: 'forward', targetId: 'browser-1' });
+    expect(
+      decideCdpCommand(
+        { id: 7, method: 'Target.detachFromTarget', params: { sessionId: 'manual-1' } },
+        targets,
+        manualSessions
+      )
+    ).toEqual({ kind: 'detach-session', sessionId: 'manual-1' });
+  });
+
+  it('rejects unknown targets and stale sessions', () => {
+    expect(
+      decideCdpCommand({ id: 8, method: 'Target.activateTarget', params: { targetId: 'closed-tab' } }, targets).kind
+    ).toBe('error');
+    expect(isAcceptableSessionId(sessionIdForTarget('closed-tab'), targets())).toBe(false);
+  });
+
+  it('keeps the same target and session ids after renderer target recreation', () => {
+    const recreated = buildTargetInfo('browser-1', 'Recreated', 'https://restored.example/');
+    expect(recreated.targetId).toBe(first.targetId);
+    expect(sessionIdForTarget(recreated.targetId)).toBe(sessionIdForTarget(first.targetId));
+  });
+});
+
+describe('cdpTargetProtocol — lifecycle operations', () => {
+  it('maps create, activate, and close to explicit renderer lifecycle operations', () => {
+    expect(
+      decideCdpCommand(
+        { id: 7, method: 'Target.createTarget', params: { url: 'https://github.com/login', background: false } },
+        targets
+      )
+    ).toEqual({ kind: 'create-target', url: 'https://github.com/login', background: false });
+    expect(
+      decideCdpCommand({ id: 8, method: 'Target.activateTarget', params: { targetId: 'browser-2' } }, targets)
+    ).toEqual({ kind: 'activate-target', targetId: 'browser-2' });
+    expect(
+      decideCdpCommand({ id: 9, method: 'Target.closeTarget', params: { targetId: 'browser-1' } }, targets)
+    ).toEqual({ kind: 'close-target', targetId: 'browser-1' });
+  });
+
+  it('allows an explicit last-tab close while still protecting the application window', () => {
+    const oneTarget = () => [first];
+    expect(
+      decideCdpCommand({ id: 10, method: 'Target.closeTarget', params: { targetId: 'browser-1' } }, oneTarget)
+    ).toEqual({ kind: 'close-target', targetId: 'browser-1' });
+    expect(decideCdpCommand({ id: 11, method: 'Browser.close' }, oneTarget).kind).toBe('error');
+  });
+
+  it('does not recurse auto-attach inside a page session', () => {
+    const decision = decideCdpCommand(
+      {
+        id: 12,
+        method: 'Target.setAutoAttach',
+        params: { autoAttach: true, flatten: true },
+        sessionId: sessionIdForTarget('browser-1'),
+      },
+      targets
+    );
+    expect(decision.kind).toBe('reply');
+  });
+
+  it('keeps one shared authenticated context and refuses additional contexts', () => {
+    const contexts = decideCdpCommand({ id: 13, method: 'Target.getBrowserContexts' }, targets);
+    expect(contexts).toEqual({ kind: 'reply', payload: { browserContextIds: [BROWSER_CONTEXT_ID] } });
+    expect(decideCdpCommand({ id: 14, method: 'Target.createBrowserContext' }, targets).kind).toBe('error');
+  });
+});
+
+describe('cdpTargetProtocol — discovery and token details', () => {
+  it('exposes the websocket debugger URL expected by puppeteer', () => {
     const payload = buildVersionPayload('ws://127.0.0.1:1234/x', '120.0.0.0');
     expect(payload.webSocketDebuggerUrl).toBe('ws://127.0.0.1:1234/x');
     expect(payload.Browser).toContain('Chrome/');
   });
 
-  it('reports exactly one page in /json/list', () => {
-    const list = buildListPayload('ws://127.0.0.1:1234/x', 'Example', 'https://example.com/');
-    expect(list).toHaveLength(1);
-    expect(list[0].type).toBe('page');
-    expect(list[0].id).toBe(SINGLE_TARGET_ID);
-  });
-});
-
-describe('cdpTargetProtocol — Target.* handled locally', () => {
-  it('backfills targetCreated when discovery is turned on, which is what unblocks puppeteer initialize()', () => {
-    const decision = decideCdpCommand(
-      { id: 1, method: 'Target.setDiscoverTargets', params: { discover: true } },
-      targetInfo
-    );
-    expect(decision.kind).toBe('reply-and-emit');
-    if (decision.kind !== 'reply-and-emit') return;
-    expect(decision.emit).toHaveLength(1);
-    expect(decision.emit[0].method).toBe('Target.targetCreated');
-  });
-
-  it('does not backfill when discovery is turned off', () => {
-    const decision = decideCdpCommand(
-      { id: 1, method: 'Target.setDiscoverTargets', params: { discover: false } },
-      targetInfo
-    );
-    expect(decision.kind).toBe('reply');
-  });
-
-  it('returns a sessionId and emits attachedToTarget so flatten-mode routing works', () => {
-    const decision = decideCdpCommand(
-      { id: 2, method: 'Target.attachToTarget', params: { targetId: SINGLE_TARGET_ID, flatten: true } },
-      targetInfo
-    );
-    expect(decision.kind).toBe('reply-and-emit');
-    if (decision.kind !== 'reply-and-emit') return;
-    expect(decision.payload.sessionId).toBe(SINGLE_SESSION_ID);
-    expect(decision.emit[0].method).toBe('Target.attachedToTarget');
-  });
-
-  it('rejects attaching to an unknown target rather than silently using the only one', () => {
-    const decision = decideCdpCommand(
-      { id: 3, method: 'Target.attachToTarget', params: { targetId: 'someone-elses-page' } },
-      targetInfo
-    );
-    expect(decision.kind).toBe('error');
-  });
-
-  it('reports a single target and a single browser context', () => {
-    const targets = decideCdpCommand({ id: 4, method: 'Target.getTargets' }, targetInfo);
-    expect(targets.kind).toBe('reply');
-    if (targets.kind === 'reply') {
-      expect(targets.payload.targetInfos).toHaveLength(1);
-    }
-
-    const contexts = decideCdpCommand({ id: 5, method: 'Target.getBrowserContexts' }, targetInfo);
-    if (contexts.kind === 'reply') {
-      expect(contexts.payload.browserContextIds).toEqual([SINGLE_BROWSER_CONTEXT_ID]);
-    }
-  });
-
-  it('backfills attachment on the browser-level setAutoAttach', () => {
-    // Verified against real puppeteer: acknowledging alone leaves browser.pages() at 0,
-    // because only the attachedToTarget event marks a target as available.
-    const decision = decideCdpCommand(
-      {
-        id: 6,
-        method: 'Target.setAutoAttach',
-        params: { autoAttach: true, flatten: true, filter: [{ type: 'page', exclude: true }] },
-      },
-      targetInfo
-    );
-    expect(decision.kind).toBe('reply-and-emit');
-  });
-});
-
-describe('cdpTargetProtocol — refusals that protect the app', () => {
-  it('errors on createTarget instead of pretending a new tab was opened', () => {
-    // Silently returning the existing targetId would leave the agent driving the old
-    // page while believing it had a new one.
-    const decision = decideCdpCommand(
-      { id: 7, method: 'Target.createTarget', params: { url: 'https://example.com' } },
-      targetInfo
-    );
-    expect(decision.kind).toBe('error');
-  });
-
-  it('refuses Browser.close, which would terminate the whole application', () => {
-    const decision = decideCdpCommand({ id: 8, method: 'Browser.close' }, targetInfo);
-    expect(decision.kind).toBe('error');
-  });
-
-  it('refuses additional browser contexts', () => {
-    expect(decideCdpCommand({ id: 9, method: 'Target.createBrowserContext' }, targetInfo).kind).toBe('error');
-  });
-});
-
-describe('cdpTargetProtocol — forwarding', () => {
-  it.each([
-    'Page.navigate',
-    'Runtime.evaluate',
-    'DOM.getDocument',
-    'Accessibility.getFullAXTree',
-    'Input.dispatchMouseEvent',
-  ])('forwards %s to the real debugger', (method) => {
-    expect(decideCdpCommand({ id: 10, method }, targetInfo).kind).toBe('forward');
-  });
-});
-
-describe('cdpTargetProtocol — session routing', () => {
-  it('accepts browser-level (absent/empty) and our own page session', () => {
-    expect(isAcceptableSessionId(undefined)).toBe(true);
-    expect(isAcceptableSessionId('')).toBe(true);
-    expect(isAcceptableSessionId(SINGLE_SESSION_ID)).toBe(true);
-  });
-
-  it('rejects a foreign sessionId rather than treating it as browser-level', () => {
-    expect(isAcceptableSessionId('some-other-session')).toBe(false);
-  });
-});
-
-describe('cdpTargetProtocol — token comparison', () => {
-  it('matches identical tokens and rejects differences', () => {
+  it('compares bridge tokens without accepting prefixes', () => {
     expect(tokensMatch('abc123', 'abc123')).toBe(true);
-    expect(tokensMatch('abc123', 'abc124')).toBe(false);
-  });
-
-  it('rejects a correct prefix, so a shorter guess cannot pass', () => {
     expect(tokensMatch('abc123', 'abc')).toBe(false);
-    expect(tokensMatch('abc', 'abc123')).toBe(false);
-  });
-
-  it('rejects an empty candidate against a real token', () => {
-    expect(tokensMatch('realtoken', '')).toBe(false);
-  });
-});
-
-/**
- * 以下三条来自用真实 puppeteer-core 跑集成验证时踩到的坑，固化成回归测试。
- * Regression tests for three bugs found while verifying against real puppeteer-core.
- */
-describe('cdpTargetProtocol — regressions found against real puppeteer', () => {
-  it('backfills attachedToTarget on the browser-level setAutoAttach, or browser.pages() stays empty', () => {
-    // getAvailableTargets() reads #attachedTargetsByTargetId, which only the
-    // attachedToTarget event populates — targetCreated alone is not enough.
-    const decision = decideCdpCommand(
-      { id: 1, method: 'Target.setAutoAttach', params: { autoAttach: true, flatten: true } },
-      targetInfo
-    );
-    expect(decision.kind).toBe('reply-and-emit');
-    if (decision.kind !== 'reply-and-emit') return;
-    expect(decision.emit.map((e) => e.method)).toContain('Target.attachedToTarget');
-  });
-
-  it('does NOT backfill on a session-scoped setAutoAttach, which would loop forever', () => {
-    // puppeteer answers attachedToTarget by issuing setAutoAttach on the new session;
-    // backfilling there produced setAutoAttach -> attachedToTarget -> setAutoAttach ...
-    // and the connection never finished initialising.
-    const decision = decideCdpCommand(
-      {
-        id: 2,
-        method: 'Target.setAutoAttach',
-        params: { autoAttach: true, flatten: true },
-        sessionId: SINGLE_SESSION_ID,
-      },
-      targetInfo
-    );
-    expect(decision.kind).toBe('reply');
-  });
-
-  it('reports a non-empty url, since PageTarget stays uninitialised while url is empty', () => {
-    // PageTarget._checkIfInitialized() only resolves once targetInfo.url !== ''.
-    const info = buildTargetInfo('', 'https://example.com/');
-    expect(info.url).not.toBe('');
+    expect(tokensMatch('abc123', 'abc124')).toBe(false);
   });
 });

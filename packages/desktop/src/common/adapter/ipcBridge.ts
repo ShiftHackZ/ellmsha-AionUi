@@ -504,6 +504,37 @@ export interface IRendererLogEntry {
   data?: unknown;
 }
 
+export type BrowserTabRegistration = {
+  tabId: string;
+  webContentsId: number;
+  active: boolean;
+};
+
+export type BrowserTabInventory = {
+  ready: boolean;
+  tabIds: string[];
+};
+
+export type BrowserTabCommand =
+  | { action: 'create'; tabId: string; url: string; activate: boolean }
+  | { action: 'activate'; tabId: string }
+  | { action: 'close'; tabId: string };
+
+export type BrowserTabCommandFailure = {
+  tabId: string;
+  reason: string;
+};
+
+export type ComputerUsePermissionValue = 'granted' | 'missing' | 'unknown';
+
+export type IComputerUsePermissionStatus = {
+  supported: boolean;
+  platform: string;
+  accessibility: ComputerUsePermissionValue;
+  screenRecording: ComputerUsePermissionValue;
+  onboardingOpened: boolean;
+};
+
 // ---------------------------------------------------------------------------
 // Application — stays IPC (Electron-native)
 // ---------------------------------------------------------------------------
@@ -543,24 +574,24 @@ export const application = {
    * of every site the agent or user logged into.
    */
   clearBrowserData: bridge.buildProvider<IBridgeResponse<void>, void>('app.clear-browser-data'),
-  /**
-   * 渲染进程把侧边浏览器 webview 的 webContents id 报给主进程，用于把单目标 CDP 通道
-   * 附加到它。
-   *
-   * 为什么必须由渲染进程报：webview 的句柄只存在于渲染进程（webviewRef），主进程无法
-   * 凭空知道哪个 webContents 是「侧边浏览器」。主进程会校验 getType() === 'webview'，
-   * 所以即使这个通道被误用也无法拿主窗口去附加。
-   *
-   * The renderer reports the in-app browser webview's webContents id so the single-target
-   * CDP bridge can attach to it. It must come from the renderer because the webview handle
-   * only exists there (webviewRef); main cannot otherwise tell which WebContents is the
-   * in-app browser. Main validates getType() === 'webview', so even a misused call cannot
-   * attach to the main window.
-   */
-  reportBrowserWebContentsId: bridge.buildProvider<IBridgeResponse<void>, { webContentsId: number }>(
+  /** Register or refresh one stable in-app browser tab target. */
+  reportBrowserWebContentsId: bridge.buildProvider<IBridgeResponse<void>, BrowserTabRegistration>(
     'app.report-browser-webcontents-id'
   ),
+  /** Declare which persisted browser tabs the renderer is currently restoring. */
+  reportBrowserTabInventory: bridge.buildProvider<IBridgeResponse<void>, BrowserTabInventory>(
+    'app.report-browser-tab-inventory'
+  ),
+  /** Reject a main-process lifecycle request using the renderer's authoritative tab state. */
+  reportBrowserTabCommandFailure: bridge.buildProvider<IBridgeResponse<void>, BrowserTabCommandFailure>(
+    'app.report-browser-tab-command-failure'
+  ),
+  /** Main-process CDP lifecycle request handled by the renderer-owned tab model. */
+  browserTabCommand: bridge.buildEmitter<BrowserTabCommand>('app.browser-tab-command'),
   getStartOnBootStatus: bridge.buildProvider<IBridgeResponse<IStartOnBootStatus>, void>('app.get-start-on-boot-status'),
+  checkComputerUsePermissions: bridge.buildProvider<IBridgeResponse<IComputerUsePermissionStatus>, void>(
+    'app.check-computer-use-permissions'
+  ),
   setStartOnBoot: bridge.buildProvider<IBridgeResponse<IStartOnBootStatus>, { enabled: boolean }>(
     'app.set-start-on-boot'
   ),
@@ -726,23 +757,26 @@ export const fs = {
   deleteAssistantRule: httpDelete<boolean, { assistant_id: string }>(
     (p) => `/api/skills/assistant-rule/${p.assistant_id}`
   ),
-  listAvailableSkills: withResponseMap(httpGet<
-    Array<{
-      name: string;
-      description: string;
-      location: string;
-      relative_location?: string;
-      is_auto_inject: boolean;
-      is_custom: boolean;
-      source: 'builtin' | 'custom' | 'cron' | 'extension';
-    }>,
-    void
-  >('/api/skills'), (skills) => {
-    const names = new Set(skills.map((skill) => skill.name));
-    return skills.filter((skill) =>
-      !skill.name.startsWith('aionui-') || !names.has(skill.name.replace(/^aionui-/, 'ellmsha-'))
-    );
-  }),
+  listAvailableSkills: withResponseMap(
+    httpGet<
+      Array<{
+        name: string;
+        description: string;
+        location: string;
+        relative_location?: string;
+        is_auto_inject: boolean;
+        is_custom: boolean;
+        source: 'builtin' | 'custom' | 'cron' | 'extension';
+      }>,
+      void
+    >('/api/skills'),
+    (skills) => {
+      const names = new Set(skills.map((skill) => skill.name));
+      return skills.filter(
+        (skill) => !skill.name.startsWith('aionui-') || !names.has(skill.name.replace(/^aionui-/, 'ellmsha-'))
+      );
+    }
+  ),
   materializeSkillsForAgent: httpPost<
     { skills: Array<{ name: string; source_path: string }> },
     { conversation_id: string; skills: string[] }
@@ -1367,10 +1401,13 @@ export type INotificationOptions = {
   body: string;
   icon?: string;
   conversation_id?: string;
+  kind?: 'confirmation' | 'turnCompleted';
+  notification_id?: string;
 };
 
 export const notification = {
   show: bridge.buildProvider<void, INotificationOptions>('notification.show'),
+  close: bridge.buildProvider<void, { notification_id: string }>('notification.close'),
   clicked: bridge.buildEmitter<{ conversation_id?: string }>('notification.clicked'),
 };
 
@@ -1820,12 +1857,114 @@ interface IBridgeResponse<D = {}> {
 
 export interface IExtensionInfo {
   name: string;
-  display_name: string;
+  display_name?: string;
   version: string;
   description?: string;
   source: string;
   enabled: boolean;
+  package_format?: 'native' | 'agent_plugin' | 'codex' | 'claude';
+  supported_components?: string[];
+  unsupported_components?: Array<{ component: string; message: string }>;
+  compatibility_warnings?: Array<{ component: string; message: string }>;
+  source_provenance?: PluginSourceProvenance;
 }
+
+export type PluginSourceProvenance = {
+  source_type: 'local_path' | 'git';
+  path?: string;
+  url?: string;
+  ref?: string;
+  subdirectory?: string;
+  resolved_revision?: string;
+};
+
+export type InstallGitPluginRequest = {
+  type: 'git';
+  url: string;
+  ref?: string;
+  subdirectory?: string;
+};
+
+export type InstalledPluginResult = {
+  name: string;
+  version: string;
+  directory: string;
+  provenance: PluginSourceProvenance;
+};
+
+export type LinearConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnect_required' | 'error';
+
+export type LinearVerifiedIdentity = {
+  account_id: string;
+  account_name: string;
+  account_email: string;
+  workspace_id?: string;
+  workspace_name?: string;
+  workspace_url?: string;
+};
+
+export type LinearVerifiedCapabilities = {
+  issues_read: boolean;
+  issues_write: boolean;
+  comments_read: boolean;
+  comments_write: boolean;
+  attachment_metadata: boolean;
+  attachment_images: boolean;
+};
+
+export type LinearConnection = {
+  id: string;
+  namespace: string;
+  label: string;
+  status: LinearConnectionStatus;
+  identity?: LinearVerifiedIdentity;
+  capabilities: LinearVerifiedCapabilities;
+  last_error?: string;
+  migrated: boolean;
+  created_at: number;
+  updated_at: number;
+};
+
+export type LinearConnections = {
+  connections: LinearConnection[];
+};
+
+export type ClockifyRealm = 'global' | 'eu' | 'us' | 'uk' | 'au';
+
+export type ClockifyConnectionStatus = 'connected' | 'disconnected' | 'reconnect_required' | 'error';
+
+export type ClockifyVerifiedIdentity = {
+  account_id: string;
+  account_name: string;
+  account_email?: string;
+};
+
+export type ClockifyWorkspaceIdentity = {
+  id: string;
+  name: string;
+};
+
+export type ClockifyConnection = {
+  id: string;
+  namespace: string;
+  label: string;
+  realm: ClockifyRealm;
+  status: ClockifyConnectionStatus;
+  identity?: ClockifyVerifiedIdentity;
+  workspaces: ClockifyWorkspaceIdentity[];
+  last_error?: string;
+  created_at: number;
+  updated_at: number;
+};
+
+export type ClockifyConnections = {
+  connections: ClockifyConnection[];
+};
+
+export type ConnectClockifyConnection = {
+  api_key: string;
+  realm: ClockifyRealm;
+};
 
 export interface IExtensionPermissionSummary {
   name: string;
@@ -1891,11 +2030,39 @@ export const extensions = {
   getSettingsTabs: httpGet<IExtensionSettingsTab[], void>('/api/extensions/settings-tabs'),
   getWebuiContributions: httpGet<IExtensionWebuiContribution[], void>('/api/extensions/webui'),
   getAgentActivitySnapshot: httpGet<IExtensionAgentActivitySnapshot, void>('/api/extensions/agent-activity'),
-  getExtI18nForLocale: httpPost<Record<string, unknown>, { locale: string }>('/api/extensions/i18n'),
+  getExtI18nForLocale: httpGet<Record<string, unknown>, { locale: string }>(
+    ({ locale }) => `/api/extensions/i18n?locale=${encodeURIComponent(locale)}`
+  ),
   enableExtension: httpPost<void, { name: string }>('/api/extensions/enable'),
   disableExtension: httpPost<void, { name: string; reason?: string }>('/api/extensions/disable'),
+  installPlugin: httpPost<InstalledPluginResult, InstallGitPluginRequest>('/api/plugins/install'),
+  updatePlugin: httpPost<InstalledPluginResult, { name: string }>('/api/plugins/update'),
+  uninstallPlugin: httpPost<void, { name: string }>('/api/plugins/uninstall'),
   getPermissions: httpPost<IExtensionPermissionSummary[], { name: string }>('/api/extensions/permissions'),
   getRiskLevel: httpPost<string, { name: string }>('/api/extensions/risk-level'),
+  getLinearConnections: httpGet<LinearConnections, void>('/api/plugins/linear/connections'),
+  migrateLegacyLinearConnection: httpPost<LinearConnections, void>('/api/plugins/linear/migrate-legacy'),
+  connectNewLinearConnection: httpPost<LinearConnection, void>('/api/plugins/linear/connections'),
+  connectLinearConnection: httpPost<LinearConnection, { connection_id: string; reconnect: boolean }>(
+    (params) => `/api/plugins/linear/connections/${encodeURIComponent(params.connection_id)}/connect`,
+    (params) => ({ reconnect: params.reconnect })
+  ),
+  disconnectLinearConnection: httpPost<LinearConnection, { connection_id: string }>(
+    (params) => `/api/plugins/linear/connections/${encodeURIComponent(params.connection_id)}/disconnect`,
+    () => ({})
+  ),
+  getClockifyConnections: httpGet<ClockifyConnections, void>('/api/plugins/clockify/connections'),
+  connectNewClockifyConnection: httpPost<ClockifyConnection, ConnectClockifyConnection>(
+    '/api/plugins/clockify/connections'
+  ),
+  reconnectClockifyConnection: httpPost<ClockifyConnection, ConnectClockifyConnection & { connection_id: string }>(
+    (params) => `/api/plugins/clockify/connections/${encodeURIComponent(params.connection_id)}/connect`,
+    (params) => ({ api_key: params.api_key, realm: params.realm })
+  ),
+  disconnectClockifyConnection: httpPost<ClockifyConnection, { connection_id: string }>(
+    (params) => `/api/plugins/clockify/connections/${encodeURIComponent(params.connection_id)}/disconnect`,
+    () => ({})
+  ),
   stateChanged: wsEmitter<{ name: string; enabled: boolean; reason?: string }>('extensions.state-changed'),
 };
 

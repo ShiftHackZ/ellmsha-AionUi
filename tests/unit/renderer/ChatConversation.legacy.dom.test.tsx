@@ -1,13 +1,39 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import type { TChatConversation } from '@/common/config/storage';
 import ChatConversation from '@/renderer/pages/conversation/components/ChatConversation';
 
 const usePresetAssistantInfoMock = vi.fn();
+const conversationHistoryMock = vi.fn();
 const acpChatMock = vi.fn(() => <div data-testid='mock-acp-chat'>acp chat</div>);
 const acpModelSelectorMock = vi.fn(() => <div data-testid='mock-acp-model-selector'>model selector</div>);
+const mergeLiveMessageMock = vi.fn();
+const responseStreamMock = vi.hoisted(() => ({
+  listeners: [] as Array<(message: unknown) => void>,
+  on: vi.fn((callback: (message: unknown) => void) => {
+    responseStreamMock.listeners.push(callback);
+    return () => {
+      responseStreamMock.listeners = responseStreamMock.listeners.filter((candidate) => candidate !== callback);
+    };
+  }),
+}));
+
+vi.mock('@/common', async () => {
+  const actual = await vi.importActual<typeof import('@/common')>('@/common');
+  return {
+    ...actual,
+    ipcBridge: {
+      ...actual.ipcBridge,
+      conversation: {
+        ...actual.ipcBridge.conversation,
+        responseStream: { on: responseStreamMock.on },
+      },
+    },
+  };
+});
 
 vi.mock('@/renderer/pages/conversation/Messages/MessageList', () => ({
   default: ({ className }: { className?: string }) => <div className={className}>message history</div>,
@@ -17,6 +43,7 @@ vi.mock('@/renderer/pages/conversation/Messages/hooks', () => ({
   MessageListLoadingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MessageListProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MessagePaginationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useMergeLiveMessage: () => mergeLiveMessageMock,
   useMessageLstCache: vi.fn(),
 }));
 
@@ -60,6 +87,10 @@ vi.mock('@/renderer/hooks/context/LayoutContext', () => ({
   useLayoutContext: () => ({ isMobile: false }),
 }));
 
+vi.mock('@/renderer/hooks/context/ConversationHistoryContext', () => ({
+  useOptionalConversationHistoryContext: () => conversationHistoryMock(),
+}));
+
 vi.mock('@/renderer/pages/conversation/Preview', () => ({
   usePreviewContext: () => ({ openPreview: vi.fn() }),
 }));
@@ -85,6 +116,11 @@ describe('ChatConversation legacy runtime rendering', () => {
     usePresetAssistantInfoMock.mockReset();
     acpChatMock.mockClear();
     acpModelSelectorMock.mockClear();
+    mergeLiveMessageMock.mockClear();
+    responseStreamMock.listeners = [];
+    responseStreamMock.on.mockClear();
+    conversationHistoryMock.mockReset();
+    conversationHistoryMock.mockReturnValue(null);
     usePresetAssistantInfoMock.mockReturnValue({ info: undefined, isLoading: false });
   });
 
@@ -183,5 +219,124 @@ describe('ChatConversation legacy runtime rendering', () => {
         waitForWarmup: true,
       })
     );
+  });
+
+  it('renders persisted subagent history through the read-only surface', () => {
+    const child = {
+      id: 'subagent:parent:child-thread',
+      user_id: 'user-1',
+      name: 'reviewer',
+      type: 'acp',
+      model: {},
+      extra: {
+        workspace: '/tmp/aionui-history',
+        backend: 'codex',
+        subagent: {
+          parent_conversation_id: 'parent',
+          ref: 'child-thread',
+          label: 'reviewer',
+          status: 'completed',
+        },
+      },
+      status: 'finished',
+      source: 'aionui',
+      created_at: 1,
+      modified_at: 1,
+      pinned: false,
+    } as TChatConversation;
+
+    render(
+      <MemoryRouter>
+        <ChatConversation conversation={child} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('message history')).toBeInTheDocument();
+    expect(screen.queryByTestId('mock-acp-chat')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-acp-model-selector')).not.toBeInTheDocument();
+    expect(screen.queryByText('cron')).not.toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeInTheDocument();
+  });
+
+  it('merges live output for the selected read-only subagent only', async () => {
+    const child = {
+      id: 'subagent:parent:child-thread',
+      name: 'reviewer',
+      type: 'acp',
+      model: {},
+      extra: {
+        subagent: {
+          parent_conversation_id: 'parent',
+          ref: 'child-thread',
+          status: 'running',
+        },
+      },
+      created_at: 1,
+      modified_at: 1,
+    } as TChatConversation;
+    render(
+      <MemoryRouter>
+        <ChatConversation conversation={child} />
+      </MemoryRouter>
+    );
+
+    const listener = responseStreamMock.listeners.at(-1);
+    expect(listener).toBeDefined();
+    listener?.({
+      conversation_id: 'another-child',
+      msg_id: 'ignored',
+      turn_id: 'turn-1',
+      type: 'text',
+      data: { content: 'ignore me' },
+    });
+    listener?.({
+      conversation_id: child.id,
+      msg_id: 'child-message',
+      turn_id: 'child-thread',
+      type: 'text',
+      data: { content: 'live child output' },
+    });
+
+    await waitFor(() => expect(mergeLiveMessageMock).toHaveBeenCalledTimes(1));
+    expect(mergeLiveMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ msg_id: 'child-message', type: 'text' })
+    );
+  });
+
+  it('shows a round status indicator for each real child conversation', () => {
+    const parent = {
+      id: 'parent',
+      name: 'Parent task',
+      type: 'acp',
+      model: {},
+      extra: { backend: 'codex' },
+      created_at: 1,
+      modified_at: 1,
+    } as TChatConversation;
+    const child = {
+      ...parent,
+      id: 'subagent:parent:child-thread',
+      name: 'reviewer',
+      extra: {
+        backend: 'codex',
+        subagent: {
+          parent_conversation_id: 'parent',
+          ref: 'child-thread',
+          label: 'reviewer',
+          status: 'running',
+        },
+      },
+    } as TChatConversation;
+    conversationHistoryMock.mockReturnValue({ conversations: [parent, child] });
+
+    render(
+      <MemoryRouter>
+        <ChatConversation conversation={parent} />
+      </MemoryRouter>
+    );
+
+    const indicator = screen.getByRole('button', { name: /reviewer/i });
+    expect(indicator).toHaveTextContent('RE');
+    expect(indicator).toHaveClass('!w-28px');
   });
 });

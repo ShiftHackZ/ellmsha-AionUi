@@ -12,7 +12,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { mkdirSync, statSync } from 'node:fs';
 import { connect, createServer, type Socket } from 'node:net';
 import { cleanupRegisteredAgentProcesses } from './agent-process-registry.js';
-import type { AppMetadata, BackendBinaryResolver } from './types.js';
+import type { AppMetadata, BackendBinaryResolver, BackendIdentityMode } from './types.js';
 
 type BackendStatus = 'stopped' | 'starting' | 'running' | 'error';
 type BackendStartupStage =
@@ -95,6 +95,9 @@ export type BackendLaunchOptions = {
    * process.env and will likely report wrong/empty dirs.
    */
   dirs?: BackendDirConfig;
+  identityMode: BackendIdentityMode;
+  /** In-memory capability for narrowly scoped host-to-backend bootstrap calls. */
+  bootstrapSecret?: string;
 };
 
 export type BackendHandle = {
@@ -221,13 +224,16 @@ export function buildSpawnArgs(config: SpawnConfig): string[] {
  * backend's `/api/system/info` matches what Electron main persists in
  * ProcessEnv('aionui.dir').
  */
-export function buildSpawnEnv(dirs: BackendDirConfig): NodeJS.ProcessEnv {
-  return {
-    ...process.env,
-    AIONUI_CACHE_DIR: dirs.cacheDir,
-    AIONUI_WORK_DIR: dirs.workDir,
-    AIONUI_LOG_DIR: dirs.logDir,
-  };
+export function buildSpawnEnv(dirs?: BackendDirConfig, bootstrapSecret?: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.AIONCORE_BOOTSTRAP_SECRET;
+  if (dirs) {
+    env.AIONUI_CACHE_DIR = dirs.cacheDir;
+    env.AIONUI_WORK_DIR = dirs.workDir;
+    env.AIONUI_LOG_DIR = dirs.logDir;
+  }
+  if (bootstrapSecret) env.AIONCORE_BOOTSTRAP_SECRET = bootstrapSecret;
+  return env;
 }
 
 const FETCH_FORBIDDEN_PORTS = new Set([
@@ -520,7 +526,10 @@ export class BackendLifecycleManager {
 
   constructor(
     private readonly appMeta: AppMetadata,
-    private readonly resolveBackend: BackendBinaryResolver
+    private readonly resolveBackend: BackendBinaryResolver,
+    private readonly runtime: { identityMode: BackendIdentityMode; bootstrapSecret?: string } = {
+      identityMode: 'local',
+    }
   ) {}
 
   get port(): number {
@@ -658,7 +667,7 @@ export class BackendLifecycleManager {
     const args = buildSpawnArgs({
       port: this._port,
       dbPath,
-      local: true,
+      local: this.runtime.identityMode === 'local',
       parentPid: process.pid,
       logDir,
       workDir: dirs?.workDir,
@@ -682,7 +691,7 @@ export class BackendLifecycleManager {
     try {
       this.childProcess = spawn(binaryPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: dirs ? buildSpawnEnv(dirs) : process.env,
+        env: buildSpawnEnv(dirs, this.runtime.bootstrapSecret),
         cwd: dirs?.workDir ?? dbPath,
         detached: process.platform !== 'win32',
       });
@@ -1069,7 +1078,10 @@ export class BackendLifecycleManager {
  * directly to preserve current stop/port getter semantics).
  */
 export async function startBackend(opts: BackendLaunchOptions): Promise<BackendHandle> {
-  const manager = new BackendLifecycleManager(opts.app, opts.resolveBackend);
+  const manager = new BackendLifecycleManager(opts.app, opts.resolveBackend, {
+    identityMode: opts.identityMode,
+    bootstrapSecret: opts.bootstrapSecret,
+  });
   const dataDir = opts.dataDir ?? '';
   if (!dataDir) {
     throw new Error('startBackend: dataDir is required');

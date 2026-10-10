@@ -76,7 +76,15 @@
     "deleting": "Eliminando...",
     "reorderPinned": "Arrastra para reordenar la conversación fijada",
     "forkedFrom": "Bifurcada de “{{name}}”",
-    "forkedConversation": "Conversación bifurcada"
+    "forkedConversation": "Conversación bifurcada",
+    "subagentStatus": {
+      "pending_init": "Iniciando",
+      "running": "En ejecución",
+      "completed": "Completado",
+      "errored": "Fallido",
+      "interrupted": "Interrumpido",
+      "shutdown": "Detenido"
+    }
   },
   "historySearch": {
     "tooltip": "Buscar mensajes",

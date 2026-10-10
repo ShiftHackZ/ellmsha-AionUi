@@ -49,6 +49,7 @@ export type TalkToButlerButtonProps = {
 
 const CHAT_KEY = '__chat__';
 const MANUAL_KEY = '__manual__';
+export const AION_ADD_BUTTON_CLASS = '!h-32px !rounded-8px !px-14px';
 
 /**
  * Unified "create/add" entry point used across settings. The button itself is
@@ -111,7 +112,7 @@ const TalkToButlerButton: React.FC<TalkToButlerButtonProps> = ({
       <Button
         type={type}
         size={size}
-        className={classNames('!h-32px !rounded-8px !px-14px', className)}
+        className={classNames(AION_ADD_BUTTON_CLASS, className)}
         data-testid={testId}
       >
         <span className='flex items-center gap-6px'>

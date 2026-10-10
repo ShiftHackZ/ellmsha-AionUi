@@ -810,45 +810,70 @@ export const useMessageLstCache = (key: string) => {
   const update = useUpdateMessageList();
   const setLoading = useUpdateMessageListLoading();
   const setPagination = useUpdateMessagePaginationState();
-  const loadMessages = useCallback(async (): Promise<TMessage[]> => {
-    const result = await loadLatestConversationMessages(key, {
-      limit: DEFAULT_MESSAGE_PAGE_LIMIT,
-      contentMode: 'compact',
-    });
-    const messages = result?.items?.map(normalizeDbMessage);
-    if (messages && Array.isArray(messages)) {
-      update((currentList) => mergeLoadedPageWithCurrent(key, messages, currentList));
-      setPagination({
-        oldestCursor: result.oldest_cursor ?? undefined,
-        newestCursor: result.newest_cursor ?? undefined,
-        hasMoreBefore: result.has_more_before,
-        hasMoreAfter: result.has_more_after,
-        isLoadingBefore: false,
-        isLoadingAnchor: false,
-      });
-      return messages;
-    }
-    return [];
-  }, [key, setPagination, update]);
+  const requestStateRef = useRef({ key, generation: 0 });
+  if (requestStateRef.current.key !== key) {
+    requestStateRef.current = {
+      key,
+      generation: requestStateRef.current.generation + 1,
+    };
+  }
+
+  const loadMessages = useCallback(
+    async (errorContext: string): Promise<void> => {
+      const generation = ++requestStateRef.current.generation;
+      setLoading(true);
+      try {
+        const result = await loadLatestConversationMessages(key, {
+          limit: DEFAULT_MESSAGE_PAGE_LIMIT,
+          contentMode: 'compact',
+        });
+        if (requestStateRef.current.key !== key || requestStateRef.current.generation !== generation) {
+          return;
+        }
+
+        const messages = result?.items?.map(normalizeDbMessage);
+        if (messages && Array.isArray(messages)) {
+          update((currentList) => mergeLoadedPageWithCurrent(key, messages, currentList));
+          setPagination({
+            oldestCursor: result.oldest_cursor ?? undefined,
+            newestCursor: result.newest_cursor ?? undefined,
+            hasMoreBefore: result.has_more_before,
+            hasMoreAfter: result.has_more_after,
+            isLoadingBefore: false,
+            isLoadingAnchor: false,
+          });
+        }
+      } catch (error) {
+        console.error(errorContext, error);
+      } finally {
+        if (requestStateRef.current.key === key && requestStateRef.current.generation === generation) {
+          setLoading(false);
+        }
+      }
+    },
+    [key, setLoading, setPagination, update]
+  );
 
   useEffect(() => {
     if (!key) return;
-    let cancelled = false;
-    setLoading(true);
     setPagination({ ...EMPTY_MESSAGE_PAGINATION_STATE });
-    void loadMessages()
-      .catch((error) => {
-        console.error('[useMessageLstCache] Failed to load messages from database:', error);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
+    void loadMessages('[useMessageLstCache] Failed to load messages from database:');
     return () => {
-      cancelled = true;
+      if (requestStateRef.current.key === key) {
+        requestStateRef.current.generation += 1;
+      }
     };
-  }, [key, loadMessages, setLoading, setPagination]);
+  }, [key, loadMessages, setPagination]);
+
+  useEffect(() => {
+    if (!key) {
+      return;
+    }
+
+    return ipcBridge.realtime.reconnected.on(() => {
+      void loadMessages('[useMessageLstCache] Failed to recover messages after reconnect:');
+    });
+  }, [key, loadMessages]);
 
   useEffect(() => {
     if (!key) {

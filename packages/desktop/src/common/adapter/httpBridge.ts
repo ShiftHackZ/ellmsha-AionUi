@@ -45,8 +45,27 @@ function getBackendPort(): number {
  * injected. Use same-origin URLs; web-host's static-server handles the reverse
  * proxy / WS upgrade to the backend.
  */
-function isWebUiBrowserMode(): boolean {
+export function isWebUiBrowserMode(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined' && !(window as Window).__backendPort;
+}
+
+const CSRF_COOKIE_NAME = 'aionui-csrf-token';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+
+export function getWebUiCsrfToken(): string | undefined {
+  if (!isWebUiBrowserMode()) return undefined;
+
+  const prefix = `${CSRF_COOKIE_NAME}=`;
+  const cookie = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+  return cookie ? cookie.slice(prefix.length) : undefined;
+}
+
+export function getWebUiCsrfHeaders(): Record<string, string> {
+  const token = getWebUiCsrfToken();
+  return token ? { [CSRF_HEADER_NAME]: token } : {};
 }
 
 export function getBaseUrl(): string {
@@ -189,16 +208,24 @@ export async function httpRequest<T>(
     Object.assign(headers, options.headers);
   }
 
+  const webUiBrowserMode = isWebUiBrowserMode();
+  if (webUiBrowserMode && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+    Object.assign(headers, getWebUiCsrfHeaders());
+  }
+
   console.debug(
     `[httpBridge] ${method} ${path}`,
     body !== undefined ? JSON.stringify(redactForLog(body)).slice(0, 500) : '(no body)'
   );
 
-  const response = await fetch(url, {
+  const request: RequestInit = {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  };
+  if (webUiBrowserMode) request.credentials = 'include';
+
+  const response = await fetch(url, request);
 
   if (!response.ok) {
     // Response body can only be consumed once — read as text, then try JSON

@@ -5,269 +5,460 @@
  */
 
 /**
- * 单目标 CDP 通道：只把「侧边浏览器那一个 webContents」暴露给 Agent。
- *
- * 替代 Chromium 的 remote-debugging-port。那个开关是应用级的，没有 per-target ACL，
- * 一开就把主窗口（连着 preload 桥）暴露给本机任意进程。这里改成：
- *   - 只绑 127.0.0.1，且必须带口令才能连
- *   - 只服务一个目标，Target.* 由 cdpTargetProtocol 本地应答
- *   - 其余命令透传给 webContents.debugger
- *
- * Single-target CDP bridge: exposes only the in-app browser's webContents to the agent.
- * Replaces Chromium's remote-debugging-port, which is application-wide with no
- * per-target ACL and therefore also exposes the main window and its preload bridge.
+ * Authenticated CDP bridge exposing only registered in-app browser webviews.
+ * Every browser tab owns one debugger attachment and one deterministic CDP
+ * session, so commands cannot drift when the visible tab changes.
  */
 
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { session, webContents, type Debugger, type WebContents } from 'electron';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { webContents, type Debugger, type WebContents } from 'electron';
+import { BROWSER_SESSION_PARTITION, MAX_BROWSER_TABS } from '@/common/config/constants';
+import type { BrowserTabCommand, BrowserTabInventory, BrowserTabRegistration } from '@/common/adapter/ipcBridge';
 import {
-  SINGLE_SESSION_ID,
+  attachedToTargetEvent,
   buildListPayload,
   buildTargetInfo,
   buildVersionPayload,
   decideCdpCommand,
   isAcceptableSessionId,
+  sessionIdForTarget,
+  targetCreatedEvent,
   tokensMatch,
+  type CdpEvent,
   type CdpRequest,
+  type TargetInfo,
 } from './cdpTargetProtocol';
 
 const HOST = '127.0.0.1';
 const WS_PATH = '/aionui-cdp';
+const TAB_COMMAND_TIMEOUT_MS = 10_000;
+const TAB_ID_PATTERN = /^[a-zA-Z0-9._:-]{1,200}$/;
+
+export type CdpBridgeOptions = {
+  sendTabCommand: (command: BrowserTabCommand) => void;
+};
 
 export type CdpBridgeHandle = {
   port: number;
   token: string;
-  /** 侧边浏览器的 webContents id；未附加时为 null。/ null while nothing is attached. */
-  attachedWebContentsId: () => number | null;
-  attach: (webContentsId: number) => { ok: true } | { ok: false; reason: string };
-  detach: () => void;
+  registerTab: (registration: BrowserTabRegistration) => { ok: true } | { ok: false; reason: string };
+  updateTabInventory: (inventory: BrowserTabInventory) => { ok: true } | { ok: false; reason: string };
+  rejectTabCommand: (tabId: string, reason: string) => void;
   close: () => Promise<void>;
 };
 
-type AttachedState = {
+type TargetState = {
+  tabId: string;
   contents: WebContents;
   dbg: Debugger;
+  active: boolean;
   onMessage: (event: unknown, method: string, params: unknown, sessionId: string) => void;
   onDestroyed: () => void;
 };
 
-let attached: AttachedState | null = null;
-let sockets = new Set<WebSocket>();
-
-const currentTargetInfo = () => {
-  if (!attached || attached.contents.isDestroyed()) return buildTargetInfo('', 'about:blank');
-  return buildTargetInfo(attached.contents.getTitle(), attached.contents.getURL());
+type SocketState = {
+  discover: boolean;
+  autoAttach: boolean;
+  manualSessions: Map<string, string>;
 };
 
-const broadcast = (payload: Record<string, unknown>) => {
-  const text = JSON.stringify(payload);
-  for (const ws of sockets) {
-    if (ws.readyState === ws.OPEN) ws.send(text);
-  }
+type StateWaiter = {
+  tabId?: string;
+  predicate: () => boolean;
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
 };
 
-const detachInternal = () => {
-  if (!attached) return;
-  const { contents, dbg, onMessage, onDestroyed } = attached;
-  attached = null;
-  try {
-    dbg.removeListener('message', onMessage);
-    contents.removeListener('destroyed', onDestroyed);
-    if (dbg.isAttached()) dbg.detach();
-  } catch {
-    // 已经销毁/已分离时 Electron 会抛，忽略即可。
-    // Electron throws if it is already destroyed or detached; nothing to do.
-  }
+const sendEvent = (ws: WebSocket, event: CdpEvent): void => {
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(event));
 };
 
-/**
- * 附加到指定 webContents。
- *
- * 两道校验都必须报错而不是「尽力而为」：
- *  - getType() 必须是 webview：防止把主窗口（带 preload 桥）交出去，这正是原方案的漏洞。
- *  - debugger.attach() 会和同一个 webContents 上打开的 DevTools 冲突（Electron 限制），
- *    这时给出可读的原因，而不是抛一个原始异常。
- *
- * Both checks must fail loudly rather than degrade:
- *  - getType() must be 'webview', so the main window (with its preload bridge) can never
- *    be handed over — that is precisely the hole in the process-wide approach.
- *  - debugger.attach() conflicts with DevTools open on the same webContents (an Electron
- *    limitation); surface a readable reason instead of a raw throw.
- */
-const attachInternal = (webContentsId: number): { ok: true } | { ok: false; reason: string } => {
-  const contents = webContents.fromId(webContentsId);
-  if (!contents || contents.isDestroyed()) {
-    return { ok: false, reason: `No live webContents with id ${webContentsId}` };
-  }
-
-  const type = contents.getType();
-  if (type !== 'webview') {
-    return {
-      ok: false,
-      reason: `Refusing to attach to webContents of type "${type}"; only the in-app browser webview may be exposed.`,
-    };
-  }
-
-  if (attached?.contents.id === webContentsId) return { ok: true };
-  detachInternal();
-
-  const dbg = contents.debugger;
-  try {
-    if (!dbg.isAttached()) dbg.attach('1.3');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: `Could not attach debugger (DevTools open on this view will block it): ${message}` };
-  }
-
-  const onMessage = (_event: unknown, method: string, params: unknown, _sessionId: string) => {
-    /**
-     * 统一贴上我们那个固定 sessionId 再转发。
-     *
-     * puppeteer 用 flatten 模式，它靠 sessionId 把事件路由到对应的页面会话；不贴的话
-     * 事件会被当成浏览器级的，Page/Runtime 那些事件就丢了。
-     *
-     * Stamp our fixed sessionId before forwarding. puppeteer runs in flatten mode and
-     * routes events to the page session by sessionId; without it these would look
-     * browser-level and Page/Runtime events would be dropped.
-     */
-    broadcast({ method, params: params ?? {}, sessionId: SINGLE_SESSION_ID });
-  };
-
-  const onDestroyed = () => {
-    detachInternal();
-    broadcast({ method: 'Target.targetDestroyed', params: { targetId: currentTargetInfo().targetId } });
-  };
-
-  dbg.on('message', onMessage);
-  contents.once('destroyed', onDestroyed);
-  attached = { contents, dbg, onMessage, onDestroyed };
-  return { ok: true };
+const sendError = (ws: WebSocket, id: number | undefined, message: string, code = -32000): void => {
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ id: id ?? 0, error: { code, message } }));
 };
 
-const sendError = (ws: WebSocket, id: number | undefined, message: string) => {
-  ws.send(JSON.stringify({ id: id ?? 0, error: { code: -32601, message } }));
-};
-
-const handleSocketMessage = async (ws: WebSocket, raw: string) => {
-  let req: CdpRequest;
-  try {
-    req = JSON.parse(raw) as CdpRequest;
-  } catch {
-    return; // 非 JSON 直接忽略 / ignore non-JSON frames
-  }
-
-  const { id, method, params, sessionId } = req;
-  if (!method) return;
-
-  if (!isAcceptableSessionId(sessionId)) {
-    sendError(ws, id, `Unknown sessionId: ${sessionId}`);
-    return;
-  }
-
-  const decision = decideCdpCommand(req, currentTargetInfo);
-
-  if (decision.kind === 'error') {
-    sendError(ws, id, decision.message);
-    return;
-  }
-
-  if (decision.kind === 'reply' || decision.kind === 'reply-and-emit') {
-    ws.send(JSON.stringify({ id, result: decision.payload }));
-    if (decision.kind === 'reply-and-emit') {
-      for (const evt of decision.emit) {
-        ws.send(JSON.stringify({ method: evt.method, params: evt.params }));
-      }
-    }
-    return;
-  }
-
-  // forward
-  if (!attached || attached.contents.isDestroyed()) {
-    sendError(ws, id, 'The in-app browser is not currently attached.');
-    return;
-  }
-
-  try {
-    const result = await attached.dbg.sendCommand(method, params ?? {});
-    ws.send(JSON.stringify({ id, result: result ?? {}, sessionId }));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    ws.send(JSON.stringify({ id, error: { code: -32000, message }, sessionId }));
-  }
-};
-
-const writeJson = (res: ServerResponse, body: unknown) => {
+const writeJson = (res: ServerResponse, body: unknown): void => {
   const text = JSON.stringify(body);
   res.writeHead(200, { 'Content-Type': 'application/json; charset=UTF-8', 'Content-Length': Buffer.byteLength(text) });
   res.end(text);
 };
 
-/**
- * 启动通道。返回 handle 供主进程在浏览器 tab 切换时改附加目标。
- *
- * 口令只加在 WebSocket 段，不加在 HTTP 发现段 —— 这是被实测逼出来的设计：
- * puppeteer 拿 browserURL 后执行 `new URL('/json/version', browserURL)`，绝对路径会
- * 把 query 整段丢掉，所以口令放在 browserURL 的 ?token= 上根本传不到服务端，
- * 只会让 puppeteer 被自己的 403 挡死。
- *
- * 于是分两层：
- *  - HTTP 发现段（/json/version、/json/list）不校验口令，响应里带着含口令的 ws 地址。
- *  - WebSocket 段强制校验口令，所有实际控制都走这里。
- *
- * ⚠️ 威胁模型要说实话：因为发现段不鉴权且会吐出口令，同机同用户的任意进程扫到这个端口后
- * 一个 GET 就能取回口令再连 WS。所以口令的作用是**阻止盲连**（不知道端口/没读过发现段
- * 的连接一律 403），**不是身份证明** —— 它无法证明对端就是我们 spawn 的那个 MCP。
- * 对本机进程而言，真实屏障只有「listen(0) 随机分配的临时端口」这一层。
- *
- * 这与 Chrome 原生 remote-debugging-port 的 /json/version 是同一水平，不是回归；本方案真正
- * 的收益在别处：只暴露侧边浏览器那一个 webview，绝不暴露主窗口（见 attachInternal 的
- * getType() 校验）。把「同用户本机进程」算作可信边界是这里的显式假设。
- *
- * The token guards only the WebSocket leg, not HTTP discovery — a design forced by testing:
- * puppeteer runs `new URL('/json/version', browserURL)`, and an absolute path discards the
- * entire query string, so a token on browserURL never reaches the server and would only make
- * puppeteer trip over its own 403.
- *
- * Hence two tiers:
- *  - HTTP discovery (/json/version, /json/list) is unauthenticated and its response carries
- *    a tokened ws address.
- *  - The WebSocket enforces the token; all actual control flows there.
- *
- * ⚠️ Be honest about the threat model: because discovery is unauthenticated and hands the
- * token out, any process running as the same user can scan this port and retrieve the token
- * with one GET, then connect. The token therefore **prevents blind connections** (anything
- * that has not read discovery gets a 403); it is **not proof of identity** and cannot show
- * the peer is the MCP we spawned. Against local processes the only real barrier is the
- * ephemeral, OS-assigned listen(0) port.
- *
- * This matches Chrome's own remote-debugging-port /json/version and is not a regression. The
- * real gain of this design lies elsewhere: only the in-app browser webview is exposed and the
- * main window never is (see the getType() check in attachInternal). Treating same-user local
- * processes as inside the trust boundary is an explicit assumption here.
- */
-export const startCdpBridge = async (): Promise<CdpBridgeHandle> => {
+export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBridgeHandle> => {
   const token = randomBytes(24).toString('hex');
+  const targets = new Map<string, TargetState>();
+  const socketStates = new Map<WebSocket, SocketState>();
+  const waiters = new Set<StateWaiter>();
+  let activeTargetId: string | null = null;
+  let lifecycleTail: Promise<void> = Promise.resolve();
+  let rendererReady = false;
+  let expectedTabIds = new Set<string>();
 
+  const targetInfos = (): TargetInfo[] =>
+    [...targets.values()].map((target) =>
+      buildTargetInfo(target.tabId, target.contents.getTitle(), target.contents.getURL(), target.active)
+    );
+
+  const notifyWaiters = (): void => {
+    for (const waiter of [...waiters]) {
+      if (!waiter.predicate()) continue;
+      clearTimeout(waiter.timer);
+      waiters.delete(waiter);
+      waiter.resolve();
+    }
+  };
+
+  const waitForState = (predicate: () => boolean, message: string, tabId?: string): Promise<void> => {
+    if (predicate()) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const waiter: StateWaiter = {
+        tabId,
+        predicate,
+        resolve,
+        reject,
+        timer: setTimeout(() => {
+          waiters.delete(waiter);
+          reject(new Error(message));
+        }, TAB_COMMAND_TIMEOUT_MS),
+      };
+      waiters.add(waiter);
+    });
+  };
+
+  const rejectTabCommand = (tabId: string, reason: string): void => {
+    for (const waiter of [...waiters]) {
+      if (waiter.tabId !== tabId) continue;
+      clearTimeout(waiter.timer);
+      waiters.delete(waiter);
+      waiter.reject(new Error(reason));
+    }
+  };
+
+  const rejectPendingLifecycle = (reason: string): void => {
+    for (const waiter of [...waiters]) {
+      if (waiter.tabId === undefined) continue;
+      clearTimeout(waiter.timer);
+      waiters.delete(waiter);
+      waiter.reject(new Error(reason));
+    }
+  };
+
+  const inventoryIsReady = (): boolean => rendererReady && [...expectedTabIds].every((tabId) => targets.has(tabId));
+
+  const waitForInventory = (): Promise<void> =>
+    waitForState(
+      inventoryIsReady,
+      'The in-app browser is not ready because its persisted tabs are still restoring. Try again shortly.'
+    );
+
+  const announceTarget = (target: TargetState): void => {
+    const info = buildTargetInfo(target.tabId, target.contents.getTitle(), target.contents.getURL(), target.active);
+    for (const [ws, state] of socketStates) {
+      if (state.discover) sendEvent(ws, targetCreatedEvent(info));
+      if (state.autoAttach) sendEvent(ws, attachedToTargetEvent(info));
+    }
+  };
+
+  const detachTarget = (target: TargetState): void => {
+    try {
+      target.dbg.removeListener('message', target.onMessage);
+      target.contents.removeListener('destroyed', target.onDestroyed);
+      if (target.dbg.isAttached()) target.dbg.detach();
+    } catch {
+      // Electron throws after a webContents has already been destroyed.
+    }
+  };
+
+  const removeTarget = (tabId: string, expectedContents?: WebContents): void => {
+    const target = targets.get(tabId);
+    if (!target || (expectedContents && target.contents !== expectedContents)) return;
+    targets.delete(tabId);
+    if (activeTargetId === tabId) activeTargetId = null;
+    detachTarget(target);
+    for (const [ws, state] of socketStates) {
+      if (state.autoAttach) {
+        sendEvent(ws, {
+          method: 'Target.detachedFromTarget',
+          params: { sessionId: sessionIdForTarget(tabId), targetId: tabId },
+        });
+      }
+      for (const [sessionId, targetId] of [...state.manualSessions]) {
+        if (targetId !== tabId) continue;
+        state.manualSessions.delete(sessionId);
+        sendEvent(ws, { method: 'Target.detachedFromTarget', params: { sessionId, targetId: tabId } });
+      }
+      if (state.discover) sendEvent(ws, { method: 'Target.targetDestroyed', params: { targetId: tabId } });
+    }
+    notifyWaiters();
+  };
+
+  const registerTab = (registration: BrowserTabRegistration): { ok: true } | { ok: false; reason: string } => {
+    const { tabId, webContentsId, active } = registration;
+    if (!TAB_ID_PATTERN.test(tabId)) return { ok: false, reason: 'Browser tab id is invalid.' };
+
+    const contents = webContents.fromId(webContentsId);
+    if (!contents || contents.isDestroyed()) {
+      return { ok: false, reason: `No live webContents with id ${webContentsId}` };
+    }
+    if (contents.getType() !== 'webview') {
+      return { ok: false, reason: 'Only an in-app browser webview may be exposed.' };
+    }
+    if (contents.session !== session.fromPartition(BROWSER_SESSION_PARTITION)) {
+      return { ok: false, reason: 'The webview does not belong to the in-app browser session.' };
+    }
+
+    const aliased = [...targets.values()].find(
+      (target) => target.contents.id === webContentsId && target.tabId !== tabId
+    );
+    if (aliased) return { ok: false, reason: `webContents ${webContentsId} is already registered to another tab.` };
+
+    const existing = targets.get(tabId);
+    if (existing?.contents === contents) {
+      if (active) {
+        for (const target of targets.values()) target.active = target.tabId === tabId;
+        activeTargetId = tabId;
+      } else if (activeTargetId === tabId) {
+        existing.active = false;
+        activeTargetId = null;
+      }
+      notifyWaiters();
+      return { ok: true };
+    }
+
+    if (existing) removeTarget(tabId, existing.contents);
+
+    const dbg = contents.debugger;
+    try {
+      if (!dbg.isAttached()) dbg.attach('1.3');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { ok: false, reason: `Could not attach debugger (DevTools open on this tab will block it): ${message}` };
+    }
+
+    const onMessage = (_event: unknown, method: string, params: unknown, _sessionId: string): void => {
+      const eventParams = params && typeof params === 'object' ? (params as Record<string, unknown>) : {};
+      for (const [ws, state] of socketStates) {
+        if (state.autoAttach) {
+          sendEvent(ws, { method, params: eventParams, sessionId: sessionIdForTarget(tabId) });
+        }
+        for (const [manualSessionId, targetId] of state.manualSessions) {
+          if (targetId === tabId) sendEvent(ws, { method, params: eventParams, sessionId: manualSessionId });
+        }
+      }
+    };
+    const onDestroyed = (): void => removeTarget(tabId, contents);
+    const target: TargetState = { tabId, contents, dbg, active, onMessage, onDestroyed };
+    dbg.on('message', onMessage);
+    contents.once('destroyed', onDestroyed);
+    targets.set(tabId, target);
+
+    if (active) {
+      for (const candidate of targets.values()) candidate.active = candidate.tabId === tabId;
+      activeTargetId = tabId;
+    }
+
+    announceTarget(target);
+    notifyWaiters();
+    return { ok: true };
+  };
+
+  const updateTabInventory = (inventory: BrowserTabInventory): { ok: true } | { ok: false; reason: string } => {
+    const uniqueTabIds = new Set(inventory.tabIds);
+    if (uniqueTabIds.size !== inventory.tabIds.length || uniqueTabIds.size > MAX_BROWSER_TABS) {
+      rendererReady = false;
+      return { ok: false, reason: 'Browser tab inventory is invalid.' };
+    }
+    for (const tabId of uniqueTabIds) {
+      if (!TAB_ID_PATTERN.test(tabId)) {
+        rendererReady = false;
+        return { ok: false, reason: 'Browser tab inventory contains an invalid id.' };
+      }
+    }
+
+    if (!inventory.ready) {
+      rejectPendingLifecycle('The in-app browser changed scope or reloaded during the request. Try again shortly.');
+    }
+    rendererReady = inventory.ready;
+    expectedTabIds = uniqueTabIds;
+    for (const tabId of [...targets.keys()]) {
+      if (!uniqueTabIds.has(tabId)) removeTarget(tabId);
+    }
+    notifyWaiters();
+    return { ok: true };
+  };
+
+  const runLifecycle = <T>(operation: () => Promise<T>): Promise<T> => {
+    const task = lifecycleTail.then(operation, operation);
+    lifecycleTail = task.then(
+      (): void => undefined,
+      (): void => undefined
+    );
+    return task;
+  };
+
+  const createTarget = (url: string, background: boolean): Promise<string> =>
+    runLifecycle(async () => {
+      await waitForInventory();
+      if (targets.size >= MAX_BROWSER_TABS) {
+        throw new Error(`The in-app browser already has its maximum of ${MAX_BROWSER_TABS} tabs.`);
+      }
+      const tabId = `browser-agent-${randomBytes(12).toString('hex')}`;
+      const registered = waitForState(
+        () => targets.has(tabId),
+        `Timed out waiting for in-app browser tab ${tabId} to be created.`,
+        tabId
+      );
+      options.sendTabCommand({ action: 'create', tabId, url, activate: !background });
+      await registered;
+      return tabId;
+    });
+
+  const activateTarget = (targetId: string): Promise<void> =>
+    runLifecycle(async () => {
+      await waitForInventory();
+      if (!targets.has(targetId)) throw new Error(`No such in-app browser tab: ${targetId}`);
+      const activated = waitForState(
+        () => activeTargetId === targetId,
+        `Timed out waiting for in-app browser tab ${targetId} to become visible.`,
+        targetId
+      );
+      options.sendTabCommand({ action: 'activate', tabId: targetId });
+      await activated;
+    });
+
+  const closeTarget = (targetId: string): Promise<void> =>
+    runLifecycle(async () => {
+      await waitForInventory();
+      if (!targets.has(targetId)) throw new Error(`No such in-app browser tab: ${targetId}`);
+      const closed = waitForState(
+        () => !targets.has(targetId),
+        `Timed out waiting for in-app browser tab ${targetId} to close.`,
+        targetId
+      );
+      options.sendTabCommand({ action: 'close', tabId: targetId });
+      await closed;
+    });
+
+  const forwardTarget = (): TargetState | undefined =>
+    (activeTargetId ? targets.get(activeTargetId) : undefined) ?? targets.values().next().value;
+
+  const handleSocketMessage = async (ws: WebSocket, raw: string): Promise<void> => {
+    let req: CdpRequest;
+    try {
+      req = JSON.parse(raw) as CdpRequest;
+    } catch {
+      return;
+    }
+
+    const { id, method, params, sessionId } = req;
+    if (!method) return;
+
+    const infos = targetInfos();
+    const socketState = socketStates.get(ws);
+    if (!isAcceptableSessionId(sessionId, infos, socketState?.manualSessions)) {
+      sendError(ws, id, `Unknown or stale sessionId: ${sessionId}`);
+      return;
+    }
+
+    if (socketState && method === 'Target.setDiscoverTargets' && !sessionId) {
+      socketState.discover = params?.discover === true;
+    }
+    if (socketState && method === 'Target.setAutoAttach' && !sessionId) {
+      socketState.autoAttach = params?.autoAttach === true;
+    }
+
+    try {
+      if (
+        method !== 'Target.setDiscoverTargets' &&
+        method !== 'Target.setAutoAttach' &&
+        method !== 'Target.getBrowserContexts'
+      ) {
+        await waitForInventory();
+      }
+      const decision = decideCdpCommand(req, targetInfos, socketState?.manualSessions);
+      if (decision.kind === 'error') {
+        sendError(ws, id, decision.message, -32601);
+        return;
+      }
+      if (decision.kind === 'reply' || decision.kind === 'reply-and-emit') {
+        if (decision.kind === 'reply-and-emit') {
+          for (const event of decision.emit) sendEvent(ws, event);
+        }
+        ws.send(JSON.stringify({ id, result: decision.payload }));
+        return;
+      }
+      if (decision.kind === 'attach-target') {
+        if (!socketState) throw new Error('Browser control socket is unavailable.');
+        const info = targetInfos().find((target) => target.targetId === decision.targetId);
+        if (!info) throw new Error(`No such in-app browser tab: ${decision.targetId}`);
+        const manualSessionId = `aionui-browser-manual:${randomBytes(12).toString('hex')}`;
+        socketState.manualSessions.set(manualSessionId, decision.targetId);
+        sendEvent(ws, attachedToTargetEvent(info, manualSessionId));
+        ws.send(JSON.stringify({ id, result: { sessionId: manualSessionId } }));
+        return;
+      }
+      if (decision.kind === 'detach-session') {
+        socketState?.manualSessions.delete(decision.sessionId);
+        sendEvent(ws, {
+          method: 'Target.detachedFromTarget',
+          params: { sessionId: decision.sessionId },
+        });
+        ws.send(JSON.stringify({ id, result: {} }));
+        return;
+      }
+      if (decision.kind === 'create-target') {
+        const targetId = await createTarget(decision.url, decision.background);
+        ws.send(JSON.stringify({ id, result: { targetId } }));
+        return;
+      }
+      if (decision.kind === 'activate-target') {
+        await activateTarget(decision.targetId);
+        ws.send(JSON.stringify({ id, result: {} }));
+        return;
+      }
+      if (decision.kind === 'close-target') {
+        await closeTarget(decision.targetId);
+        ws.send(JSON.stringify({ id, result: { success: true } }));
+        return;
+      }
+
+      const target = decision.targetId ? targets.get(decision.targetId) : forwardTarget();
+      if (!target || target.contents.isDestroyed()) {
+        sendError(
+          ws,
+          id,
+          decision.targetId
+            ? `Browser tab ${decision.targetId} is closed or reloading.`
+            : 'No in-app browser tab is open.'
+        );
+        return;
+      }
+      const result = await target.dbg.sendCommand(method, params ?? {});
+      ws.send(JSON.stringify({ id, result: result ?? {}, sessionId }));
+    } catch (error) {
+      sendError(ws, id, error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  let port = 0;
   const httpServer: Server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? '/', `http://${HOST}`);
     const wsUrl = `ws://${HOST}:${port}${WS_PATH}?token=${token}`;
-    const info = currentTargetInfo();
 
     if (url.pathname === '/json/version') {
       writeJson(res, buildVersionPayload(wsUrl, process.versions.chrome ?? '0.0.0.0'));
       return;
     }
     if (url.pathname === '/json/list' || url.pathname === '/json') {
-      writeJson(res, buildListPayload(wsUrl, info.title, info.url));
+      writeJson(res, buildListPayload(wsUrl, targetInfos()));
       return;
     }
     res.writeHead(404).end('not found');
   });
 
   const wss = new WebSocketServer({ noServer: true });
-
   httpServer.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url ?? '/', `http://${HOST}`);
     if (url.pathname !== WS_PATH || !tokensMatch(token, url.searchParams.get('token') ?? '')) {
@@ -276,20 +467,21 @@ export const startCdpBridge = async (): Promise<CdpBridgeHandle> => {
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
-      sockets.add(ws);
+      socketStates.set(ws, { discover: false, autoAttach: false, manualSessions: new Map() });
       ws.on('message', (data) => void handleSocketMessage(ws, data.toString()));
-      ws.on('close', () => sockets.delete(ws));
-      ws.on('error', () => sockets.delete(ws));
+      const forget = (): void => {
+        socketStates.delete(ws);
+      };
+      ws.on('close', forget);
+      ws.on('error', forget);
     });
   });
 
-  const port = await new Promise<number>((resolve, reject) => {
+  port = await new Promise<number>((resolve, reject) => {
     httpServer.once('error', reject);
-    // 端口 0 = 让系统分配空闲端口，避免和别的服务撞。
-    // Port 0 lets the OS pick a free port so we cannot collide with another service.
     httpServer.listen(0, HOST, () => {
-      const addr = httpServer.address();
-      if (addr && typeof addr === 'object') resolve(addr.port);
+      const address = httpServer.address();
+      if (address && typeof address === 'object') resolve(address.port);
       else reject(new Error('Could not determine bridge port'));
     });
   });
@@ -297,13 +489,19 @@ export const startCdpBridge = async (): Promise<CdpBridgeHandle> => {
   return {
     port,
     token,
-    attachedWebContentsId: () => (attached && !attached.contents.isDestroyed() ? attached.contents.id : null),
-    attach: attachInternal,
-    detach: detachInternal,
+    registerTab,
+    updateTabInventory,
+    rejectTabCommand,
     close: async () => {
-      detachInternal();
-      for (const ws of sockets) ws.close();
-      sockets = new Set();
+      for (const waiter of waiters) {
+        clearTimeout(waiter.timer);
+        waiter.reject(new Error('The in-app browser bridge is shutting down.'));
+      }
+      waiters.clear();
+      for (const target of targets.values()) detachTarget(target);
+      targets.clear();
+      for (const ws of socketStates.keys()) ws.close();
+      socketStates.clear();
       await new Promise<void>((resolve) => {
         wss.close(() => httpServer.close(() => resolve()));
       });

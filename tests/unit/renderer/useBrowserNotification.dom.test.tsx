@@ -60,7 +60,11 @@ afterEach(() => {
 describe('useBrowserNotification', () => {
   it('shows a confirmation notification on an acp_permission stream message when hidden', () => {
     renderHook(() => useBrowserNotification());
-    emitStream({ type: 'acp_permission', conversation_id: 'c1' });
+    emitStream({
+      type: 'acp_permission',
+      conversation_id: 'c1',
+      data: { tool_call: { tool_call_id: 'request-1' }, options: [] },
+    });
     expect(FakeNotification.instances).toHaveLength(1);
     expect(FakeNotification.instances[0].options.body).toBe('settings.browserNotification.bodyConfirmation');
   });

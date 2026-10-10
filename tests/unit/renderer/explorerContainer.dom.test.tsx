@@ -71,6 +71,25 @@ afterEach(() => {
 });
 
 describe('ExplorerContainer data integration', () => {
+  it('exposes Code indexes as a compact accessible selected icon action', async () => {
+    const electronAPI = window.electronAPI;
+    const memoryProject = vi.fn().mockResolvedValue({ repositories: [], errors: [] });
+    window.electronAPI = { ...electronAPI, memoryProject };
+    projectGet.mockResolvedValue(detail([entry({ pe_id: 'peA', display_name: 'Root Alpha' })]));
+
+    renderContainer('p1');
+    await screen.findByText('Root Alpha');
+    const button = screen.getByRole('button', { name: 'conversation.explorer.codeIndex.title' });
+
+    expect(button).toHaveClass('!h-28px', '!w-28px', '!p-0');
+    expect(button).toHaveTextContent('');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(button);
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+
+    window.electronAPI = electronAPI;
+  });
+
   it('fetches GET /projects/{id} and projects the returned roots into the tree', async () => {
     projectGet.mockResolvedValue(detail([entry({ pe_id: 'peA', display_name: 'Root Alpha' })]));
     renderContainer('p1');

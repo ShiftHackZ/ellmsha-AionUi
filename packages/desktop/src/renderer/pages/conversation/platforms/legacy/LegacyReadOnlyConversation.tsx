@@ -5,6 +5,8 @@
  */
 
 import type { TChatConversation } from '@/common/config/storage';
+import { ipcBridge } from '@/common';
+import { transformMessage } from '@/common/chat/chatLib';
 import { ConversationProvider } from '@/renderer/hooks/context/ConversationContext';
 import FlexFullContainer from '@renderer/components/layout/FlexFullContainer';
 import MessageList from '@renderer/pages/conversation/Messages/MessageList';
@@ -13,16 +15,27 @@ import {
   MessageListLoadingProvider,
   MessageListProvider,
   MessagePaginationProvider,
+  useMergeLiveMessage,
   useMessageLstCache,
 } from '@renderer/pages/conversation/Messages/hooks';
 import HOC from '@renderer/utils/ui/HOC';
-import React from 'react';
+import React, { useEffect } from 'react';
 
 const LegacyReadOnlyConversation: React.FC<{
   conversation: TChatConversation;
   emptySlot?: React.ReactNode;
 }> = ({ conversation, emptySlot }) => {
   useMessageLstCache(conversation.id);
+  const mergeLiveMessage = useMergeLiveMessage();
+
+  useEffect(
+    () =>
+      ipcBridge.conversation.responseStream.on((message) => {
+        if (message.conversation_id !== conversation.id) return;
+        mergeLiveMessage(transformMessage(message));
+      }),
+    [conversation.id, mergeLiveMessage]
+  );
 
   return (
     <ConversationProvider

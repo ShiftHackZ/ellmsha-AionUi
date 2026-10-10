@@ -20,6 +20,7 @@ import AboutModalContent from './contents/AboutModalContent';
 import AgentModalContent from './contents/AgentModalContent';
 import ExtensionSettingsTabContent from './contents/ExtensionSettingsTabContent';
 import ModelModalContent from './contents/ModelModalContent';
+import PluginsContent from '@/renderer/pages/settings/PluginsSettings/PluginsContent';
 import SystemModalContent from './contents/SystemModalContent';
 import ToolsModalContent from './contents/ToolsModalContent';
 import WebuiModalContent from './contents/WebuiModalContent';
@@ -55,7 +56,7 @@ const RESIZE_DEBOUNCE_DELAY = 150;
 /**
  * 内置设置标签页类型 / Built-in settings tab type
  */
-export type BuiltinSettingTab = 'model' | 'agent' | 'tools' | 'webui' | 'system' | 'about';
+export type BuiltinSettingTab = 'model' | 'agent' | 'plugins' | 'tools' | 'webui' | 'system' | 'about';
 
 /**
  * 设置标签页类型（内置 + 扩展）/ Settings tab type (built-in + extension)
@@ -196,6 +197,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
         icon: <LinkCloud theme='outline' size='20' fill={iconColors.secondary} />,
       },
       {
+        key: 'plugins',
+        label: t('settings.plugins'),
+        icon: <Puzzle theme='outline' size='20' fill={iconColors.secondary} />,
+      },
+      {
         key: 'tools',
         label: t('settings.tools'),
         icon: <Toolkit theme='outline' size='20' fill={iconColors.secondary} />,
@@ -304,6 +310,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
         return <ModelModalContent />;
       case 'agent':
         return <AgentModalContent />;
+      case 'plugins':
+        return <PluginsContent />;
       case 'tools':
         return <ToolsModalContent />;
       case 'webui':

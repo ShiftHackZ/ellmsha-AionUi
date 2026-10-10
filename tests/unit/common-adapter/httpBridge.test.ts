@@ -483,6 +483,54 @@ describe('httpBridge', () => {
       expect(fetchSpy.mock.calls[0][1]?.body).toBe('{"key":"value"}');
       expect(fetchSpy.mock.calls[0][1]?.headers).toEqual({ 'Content-Type': 'application/json' });
     });
+
+    it('mirrors the WebUI CSRF cookie into mutation headers and includes credentials', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+      vi.stubGlobal('window', {});
+      vi.stubGlobal('document', {
+        cookie: 'unrelated=value; aionui-csrf-token=csrf-token',
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+      await httpRequest('POST', '/api/extensions/enable', { name: 'linear' });
+
+      expect(fetchSpy).toHaveBeenCalledWith('/api/extensions/enable', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': 'csrf-token',
+        },
+        body: '{"name":"linear"}',
+        credentials: 'include',
+      });
+    });
+
+    it('does not invent a WebUI CSRF header when the cookie is unavailable', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+      vi.stubGlobal('window', {});
+      vi.stubGlobal('document', { cookie: '' });
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+      await httpRequest('DELETE', '/api/plugins/uninstall');
+
+      expect(fetchSpy.mock.calls[0][1]).toMatchObject({
+        method: 'DELETE',
+        headers: {},
+        credentials: 'include',
+      });
+    });
   });
 
   describe('httpPut', () => {

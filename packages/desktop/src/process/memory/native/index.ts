@@ -7,39 +7,95 @@ import { nativeConfig, provision, recoverEmbeddingChange } from './config';
 const children = new Set<ChildProcess>();
 let stopping = false;
 
+type StopMemoryChildOptions = {
+  graceMs?: number;
+  forceWaitMs?: number;
+  signal?: (signal: NodeJS.Signals) => Promise<'sent' | 'missing'>;
+};
+
+async function signalProcessGroup(pid: number, signal: NodeJS.Signals): Promise<'sent' | 'missing'> {
+  if (process.platform !== 'win32') {
+    try {
+      process.kill(-pid, signal);
+      return 'sent';
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ESRCH') return 'missing';
+      throw error;
+    }
+  }
+
+  return await new Promise((resolve, reject) => {
+    const taskkill = spawn('taskkill.exe', ['/pid', String(pid), '/T', ...(signal === 'SIGKILL' ? ['/F'] : [])], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+    taskkill.once('error', reject);
+    taskkill.once('exit', (code) => {
+      if (code === 0) resolve('sent');
+      else reject(new Error(`taskkill failed with exit code ${code ?? 'unknown'}`));
+    });
+  });
+}
+
+/** Do not let callers touch SQLite files until the owning process has actually exited. */
+export async function stopOwnedMemoryChild(
+  child: ChildProcess,
+  { graceMs = 5_000, forceWaitMs = 5_000, signal }: StopMemoryChildOptions = {}
+): Promise<void> {
+  if (child.exitCode !== null || !child.pid) return;
+  const pid = child.pid;
+  const sendSignal = signal ?? ((nextSignal: NodeJS.Signals) => signalProcessGroup(pid, nextSignal));
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    let forceTimer: NodeJS.Timeout | undefined;
+    let forceConfirmationTimer: NodeJS.Timeout | undefined;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      if (forceTimer) clearTimeout(forceTimer);
+      if (forceConfirmationTimer) clearTimeout(forceConfirmationTimer);
+      child.off('exit', onExit);
+      child.off('error', onError);
+      if (error) reject(error);
+      else resolve();
+    };
+    const onExit = () => finish();
+    const onError = (error: Error) => finish(error);
+    child.once('exit', onExit);
+    child.once('error', onError);
+
+    // Cover an exit between the initial state check and listener registration.
+    if (child.exitCode !== null) {
+      finish();
+      return;
+    }
+
+    forceTimer = setTimeout(() => {
+      forceConfirmationTimer = setTimeout(
+        () => finish(new Error(`Memory service process ${pid} did not exit after forced termination`)),
+        forceWaitMs
+      );
+      void sendSignal('SIGKILL')
+        .then((result) => {
+          if (result === 'missing') finish();
+        })
+        .catch((error) => finish(error instanceof Error ? error : new Error(String(error))));
+    }, graceMs);
+
+    // A graceful signal failure is retried with forced termination after the grace period.
+    void sendSignal('SIGTERM')
+      .then((result) => {
+        if (result === 'missing') finish();
+      })
+      .catch(() => {});
+  });
+}
+
 /** Stop only owned service process groups; never remove persistent data. */
 export async function stopNativeMemory(): Promise<void> {
   stopping = true;
-  await Promise.all(
-    [...children].map(
-      (child) =>
-        new Promise<void>((resolve) => {
-          if (child.exitCode !== null || !child.pid) {
-            resolve();
-            return;
-          }
-          const pid = child.pid;
-          const kill = (signal: NodeJS.Signals) => {
-            try {
-              if (process.platform === 'win32')
-                spawn('taskkill.exe', ['/pid', String(pid), '/T', '/F'], { windowsHide: true });
-              else process.kill(-pid, signal);
-            } catch {
-              /* Already exited. */
-            }
-          };
-          const timer = setTimeout(() => {
-            kill('SIGKILL');
-            resolve();
-          }, 5000);
-          child.once('exit', () => {
-            clearTimeout(timer);
-            resolve();
-          });
-          kill('SIGTERM');
-        })
-    )
-  );
+  await Promise.all([...children].map((child) => stopOwnedMemoryChild(child)));
   children.clear();
 }
 

@@ -52,7 +52,7 @@ export const resolveBrowserUrl = (deps: ResolveBrowserUrlDeps): string | null =>
 };
 
 /**
- * 单目标 CDP 通道的访问口令。
+ * 应用内浏览器 CDP 通道的访问口令。
  *
  * 口令由主进程随机生成后写进 env，顺着进程继承链传到这里。它的作用是**阻止盲连**：
  * 没读过发现段、不带口令的连接一律被通道 403 掉。
@@ -62,7 +62,7 @@ export const resolveBrowserUrl = (deps: ResolveBrowserUrlDeps): string | null =>
  * 真正的意义是「通道确实起来了」的凭证：缺了就说明桥没起（或 CDP 被关掉了），此时必须
  * 退出，而不是让 MCP 回退去开一个用户看不见的独立 Chrome。
  *
- * Access token for the single-target CDP bridge. The main process generates it randomly and
+ * Access token for the in-app browser CDP bridge. The main process generates it randomly and
  * writes it into the env, from where it travels down the process inheritance chain. Its job is
  * to **prevent blind connections**: anything connecting without it (i.e. without having read
  * discovery) is refused with a 403.

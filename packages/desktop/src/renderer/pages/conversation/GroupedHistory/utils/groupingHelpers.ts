@@ -10,6 +10,7 @@ import { getWorkspaceDisplayName } from '@/renderer/utils/workspace/workspace';
 import { getWorkspaceUpdateTime } from '@/renderer/utils/workspace/workspaceHistory';
 
 import type { GroupedHistoryResult, TimelineItem, TimelineSection } from '../types';
+import { isSubagentConversation } from '../types';
 import { getConversationSortOrder } from './sortOrderHelpers';
 
 export const isConversationPinned = (conversation: TChatConversation): boolean => {
@@ -99,7 +100,9 @@ export const buildGroupedHistory = (
   t: (key: string) => string
 ): GroupedHistoryResult => {
   // Filter out team-owned conversations; they are only visible via the Teams panel
-  const visibleConversations = conversations.filter((conv) => !isTeamConversation(conv));
+  const visibleConversations = conversations.filter(
+    (conv) => !isTeamConversation(conv) && !isSubagentConversation(conv)
+  );
 
   const pinnedConversations = visibleConversations
     .filter((conversation) => isConversationPinned(conversation))
