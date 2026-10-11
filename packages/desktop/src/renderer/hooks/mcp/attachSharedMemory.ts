@@ -16,7 +16,10 @@ export async function attachSharedMemory(conversationId: string): Promise<void> 
   if (!conversation) throw new Error(`Team member conversation ${conversationId} was not found`);
   const extra = conversation.extra as Record<string, unknown>;
   const existing = (extra.session_mcp_servers ?? []) as ISessionMcpServer[];
-  const selected = [...existing.filter((server) => server.name !== BUILTIN_TDAI_MEMORY_NAME), toSessionMcpServer(memory)];
+  const selected = [
+    ...existing.filter((server) => server.name !== BUILTIN_TDAI_MEMORY_NAME),
+    toSessionMcpServer(memory),
+  ];
   const updated = await ipcBridge.conversation.update.invoke({
     id: conversationId,
     updates: { extra: { ...extra, session_mcp_servers: selected } } as Partial<TChatConversation>,

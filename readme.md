@@ -1,14 +1,15 @@
 <!-- ELLMSHA FORK INTRO -->
+
 # AionUI — eLLMsha integration fork
 
 **Electron and React desktop, settings, browser surface and WebUI.**
 
-| Provenance | Value |
-| --- | --- |
-| Original project | [AionUI](https://github.com/iOfficeAI/AionUi) |
-| Upstream baseline | `v2.1.47-final` |
-| Baseline revision | `42be46dbf5a7d45042d0a691dea590f76cba8e24` |
-| Harness patch label | 1 |
+| Provenance          | Value                                         |
+| ------------------- | --------------------------------------------- |
+| Original project    | [AionUI](https://github.com/iOfficeAI/AionUi) |
+| Upstream baseline   | `v2.1.47-final`                               |
+| Baseline revision   | `42be46dbf5a7d45042d0a691dea590f76cba8e24`    |
+| Harness patch label | 1                                             |
 
 ## Why this fork exists
 

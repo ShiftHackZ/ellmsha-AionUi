@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
@@ -7,6 +8,14 @@ import {
   resolveMobileMcpEntryPath,
   resolveOpenComputerUseEntryPath,
 } from '../../../packages/desktop/src/process/backend/pluginResourcePath';
+
+const require = createRequire(import.meta.url);
+const { MOBILE_MCP_SOURCE_DIGEST } = require('../../../../scripts/prepare-mobile-mcp.js') as {
+  MOBILE_MCP_SOURCE_DIGEST: string;
+};
+const { CHROME_DEVTOOLS_MCP_SOURCE_DIGEST } = require('../../../../scripts/prepare-chrome-devtools-mcp.js') as {
+  CHROME_DEVTOOLS_MCP_SOURCE_DIGEST: string;
+};
 
 describe('resolveBuiltinPluginsPath', () => {
   it('records the maintained AionRS fork in root provenance', () => {
@@ -101,7 +110,7 @@ describe('resolveBuiltinPluginsPath', () => {
     const afterPack = readFileSync('scripts/afterPack.js', 'utf8');
     const webPackager = readFileSync('scripts/pack-web-cli.js', 'utf8');
     expect(dockerfile).toContain('COPY scripts/prepare-mobile-mcp.js /tmp/prepare-mobile-mcp.js');
-    expect(dockerfile).toContain('caaee6d01be09908e8684c2a693b67cbaa5c1e91efe2f851e8aab60e2099ff2e');
+    expect(dockerfile).toContain(MOBILE_MCP_SOURCE_DIGEST);
     expect(dockerfile).toContain("require('/tmp/prepare-mobile-mcp.js')");
     expect(dockerfile).toContain('ELLM_SHA_MOBILE_MCP_ENTRY=/opt/ellmsha/mobile-mcp/lib/index.js');
     expect(launcher).toContain('prepare_mobile_mcp --verify-only');
@@ -169,7 +178,7 @@ describe('resolveBuiltinPluginsPath', () => {
     expect(migrations).toContain('isObsoleteBuiltinChromeDevtools');
     expect(dockerfile).toContain('FROM node:22-bookworm-slim AS chrome-devtools-mcp');
     expect(dockerfile).toContain('4f7b06898327ab5be42c85bd98bd176f33d55d89');
-    expect(dockerfile).toContain('40f7a21f18555476d0183b1cbb6d91c0aff6ef28abfdd178429afa621676a5c5');
+    expect(dockerfile).toContain(CHROME_DEVTOOLS_MCP_SOURCE_DIGEST);
     expect(dockerfile).toContain('hashBuildInputs(process.cwd())');
     const chromeMarker = dockerfile.split('\n').find((line) => line.includes('.ellmsha-chrome-devtools-mcp-pin.json'));
     expect(chromeMarker).toContain('"upstreamCommit":"4f7b06898327ab5be42c85bd98bd176f33d55d89"');

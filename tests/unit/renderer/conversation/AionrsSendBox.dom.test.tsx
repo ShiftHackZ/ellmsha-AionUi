@@ -235,10 +235,13 @@ describe('AionrsSendBox', () => {
     useTeamPermissionMock.mockReturnValue(null);
   });
 
-  it.each([undefined, 'Aion CLI', 'AionCLI', 'eLLMsha'])('shows Ollama for the native connection name %s', (agent_name) => {
-    render(<AionrsSendBox conversation_id='conv-1' modelSelection={modelSelection} agent_name={agent_name} />);
-    expect(screen.getByTestId('sendbox-placeholder')).toHaveTextContent('Send message to Ollama...');
-  });
+  it.each([undefined, 'Aion CLI', 'AionCLI', 'eLLMsha'])(
+    'shows Ollama for the native connection name %s',
+    (agent_name) => {
+      render(<AionrsSendBox conversation_id='conv-1' modelSelection={modelSelection} agent_name={agent_name} />);
+      expect(screen.getByTestId('sendbox-placeholder')).toHaveTextContent('Send message to Ollama...');
+    }
+  );
 
   it('preserves a user-assigned assistant name', () => {
     render(<AionrsSendBox conversation_id='conv-1' modelSelection={modelSelection} agent_name='My local assistant' />);

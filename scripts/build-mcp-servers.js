@@ -21,8 +21,7 @@ const INTEGRATION_ROOT = path.resolve(ROOT, '..');
 function resolveChromeDevtoolsRuntime(options = {}) {
   const env = options.env ?? process.env;
   const runtimeRoot =
-    env.ELLM_SHA_CHROME_DEVTOOLS_MCP_RUNTIME ||
-    path.join(INTEGRATION_ROOT, '.data', 'chrome-devtools-mcp-runtime');
+    env.ELLM_SHA_CHROME_DEVTOOLS_MCP_RUNTIME || path.join(INTEGRATION_ROOT, '.data', 'chrome-devtools-mcp-runtime');
   const preparationPath = path.join(INTEGRATION_ROOT, 'scripts', 'prepare-chrome-devtools-mcp.js');
   if (!fs.existsSync(preparationPath)) {
     throw new Error(`Chrome DevTools MCP preparation is missing: ${preparationPath}`);

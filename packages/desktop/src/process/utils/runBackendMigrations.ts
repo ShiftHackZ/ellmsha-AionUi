@@ -281,11 +281,7 @@ function buildPinnedLegacyChromeDevtoolsServer(): McpImportServer {
     enabled: false,
     builtin: true,
     transport: { type: 'stdio', ...serverConfig },
-    original_json: JSON.stringify(
-      { mcpServers: { [LEGACY_BUILTIN_CHROME_DEVTOOLS_NAME]: serverConfig } },
-      null,
-      2
-    ),
+    original_json: JSON.stringify({ mcpServers: { [LEGACY_BUILTIN_CHROME_DEVTOOLS_NAME]: serverConfig } }, null, 2),
   };
 }
 

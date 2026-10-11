@@ -109,12 +109,7 @@ const TalkToButlerButton: React.FC<TalkToButlerButtonProps> = ({
 
   return (
     <Dropdown trigger='click' droplist={droplist} position='br'>
-      <Button
-        type={type}
-        size={size}
-        className={classNames(AION_ADD_BUTTON_CLASS, className)}
-        data-testid={testId}
-      >
+      <Button type={type} size={size} className={classNames(AION_ADD_BUTTON_CLASS, className)} data-testid={testId}>
         <span className='flex items-center gap-6px'>
           {label}
           <Down theme='outline' size={14} fill='currentColor' />

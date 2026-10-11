@@ -60,9 +60,10 @@ vi.mock('@/renderer/components/settings/useUpdateNotificationController', () => 
 vi.mock('@/renderer/components/settings/SettingsModal/contents/FeedbackReportModal', () => ({ default: () => null }));
 
 import { OPEN_MIGRATION_DIALOG_EVENT } from '@/renderer/components/settings/UpdateMigrationDialog';
+import { harnessRelease, harnessVersion } from '@/common/branding';
 import AboutModalContent from '@/renderer/components/settings/SettingsModal/contents/AboutModalContent';
 
-describe('About panel check-update in discontinued build', () => {
+describe('eLLMsha About panel in an upstream discontinued build', () => {
   beforeEach(() => {
     vi.stubGlobal('__APP_VERSION__', '2.1.40');
   });
@@ -73,14 +74,17 @@ describe('About panel check-update in discontinued build', () => {
     vi.unstubAllGlobals();
   });
 
-  it('dispatches migration event and skips version detection', () => {
+  it('keeps fork provenance and avoids the obsolete upstream update and migration flows', () => {
     const listener = vi.fn();
     window.addEventListener(OPEN_MIGRATION_DIALOG_EVENT, listener);
 
     render(<AboutModalContent />);
-    fireEvent.click(screen.getByText('settings.checkForUpdates'));
-
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('settings.checkForUpdates')).not.toBeInTheDocument();
+    expect(screen.getByText(harnessVersion)).toBeInTheDocument();
+    const component = harnessRelease.components[0];
+    fireEvent.click(screen.getByRole('button', { name: component.name }));
+    expect(mocks.openExternalUrl).toHaveBeenCalledWith(component.forkUrl ?? component.url);
+    expect(listener).not.toHaveBeenCalled();
     expect(mocks.runUpdateCheck).not.toHaveBeenCalled();
 
     window.removeEventListener(OPEN_MIGRATION_DIALOG_EVENT, listener);

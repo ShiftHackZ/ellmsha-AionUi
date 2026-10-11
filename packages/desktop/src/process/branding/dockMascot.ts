@@ -6,9 +6,7 @@ const durations = [280, 110, 110, 140, 140, 320];
 
 export function startDockMascot(): void {
   if (process.platform !== 'darwin' || !app.dock) return;
-  const dir = app.isPackaged
-    ? path.join(process.resourcesPath, 'dock')
-    : path.join(process.cwd(), 'resources', 'dock');
+  const dir = app.isPackaged ? path.join(process.resourcesPath, 'dock') : path.join(process.cwd(), 'resources', 'dock');
   const frames = durations.map((_, index) => path.join(dir, `idle-${index}.png`));
   if (!frames.every(existsSync)) return;
   const icons = frames.map((frame) => nativeImage.createFromPath(frame));

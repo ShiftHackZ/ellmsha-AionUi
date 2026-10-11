@@ -13,6 +13,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // exercises only the scope-reset behavior.
 vi.mock('@/common', () => ({
   ipcBridge: {
+    application: {
+      reportBrowserTabInventory: { invoke: vi.fn().mockResolvedValue(undefined) },
+      browserTabCommand: { on: vi.fn(() => vi.fn()) },
+      reportBrowserTabCommandFailure: { invoke: vi.fn().mockResolvedValue(undefined) },
+    },
     fileStream: { contentUpdate: { on: () => () => {} } },
     preview: { open: { on: () => () => {} } },
     fs: {

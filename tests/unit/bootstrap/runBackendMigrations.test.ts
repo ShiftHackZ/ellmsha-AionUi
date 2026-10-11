@@ -256,9 +256,7 @@ describe('runBackendMigrations', () => {
 
     await runBackendMigrations(configFile as never);
 
-    expect(updateServerMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'chrome-devtools-server-id' })
-    );
+    expect(updateServerMock).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'chrome-devtools-server-id' }));
     expect(testMcpConnectionMock).not.toHaveBeenCalled();
   });
 });

@@ -11,6 +11,11 @@ import { PreviewProvider, usePreviewContext } from '@/renderer/pages/conversatio
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    application: {
+      reportBrowserTabInventory: { invoke: vi.fn().mockResolvedValue(undefined) },
+      browserTabCommand: { on: vi.fn(() => vi.fn()) },
+      reportBrowserTabCommandFailure: { invoke: vi.fn().mockResolvedValue(undefined) },
+    },
     fileStream: {
       contentUpdate: { on: vi.fn(() => vi.fn()) },
     },

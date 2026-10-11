@@ -46,28 +46,28 @@ describe('Titlebar workspace toggle', () => {
     platform.mac = false;
   });
 
-  it('places the Windows workspace toggle directly after Bug Report', () => {
+  it('places the Windows workspace toggle before window controls without upstream promotion', () => {
     render(<Titlebar workspaceAvailable />);
 
-    const report = screen.getByRole('button', { name: 'conversation.welcome.quickActionFeedback' });
+    expect(screen.queryByRole('button', { name: 'conversation.welcome.quickActionFeedback' })).not.toBeInTheDocument();
     const workspace = screen.getByRole('button', { name: 'common.expandMore' });
 
-    expect(report.nextElementSibling).toBe(workspace);
+    expect(workspace.parentElement?.firstElementChild).toBe(workspace);
     expect(workspace.nextElementSibling).toBe(screen.getByTestId('window-controls'));
   });
 
   it.each([
     { runtime: 'macOS desktop', desktop: true, mac: true },
     { runtime: 'WebUI', desktop: false, mac: false },
-  ])('keeps the workspace toggle after Bug Report on $runtime', ({ desktop, mac }) => {
+  ])('keeps the workspace toggle visible without upstream promotion on $runtime', ({ desktop, mac }) => {
     platform.desktop = desktop;
     platform.mac = mac;
     render(<Titlebar workspaceAvailable />);
 
-    const report = screen.getByRole('button', { name: 'conversation.welcome.quickActionFeedback' });
+    expect(screen.queryByRole('button', { name: 'conversation.welcome.quickActionFeedback' })).not.toBeInTheDocument();
     const workspace = screen.getByRole('button', { name: 'common.expandMore' });
 
-    expect(report.nextElementSibling).toBe(workspace);
+    expect(workspace.parentElement?.firstElementChild).toBe(workspace);
     expect(screen.queryByTestId('window-controls')).not.toBeInTheDocument();
   });
 

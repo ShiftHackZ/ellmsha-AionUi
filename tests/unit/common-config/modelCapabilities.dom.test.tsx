@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IProvider } from '@/common/config/storage';
@@ -602,7 +603,11 @@ describe('configured model list', () => {
   });
 
   it('shows explicit and automatic Vision and API mode states', () => {
-    render(<ModelModalContent />);
+    render(
+      <MemoryRouter>
+        <ModelModalContent />
+      </MemoryRouter>
+    );
 
     expect(screen.getAllByTitle('settings.imageInputSupported')).toHaveLength(2);
     expect(screen.getByTitle('settings.imageInputUnsupported')).toBeInTheDocument();
@@ -613,7 +618,11 @@ describe('configured model list', () => {
   });
 
   it('opens the selected model in the configuration dialog', async () => {
-    render(<ModelModalContent />);
+    render(
+      <MemoryRouter>
+        <ModelModalContent />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getAllByRole('button', { name: 'configure' })[1]);
 
@@ -625,7 +634,11 @@ describe('configured model list', () => {
   });
 
   it('removes all per-model state when deleting a model', async () => {
-    render(<ModelModalContent />);
+    render(
+      <MemoryRouter>
+        <ModelModalContent />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[0]);
 

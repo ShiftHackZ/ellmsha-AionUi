@@ -210,11 +210,12 @@ describe('Chrome DevTools MCP runtime preparation', () => {
           } else if (command === 'FEAT') controlSocket.write('211 no features\r\n');
           else if (command === 'MDTM') controlSocket.write('213 20260102030405\r\n');
           else if (command === 'EPSV') {
-            dataServer = createServer((socket) => {
+            const server = createServer((socket) => {
               dataSocket = socket;
             });
-            dataServer.listen(0, '127.0.0.1', () => {
-              const port = (dataServer?.address() as AddressInfo).port;
+            dataServer = server;
+            server.listen(0, '127.0.0.1', () => {
+              const port = (server.address() as AddressInfo).port;
               controlSocket.write(`229 Entering Extended Passive Mode (|||${port}|)\r\n`);
             });
           } else if (command === 'RETR') {

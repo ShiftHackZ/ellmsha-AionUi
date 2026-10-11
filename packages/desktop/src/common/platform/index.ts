@@ -39,7 +39,10 @@ export function getPlatformServices(): IPlatformServices {
         // Dev isolation: set app name before any getPath('userData') call.
         // Rollup may load this chunk before configureChromium.ts runs, so we
         // must apply the dev name here as a safety net.
-        const stableUserData = (process.env.AIONUI_E2E_TEST === '1' && process.env.AIONUI_E2E_USER_DATA_DIR) || process.env.ELLM_SHA_USER_DATA_DIR || path.join(app.getPath('appData'), 'eLLMsha Desktop');
+        const stableUserData =
+          (process.env.AIONUI_E2E_TEST === '1' && process.env.AIONUI_E2E_USER_DATA_DIR) ||
+          process.env.ELLM_SHA_USER_DATA_DIR ||
+          path.join(app.getPath('appData'), 'eLLMsha Desktop');
         process.env.ELLM_SHA_USER_DATA_DIR = stableUserData;
         app.setName('eLLMsha');
         app.setPath('userData', stableUserData);

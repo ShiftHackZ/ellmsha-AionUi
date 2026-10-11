@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 import { BackendHttpError } from '@/common/adapter/httpBridge';
 import AcpSendBox from '@/renderer/pages/conversation/platforms/acp/AcpSendBox';
+import { resetConversationRuntimeViewStoreForTest } from '@/renderer/pages/conversation/runtime/conversationRuntimeViewStore';
 import type { UseAcpMessageReturn } from '@/renderer/pages/conversation/platforms/acp/useAcpMessage';
 
 const {
@@ -42,12 +43,16 @@ const {
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    realtime: { reconnected: { on: vi.fn(() => vi.fn()) } },
     acpConversation: {
       sendMessage: {
         invoke: sendMessageInvokeMock,
       },
     },
     conversation: {
+      get: { invoke: vi.fn().mockResolvedValue(null) },
+      turnCompleted: { on: vi.fn(() => vi.fn()) },
+      listChanged: { on: vi.fn(() => vi.fn()) },
       stop: {
         invoke: vi.fn().mockResolvedValue(undefined),
       },
@@ -233,6 +238,7 @@ const makeMessageState = (): UseAcpMessageReturn => ({
 describe('AcpSendBox', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetConversationRuntimeViewStoreForTest();
     isMobileMock.current = false;
     mobileActionSheetEntries.current = [];
     useTeamPermissionMock.mockReturnValue(null);

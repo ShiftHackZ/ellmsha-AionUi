@@ -6,6 +6,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BUILTIN_TDAI_MEMORY_NAME } from '@/common/config/constants';
 import type { IMcpServer } from '@/common/config/storage';
 import { useGuidSend, type GuidSendDeps } from '@/renderer/pages/guid/hooks/useGuidSend';
 
@@ -130,16 +131,20 @@ describe('useGuidSend', () => {
 
     const payload = createConversationInvokeMock.mock.calls[0][0];
     expect(payload.assistant?.conversation_overrides?.skill_ids).toEqual(['assistant-skill']);
-    expect(payload.assistant?.conversation_overrides?.disabled_builtin_skill_ids).toEqual(['builtin-skill']);
+    expect(payload.assistant?.conversation_overrides?.disabled_builtin_skill_ids).toEqual([
+      'builtin-skill',
+      'aionui-config',
+    ]);
     expect(payload.assistant?.conversation_overrides?.mcp_ids).toEqual(['mcp-user']);
     expect(payload.extra.selected_mcp_server_ids).toEqual(['mcp-user']);
   });
 
-  it('preserves builtin MCP ids in assistant overrides while only sending user MCP ids to runtime selection', async () => {
+  it('preserves selected MCP snapshots and mandatory shared memory while user runtime ids stay user-only', async () => {
     const deps = createDeps();
     deps.availableMcpServers = [
       { id: 'mcp-user', name: 'User MCP', enabled: true, builtin: false } as IMcpServer,
       { id: 'builtin-mcp', name: 'Builtin MCP', enabled: true, builtin: true } as IMcpServer,
+      { id: 'shared-memory', name: BUILTIN_TDAI_MEMORY_NAME, enabled: true, builtin: true } as IMcpServer,
     ];
     deps.selectedMcpServerIds = ['mcp-user', 'builtin-mcp'];
 
@@ -150,9 +155,13 @@ describe('useGuidSend', () => {
     });
 
     const payload = createConversationInvokeMock.mock.calls[0][0];
-    expect(payload.assistant?.conversation_overrides?.mcp_ids).toEqual(['mcp-user', 'builtin-mcp']);
+    expect(payload.assistant?.conversation_overrides?.mcp_ids).toEqual(['mcp-user', 'builtin-mcp', 'shared-memory']);
     expect(payload.extra.selected_mcp_server_ids).toEqual(['mcp-user']);
-    expect(payload.extra.selected_session_mcp_servers).toEqual([expect.objectContaining({ id: 'builtin-mcp' })]);
+    expect(payload.extra.selected_session_mcp_servers).toEqual([
+      expect.objectContaining({ id: 'mcp-user' }),
+      expect.objectContaining({ id: 'builtin-mcp' }),
+      expect.objectContaining({ id: 'shared-memory' }),
+    ]);
   });
 
   it('does not write legacy preset_assistant_id for preset assistant sends', async () => {
@@ -183,7 +192,10 @@ describe('useGuidSend', () => {
     const payload = createConversationInvokeMock.mock.calls[0][0];
     expect(payload.assistant?.id).toBe('assistant-1');
     expect(payload.assistant?.conversation_overrides?.skill_ids).toEqual(['pdf-reader']);
-    expect(payload.assistant?.conversation_overrides?.disabled_builtin_skill_ids).toEqual(['todo-tracker']);
+    expect(payload.assistant?.conversation_overrides?.disabled_builtin_skill_ids).toEqual([
+      'todo-tracker',
+      'aionui-config',
+    ]);
   });
 
   it('forwards local skill overrides for generated Aion CLI assistants through assistant conversation overrides', async () => {
@@ -205,7 +217,10 @@ describe('useGuidSend', () => {
     expect(payload.model).toBe(deps.current_model);
     expect(payload.assistant?.id).toBe('bare:aionrs');
     expect(payload.assistant?.conversation_overrides?.skill_ids).toEqual(['pdf-reader']);
-    expect(payload.assistant?.conversation_overrides?.disabled_builtin_skill_ids).toEqual(['todo-tracker']);
+    expect(payload.assistant?.conversation_overrides?.disabled_builtin_skill_ids).toEqual([
+      'todo-tracker',
+      'aionui-config',
+    ]);
     expect(payload.extra.session_mode).toBeUndefined();
   });
 

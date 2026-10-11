@@ -5,21 +5,44 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(__dirname, '../../..');
+
+function createBuilderFixture(directory: string): string {
+  const fixtureRoot = join(directory, 'aionui');
+  for (const file of ['scripts/build-with-builder.js', 'package.json', 'packages/desktop/electron-builder.yml']) {
+    const target = join(fixtureRoot, file);
+    mkdirSync(resolve(target, '..'), { recursive: true });
+    writeFileSync(target, readFileSync(join(repoRoot, file)));
+  }
+  if (process.platform === 'win32') {
+    const appBuilder = join(fixtureRoot, 'node_modules/app-builder-lib');
+    mkdirSync(join(appBuilder, 'templates/nsis/include'), { recursive: true });
+    writeFileSync(join(appBuilder, 'package.json'), '{}');
+    writeFileSync(
+      join(appBuilder, 'templates/nsis/include/installUtil.nsh'),
+      readFileSync(resolveAppBuilderInstallUtil())
+    );
+  }
+  return fixtureRoot;
+}
+
+const runtimePreparationMocks = `
+function runtimePreparationMock(request) {
+  const names = {
+    'prepare-mobile-mcp.js': 'prepareMobileMcpRuntime',
+    'prepare-chrome-devtools-mcp.js': 'prepareChromeDevtoolsMcpRuntime',
+    'prepare-open-computer-use.js': 'prepareOpenComputerUseRuntime',
+  };
+  for (const [filename, name] of Object.entries(names)) {
+    if (request.endsWith('/' + filename)) return { [name]: () => ({ prepared: true }) };
+  }
+}
+`;
 
 function readInstallerErrorDefinitions(): Array<{ defineName: string; code: string }> {
   const source = readFileSync(resolve(repoRoot, 'resources/windows/installer-errors-sentry.nsh'), 'utf8');
@@ -50,15 +73,21 @@ function resolveAppBuilderInstallUtil(): string {
 
 describe('build-with-builder', () => {
   it('rejects skip-vite when renderer output is only a source html shell', () => {
-    const outDir = resolve(repoRoot, 'out');
-    const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}`);
     const tempDir = mkdtempSync(join(tmpdir(), 'aionui-build-skip-vite-test-'));
+    const fixtureRoot = createBuilderFixture(tempDir);
+    const outDir = resolve(fixtureRoot, 'out');
     const hookPath = join(tempDir, 'hook.cjs');
 
     writeFileSync(
       hookPath,
       `
 const childProcess = require('node:child_process');
+const Module = require('node:module');
+const originalLoad = Module._load;
+${runtimePreparationMocks}
+Module._load = function(request, parent, isMain) {
+  return runtimePreparationMock(request) || originalLoad.call(this, request, parent, isMain);
+};
 childProcess.execSync = function mockedExecSync(command) {
   return Buffer.from('');
 };
@@ -66,12 +95,7 @@ childProcess.execSync = function mockedExecSync(command) {
       'utf8'
     );
 
-    let movedExistingOut = false;
     try {
-      if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
-        movedExistingOut = true;
-      }
       mkdirSync(resolve(outDir, 'main'), { recursive: true });
       mkdirSync(resolve(outDir, 'renderer'), { recursive: true });
       writeFileSync(resolve(outDir, 'main/index.js'), 'console.log("main placeholder");\n', 'utf8');
@@ -85,7 +109,7 @@ childProcess.execSync = function mockedExecSync(command) {
         process.execPath,
         ['scripts/build-with-builder.js', 'x64', '--skip-vite', '--pack-only'],
         {
-          cwd: repoRoot,
+          cwd: fixtureRoot,
           encoding: 'utf8',
           env: {
             ...process.env,
@@ -97,10 +121,6 @@ childProcess.execSync = function mockedExecSync(command) {
       expect(result.status).not.toBe(0);
       expect(result.stderr + result.stdout).toContain('Renderer build output is incomplete');
     } finally {
-      rmSync(outDir, { recursive: true, force: true });
-      if (movedExistingOut) {
-        renameSync(backupOutDir, outDir);
-      }
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
@@ -263,27 +283,40 @@ childProcess.execSync = function mockedExecSync(command) {
     {
       args: ['arm64', '--win', '--arm64'],
       expectedArch: 'arm64',
+      expectedPlatform: 'win32',
     },
     {
       args: ['auto', '--mac', '--x64'],
       expectedArch: 'x64',
+      expectedPlatform: 'darwin',
     },
-  ])('prepares bundled AionCore for $expectedArch with args $args', ({ args, expectedArch }) => {
-    const tempDir = mkdtempSync(join(tmpdir(), 'aionui-build-test-'));
-    const hookPath = join(tempDir, 'hook.cjs');
-    const callsPath = join(tempDir, 'prepare-calls.json');
-    const outDir = resolve(repoRoot, 'out');
-    const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}-${expectedArch}`);
+    {
+      args: [
+        process.arch,
+        process.platform === 'darwin' ? '--mac' : process.platform === 'win32' ? '--win' : '--linux',
+        `--${process.arch}`,
+      ],
+      expectedArch: process.arch,
+      expectedPlatform: process.platform,
+    },
+  ])(
+    'prepares only native bundled AionCore for $expectedArch with args $args',
+    ({ args, expectedArch, expectedPlatform }) => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'aionui-build-test-'));
+      const fixtureRoot = createBuilderFixture(tempDir);
+      const hookPath = join(tempDir, 'hook.cjs');
+      const callsPath = join(tempDir, 'prepare-calls.json');
 
-    writeFileSync(
-      hookPath,
-      `
+      writeFileSync(
+        hookPath,
+        `
 const childProcess = require('node:child_process');
 const fs = require('node:fs');
 const Module = require('node:module');
 const path = require('node:path');
 
 const originalLoad = Module._load;
+${runtimePreparationMocks}
 
 function recordPrepareCall(options) {
   const callsPath = process.env.AIONUI_PREPARE_CALLS_FILE;
@@ -294,6 +327,8 @@ function recordPrepareCall(options) {
 }
 
 Module._load = function patchedLoad(request, parent, isMain) {
+  const runtimeMock = runtimePreparationMock(request);
+  if (runtimeMock) return runtimeMock;
   if (request === './prepareAioncore' || request.endsWith('/prepareAioncore')) {
     return recordPrepareCall;
   }
@@ -309,9 +344,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 
-// Satisfy build-with-builder's output checks without clobbering real build
-// artifacts: out/ lives in the actual repo (the script resolves it from its
-// own __dirname), so only create empty placeholders when nothing is there.
+// All build artifacts live under this test's private fixture checkout.
 function ensurePlaceholder(relativePath) {
   const target = path.join(process.cwd(), relativePath);
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -335,46 +368,48 @@ childProcess.execSync = function mockedExecSync(command) {
   return Buffer.from('');
 };
 `,
-      'utf8'
-    );
-
-    let movedExistingOut = false;
-    try {
-      if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
-        movedExistingOut = true;
-      }
-
-      const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', ...args], {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          AIONUI_PREPARE_CALLS_FILE: callsPath,
-          NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
-        },
-      });
-
-      expect(result.status, result.stderr || result.stdout).toBe(0);
-      expect(readFileSync(resolve(repoRoot, 'resources/windows/support/_sentry-dsn.generated.nsh'), 'utf8')).toBe(
-        '!define AIONUI_SENTRY_DSN ""\n'
+        'utf8'
       );
 
-      if (args.includes('--win')) {
-        const installUtil = readFileSync(resolveAppBuilderInstallUtil(), 'utf8');
-        expect(installUtil).toContain('AionUi-bundled-uninstaller override source');
-        expect(installUtil).toContain('$PLUGINSDIR\\AionUi-fixed-uninstaller.exe');
-        expect(installUtil.match(/AionUi-bundled-uninstaller override source/g)).toHaveLength(1);
-      }
+      try {
+        const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', ...args], {
+          cwd: fixtureRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            AIONUI_PREPARE_CALLS_FILE: callsPath,
+            NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
+          },
+        });
 
-      const calls = JSON.parse(readFileSync(callsPath, 'utf8')) as Array<{ arch?: string } | null>;
-      expect(calls).toContainEqual(expect.objectContaining({ arch: expectedArch }));
-    } finally {
-      rmSync(outDir, { recursive: true, force: true });
-      if (movedExistingOut) {
-        renameSync(backupOutDir, outDir);
+        if (expectedArch !== process.arch || expectedPlatform !== process.platform) {
+          expect(result.status).not.toBe(0);
+          expect(result.stderr + result.stdout).toContain(
+            'Tencent desktop runtime requires a native build for each target OS and architecture'
+          );
+          expect(existsSync(callsPath)).toBe(false);
+          return;
+        }
+        expect(result.status, result.stderr || result.stdout).toBe(0);
+        expect(readFileSync(resolve(fixtureRoot, 'resources/windows/support/_sentry-dsn.generated.nsh'), 'utf8')).toBe(
+          '!define AIONUI_SENTRY_DSN ""\n'
+        );
+
+        if (args.includes('--win')) {
+          const installUtil = readFileSync(
+            join(fixtureRoot, 'node_modules/app-builder-lib/templates/nsis/include/installUtil.nsh'),
+            'utf8'
+          );
+          expect(installUtil).toContain('AionUi-bundled-uninstaller override source');
+          expect(installUtil).toContain('$PLUGINSDIR\\AionUi-fixed-uninstaller.exe');
+          expect(installUtil.match(/AionUi-bundled-uninstaller override source/g)).toHaveLength(1);
+        }
+
+        const calls = JSON.parse(readFileSync(callsPath, 'utf8')) as Array<{ arch?: string } | null>;
+        expect(calls).toContainEqual(expect.objectContaining({ arch: expectedArch }));
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
       }
-      rmSync(tempDir, { recursive: true, force: true });
     }
-  });
+  );
 });

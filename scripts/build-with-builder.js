@@ -767,7 +767,13 @@ try {
     return;
   }
 
-  if (targetArch !== process.arch || archArgs.length > 1 || (builderArgs.includes('--win') && process.platform !== 'win32') || (builderArgs.includes('--linux') && process.platform !== 'linux') || (builderArgs.includes('--mac') && process.platform !== 'darwin')) {
+  if (
+    targetArch !== process.arch ||
+    archArgs.length > 1 ||
+    (builderArgs.includes('--win') && process.platform !== 'win32') ||
+    (builderArgs.includes('--linux') && process.platform !== 'linux') ||
+    (builderArgs.includes('--mac') && process.platform !== 'darwin')
+  ) {
     throw new Error('Tencent desktop runtime requires a native build for each target OS and architecture');
   }
   execSync(`node "${path.join(__dirname, 'memory/prepare.cjs')}"`, { stdio: 'inherit', env: process.env });

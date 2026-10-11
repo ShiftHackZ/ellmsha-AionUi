@@ -143,12 +143,15 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({
-      backendPort: 25808,
-      bootstrapSecret: 'bootstrap-test',
-      statusTimeoutMs: 10_000,
-      statusPollIntervalMs: 100,
-    }, deps);
+    await ensureAdminPassword(
+      {
+        backendPort: 25808,
+        bootstrapSecret: 'bootstrap-test',
+        statusTimeoutMs: 10_000,
+        statusPollIntervalMs: 100,
+      },
+      deps
+    );
 
     expect(statusAttempts).toBe(3);
     expect(sleeps.length).toBeGreaterThanOrEqual(2);
@@ -160,12 +163,15 @@ describe('ensureAdminPassword', () => {
       handlers: [() => mockResponse(500, 'oops')],
     });
 
-    await ensureAdminPassword({
-      backendPort: 25808,
-      bootstrapSecret: 'bootstrap-test',
-      statusTimeoutMs: 1_000,
-      statusPollIntervalMs: 250,
-    }, deps);
+    await ensureAdminPassword(
+      {
+        backendPort: 25808,
+        bootstrapSecret: 'bootstrap-test',
+        statusTimeoutMs: 1_000,
+        statusPollIntervalMs: 250,
+      },
+      deps
+    );
 
     expect(warns.some((w) => w.includes('could not verify admin credentials'))).toBe(true);
     expect(logs).toEqual([]);
@@ -215,11 +221,14 @@ describe('ensureAdminPassword', () => {
       ],
     });
 
-    await ensureAdminPassword({
-      backendPort: 25808,
-      bootstrapSecret: 'bootstrap-test',
-      resetCommand: 'bun run resetpass',
-    }, deps);
+    await ensureAdminPassword(
+      {
+        backendPort: 25808,
+        bootstrapSecret: 'bootstrap-test',
+        resetCommand: 'bun run resetpass',
+      },
+      deps
+    );
 
     expect(logs.some((m) => m.includes('bun run resetpass'))).toBe(true);
     expect(logs.every((m) => !m.includes('aionui-web resetpass'))).toBe(true);
@@ -243,11 +252,14 @@ describe('ensureAdminPassword', () => {
       handlers: [() => mockResponse(200, { needs_setup: true }), () => mockResponse(500, 'boom')],
     });
 
-    await ensureAdminPassword({
-      backendPort: 25808,
-      bootstrapSecret: 'bootstrap-test',
-      resetCommand: 'bun run resetpass',
-    }, deps);
+    await ensureAdminPassword(
+      {
+        backendPort: 25808,
+        bootstrapSecret: 'bootstrap-test',
+        resetCommand: 'bun run resetpass',
+      },
+      deps
+    );
 
     expect(warns.some((w) => w.includes('bun run resetpass'))).toBe(true);
   });
