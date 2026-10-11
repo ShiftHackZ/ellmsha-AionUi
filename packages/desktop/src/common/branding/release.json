@@ -1,20 +1,20 @@
 {
-  "version": "2026.10.10",
-  "patch": 3,
+  "version": "2026.10.11",
+  "patch": 5,
   "components": [
     {
       "name": "AionUI",
       "url": "https://github.com/iOfficeAI/AionUi",
       "upstream": "v2.1.47-final",
       "commit": "42be46dbf5a7d45042d0a691dea590f76cba8e24",
-      "patch": 3
+      "patch": 5
     },
     {
       "name": "AionCore",
       "url": "https://github.com/iOfficeAI/AionCore",
       "upstream": "v0.1.58",
       "commit": "134daddccf129d1642e08e709522f835fb734572",
-      "patch": 3
+      "patch": 5
     },
     {
       "name": "AionRS",
@@ -22,14 +22,14 @@
       "forkUrl": "https://github.com/ShiftHackZ/ellmsha-aionrs",
       "upstream": "v0.2.8",
       "commit": "4bd4f3254f6d875f122b648dd55116516c380d31",
-      "patch": 1
+      "patch": 2
     },
     {
       "name": "TencentDB Agent Memory",
       "url": "https://github.com/TencentCloud/TencentDB-Agent-Memory",
       "upstream": "8b86874",
       "commit": "8b86874a2daea49e3ff0fb53d699203146c5c77d",
-      "patch": 1
+      "patch": 3
     },
     {
       "name": "BMAD Method",
@@ -41,7 +41,7 @@
     {
       "name": "Ponytail",
       "url": "https://github.com/DietrichGebert/ponytail",
-      "upstream": "v5.1.0 \u00b7 9cc65d0",
+      "upstream": "v5.1.0 · 9cc65d0",
       "commit": "9cc65d03aa2da1db7121b912d03596409ee340b8",
       "patch": 0
     },

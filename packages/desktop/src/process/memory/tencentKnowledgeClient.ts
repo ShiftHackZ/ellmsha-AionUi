@@ -27,6 +27,14 @@ export type KnowledgeDetail = {
   last_sync_at?: string | null;
 };
 type KnowledgeList = { items: KnowledgeDetail[]; total: number };
+export type CodeRuntimeAction = 'status' | 'allocate' | 'deallocate';
+export type CodeRuntimeStatus = {
+  code_graph_id: string;
+  index_status: string;
+  loaded: boolean;
+  loading: boolean;
+  active_queries: number;
+};
 
 /** Resolve symlinks before mapping, so a workspace cannot expose files outside an allowed mount. */
 export function knowledgeRepositoryUrl(workspace: string, mappings: KnowledgeConfig['knowledgeWorkspaces']): string {
@@ -124,6 +132,12 @@ export class TencentKnowledgeClient {
       source: 'workspace snapshot at last successful sync',
       ...data,
     };
+  }
+
+  async runtime(id: string, action: CodeRuntimeAction): Promise<CodeRuntimeStatus> {
+    if (!id.startsWith('cg-')) throw new Error('Expected a code graph ID');
+    await this.detail(id);
+    return this.call('code-graph/runtime', { ...this.identity(), code_graph_id: id, action }, true);
   }
 
   async ingest(input: { wiki_id?: string; name?: string; files: Array<{ filename: string; content: string }> }) {

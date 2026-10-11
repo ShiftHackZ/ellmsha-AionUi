@@ -2,7 +2,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { loadMemoryConfig, TencentMemoryClient } from '../../memory/tencentMemoryClient';
+import { loadMemoryConfig, memorySearchProjectOptions, TencentMemoryClient } from '../../memory/tencentMemoryClient';
+import { resolveProjectContext } from '../../memory/project';
 import { registerProjectKnowledgeTools } from '../../memory/project/knowledge';
 import { registerTencentKnowledgeTools } from '../../memory/tencentKnowledgeClient';
 
@@ -26,16 +27,37 @@ async function main() {
   server.tool(
     'tdai_context',
     'Recall bounded shared context and this workspace’s BMAD artifact prefix/catalog. Use when runtime context is insufficient or a skill needs artifact paths.',
-    { query: z.string().min(1).max(2048), workspace: z.string().min(1).optional() },
+    { query: z.string().min(1).max(8192), workspace: z.string().min(1).optional() },
     READ_ONLY,
-    async ({ query, workspace }) => result(await client.context(query, workspace))
+    async ({ query, workspace }) => result(await client.context(query, await resolveProjectContext(), workspace))
   );
   server.tool(
     'tdai_memory_search',
     'Search shared knowledge across sessions. Returns bounded excerpts and source_path; use tdai_scenario_read for full text.',
-    { query: z.string().min(1).max(2048), limit: z.number().int().min(1).max(20).optional() },
+    {
+      query: z.string().min(1).max(8192),
+      limit: z.number().int().min(1).max(100).optional(),
+      offset: z.number().int().min(0).optional(),
+      intent: z.enum(['search', 'latest', 'current_decision', 'exact_ids', 'list_all', 'rules']).optional(),
+      scope: z.enum(['current_project', 'all']).optional(),
+      exact_ids: z.array(z.string().min(2).max(64)).max(32).optional(),
+    },
     READ_ONLY,
-    async ({ query, limit }) => result(await client.search(query, limit))
+    async ({ query, limit, offset, intent, scope, exact_ids }) => {
+      const currentProject = (scope ?? 'current_project') === 'current_project';
+      const projectOptions = currentProject ? memorySearchProjectOptions(await resolveProjectContext()) : undefined;
+      return result(
+        await client.search(query, limit, 1800, {
+          offset,
+          intent,
+          scope_mode: currentProject ? 'current_project' : 'cross_project',
+          project_scopes: projectOptions?.project_scopes ?? [],
+          project_aliases: projectOptions?.project_aliases ?? [],
+          exact_ids,
+          include_global: intent === 'rules',
+        })
+      );
+    }
   );
   server.tool(
     'tdai_memory_write',
@@ -84,7 +106,11 @@ async function main() {
   server.tool(
     'tdai_scenario_write',
     'Save a shared BMAD artifact or document and index it immediately. Update the existing path; then read it back to verify the full content.',
-    { path: z.string().min(1), content: z.string().min(1).max(100000), summary: z.string().max(500).optional() },
+    {
+      path: z.string().min(1),
+      content: z.string().min(1).max(100000),
+      summary: z.string().max(500).optional(),
+    },
     async ({ path, content, summary }) => result(await client.writeScenario(path, content, summary))
   );
   server.tool(

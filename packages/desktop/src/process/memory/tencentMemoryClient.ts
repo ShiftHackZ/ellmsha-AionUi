@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { resolveTencentGenerationContext } from './tencentGenerationContext';
+import type { ProjectContext } from './project';
 
 export type MemoryConfig = {
   gatewayUrl: string;
@@ -12,7 +13,37 @@ export type MemoryConfig = {
   userId: string;
   gatewayApiKey?: string;
 };
-type MemoryHit = { id: string; content: string; score?: number; type?: string; source_path?: string };
+type MemoryHit = {
+  id: string;
+  content: string;
+  score?: number;
+  type?: string;
+  source_path?: string;
+  event_date?: string;
+  status_hint?: string;
+};
+type MemorySearchData = {
+  strategy?: string;
+  degraded?: boolean;
+  message?: string;
+  evidence_status?: 'available' | 'partial' | 'empty' | 'missing_exact_ids' | 'degraded';
+  items?: MemoryHit[];
+  returned?: number;
+  total_candidates?: number;
+  complete?: boolean;
+  next_offset?: number;
+  matched_exact_ids?: string[];
+  missing_exact_ids?: string[];
+  source_catalog?: {
+    paths?: string[];
+    returned?: number;
+    total?: number;
+    complete?: boolean;
+    next_offset?: number;
+    error?: string;
+    unindexed_paths?: string[];
+  };
+};
 type ScenarioEntry = { path: string; summary?: string; version?: number };
 type ScenarioWrite = { path: string; version?: number; memory_id?: string };
 
@@ -44,6 +75,20 @@ export function memoryScope(workspace = process.env.AIONUI_TDAI_MEMORY_WORKSPACE
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '') || 'project';
   return `${name}-${createHash('sha256').update(canonical).digest('hex').slice(0, 10)}`;
+}
+
+export function memorySearchProjectOptions(context: ProjectContext) {
+  const roots = [context.workspace, ...context.roots];
+  return {
+    project_scopes: [...new Set(roots.map((root) => memoryScope(root)))],
+    project_aliases: [
+      ...new Set(
+        [context.name, path.basename(path.resolve(context.workspace))]
+          .map((alias) => alias.trim().toLowerCase())
+          .filter((alias) => alias.length >= 2 && alias.length <= 160)
+      ),
+    ],
+  };
 }
 
 function clip(value: string, length: number): string {
@@ -85,22 +130,65 @@ export class TencentMemoryClient {
     return envelope.data as T;
   }
 
-  async search(query: string, limit = 5, excerptLength = 1800) {
-    const data = await this.call<{ items?: MemoryHit[] }>('atomic/search', { query, limit });
+  async search(
+    query: string,
+    limit = 5,
+    excerptLength = 1800,
+    options: {
+      offset?: number;
+      intent?: 'search' | 'continue' | 'latest' | 'current_decision' | 'exact_ids' | 'list_all' | 'rules';
+      scope_mode?: 'current_project' | 'cross_project' | 'projectless';
+      project_scopes?: string[];
+      project_aliases?: string[];
+      include_global?: boolean;
+      exact_ids?: string[];
+    } = {}
+  ) {
+    const data = await this.call<MemorySearchData>('atomic/search', { query, limit, ...options });
+    const degraded = data.degraded ?? true;
     return {
+      strategy: data.strategy,
+      degraded,
+      message:
+        data.message ??
+        (data.degraded === undefined
+          ? 'Gateway did not report retrieval health; treat the evidence as partial.'
+          : undefined),
+      evidence_status: data.evidence_status ?? (degraded ? 'degraded' : 'partial'),
       items: (data.items ?? []).slice(0, limit).map((hit) => ({
         id: hit.id,
         type: hit.type,
         score: hit.score,
         source_path: hit.source_path,
+        event_date: hit.event_date,
+        status_hint: hit.status_hint,
         content: clip(hit.content, excerptLength),
         truncated: hit.content.length > excerptLength,
       })),
+      returned: data.returned ?? data.items?.length ?? 0,
+      total_candidates: data.total_candidates ?? data.items?.length ?? 0,
+      complete: data.complete ?? false,
+      next_offset: data.next_offset,
+      matched_exact_ids: data.matched_exact_ids ?? [],
+      missing_exact_ids: data.missing_exact_ids ?? [],
+      source_catalog: data.source_catalog
+        ? {
+            paths: data.source_catalog.paths ?? [],
+            returned: data.source_catalog.returned ?? data.source_catalog.paths?.length ?? 0,
+            total: data.source_catalog.total ?? 0,
+            complete: data.source_catalog.complete ?? false,
+            next_offset: data.source_catalog.next_offset,
+            error: data.source_catalog.error,
+            unindexed_paths: data.source_catalog.unindexed_paths,
+          }
+        : undefined,
     };
   }
 
   async list(pathPrefix?: string, offset = 0, limit = 30) {
-    const data = await this.call<{ entries?: ScenarioEntry[] }>('scenario/ls', { path_prefix: pathPrefix });
+    const data = await this.call<{ entries?: ScenarioEntry[] }>('scenario/ls', {
+      path_prefix: pathPrefix,
+    });
     const entries = (data.entries ?? []).toSorted((a, b) => a.path.localeCompare(b.path));
     return {
       entries: entries.slice(offset, offset + limit).map((entry) => ({
@@ -114,19 +202,24 @@ export class TencentMemoryClient {
     };
   }
 
-  async context(query: string, workspace?: string) {
-    const scope = memoryScope(workspace);
+  async context(query: string, context: ProjectContext, workspace?: string) {
+    const projectOptions = memorySearchProjectOptions(context);
+    const scope = memoryScope(workspace ?? context.workspace);
+    if (!projectOptions.project_scopes.includes(scope))
+      throw new Error('Memory workspace is outside the current project. Use one of its registered roots.');
     const prefix = `bmad/${scope}/`;
     const values = await Promise.allSettled([
-      this.search(query, 4, 1100),
+      this.search(query, 4, 1100, { scope_mode: 'current_project', ...projectOptions }),
       this.call<{ content?: string | null }>('core/read', {}),
       this.list(prefix, 0, 8),
     ]);
     const [memories, guidance, artifacts] = values;
+    const { items = [], ...memoryRetrieval } = memories.status === 'fulfilled' ? memories.value : {};
     return {
       project_scope: scope,
       bmad_prefix: prefix,
-      memories: memories.status === 'fulfilled' ? memories.value.items : [],
+      memories: items,
+      memory_retrieval: memories.status === 'fulfilled' ? memoryRetrieval : null,
       guidance: guidance.status === 'fulfilled' ? clip(guidance.value.content ?? '', 1000) : '',
       artifacts: artifacts.status === 'fulfilled' ? artifacts.value : null,
       unavailable: values.flatMap((value, index) =>

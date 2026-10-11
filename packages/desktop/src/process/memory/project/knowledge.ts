@@ -6,6 +6,7 @@ import {
   knowledgeRepositoryUrl,
   type KnowledgeConfig,
   type KnowledgeDetail,
+  type CodeRuntimeAction,
 } from '../tencentKnowledgeClient';
 import type { MemoryConfig } from '../tencentMemoryClient';
 import { allowNativeProject, discoverRepositories, resolveProjectContext, type ProjectContext } from './index';
@@ -111,6 +112,13 @@ export class ProjectKnowledge {
     };
   }
 
+  async runtime(context: ProjectContext, graphId: string, action: CodeRuntimeAction) {
+    const catalog = await this.catalog(context);
+    if (!catalog.repositories.some((repo) => repo.code_graph_id === graphId))
+      throw new Error('Code graph is not in the current project');
+    return this.client(context).runtime(graphId, action);
+  }
+
   async search(context: ProjectContext, query: string, repository?: string, limit = 5) {
     const catalog = await this.catalog(context);
     const selected = repository
@@ -168,6 +176,20 @@ export function registerProjectKnowledgeTools(server: McpServer, config: MemoryC
     'Create or refresh separate Tencent code indexes for all current project repositories, or one selected repository. Asynchronous; poll tdai_project_repositories for completion. No code is changed.',
     { repository: repositorySchema },
     async ({ repository }) => result(await client.index(await resolveProjectContext(), repository))
+  );
+  server.tool(
+    'tdai_code_runtime',
+    'Inspect, load, or release a current-project code index in runtime memory. Deallocate only closes idle handles; it preserves index files, metadata, and user code. Queries load indexes again automatically. Busy indexes return an error; retry later. Use tdai_project_index to create or refresh an index.',
+    {
+      code_graph_id: z
+        .string()
+        .regex(/^cg-[a-zA-Z0-9_-]+$/)
+        .describe('Existing ID from tdai_project_repositories'),
+      action: z.enum(['status', 'allocate', 'deallocate']),
+    },
+    { destructiveHint: false, openWorldHint: false, idempotentHint: true },
+    async ({ code_graph_id, action }) =>
+      result(await client.runtime(await resolveProjectContext(), code_graph_id, action))
   );
   server.tool(
     'tdai_project_code_search',

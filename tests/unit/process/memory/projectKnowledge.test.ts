@@ -13,12 +13,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, expect, it, vi } from 'vitest';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import {
   discoverRepositories,
   allowNativeProject,
   resolveProjectContext,
 } from '../../../../packages/desktop/src/process/memory/project';
-import { ProjectKnowledge } from '../../../../packages/desktop/src/process/memory/project/knowledge';
+import {
+  ProjectKnowledge,
+  registerProjectKnowledgeTools,
+} from '../../../../packages/desktop/src/process/memory/project/knowledge';
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -144,6 +150,61 @@ it('project grant files remain separate across concurrent projects', async () =>
     allowNativeProject(f.config.nativeKnowledgeProjectsDir, { ...f.context, project_id: 'other' }),
   ]);
   expect(readdirSync(f.config.nativeKnowledgeProjectsDir).filter((p) => p.endsWith('.json'))).toHaveLength(2);
+});
+it('limits runtime allocation and release to graphs discovered in the current project', async () => {
+  const f = fixture();
+  const graphs = [
+    {
+      code_graph_id: 'cg-current',
+      repo_url: pathToFileURL(f.backend).href,
+      branch: 'local',
+      status: 'ready',
+      team_id: 'team',
+    },
+    { code_graph_id: 'cg-other', repo_url: 'file:///other/project', branch: 'local', status: 'ready', team_id: 'team' },
+  ];
+  const actions: unknown[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      if (url.endsWith('/list')) return response({ items: graphs, total: graphs.length });
+      if (url.endsWith('/get')) return response(graphs[0]);
+      actions.push(body);
+      return response({
+        code_graph_id: body.code_graph_id,
+        index_status: 'ready',
+        loaded: false,
+        loading: false,
+        active_queries: 0,
+      });
+    })
+  );
+  const client = new ProjectKnowledge(f.config);
+  await expect(client.runtime(f.context, 'cg-other', 'deallocate')).rejects.toThrow('not in the current project');
+  await client.runtime(f.context, 'cg-current', 'deallocate');
+  expect(actions).toEqual([
+    { team_id: 'team', user_id: 'user', agent_id: 'agent', code_graph_id: 'cg-current', action: 'deallocate' },
+  ]);
+});
+it('advertises code runtime actions through the actual MCP catalog', async () => {
+  const f = fixture();
+  const server = new McpServer({ name: 'test', version: '1' });
+  registerProjectKnowledgeTools(server, f.config);
+  const client = new Client({ name: 'test', version: '1' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  try {
+    const tool = (await client.listTools()).tools.find((tool) => tool.name === 'tdai_code_runtime');
+    expect(tool?.inputSchema).toMatchObject({
+      required: ['code_graph_id', 'action'],
+      properties: { action: { enum: ['status', 'allocate', 'deallocate'] } },
+    });
+    expect(tool?.annotations?.destructiveHint).toBe(false);
+  } finally {
+    await client.close();
+    await server.close();
+  }
 });
 it('resolves live project context through the chat capability and fails closed on rejection', async () => {
   const f = fixture();
