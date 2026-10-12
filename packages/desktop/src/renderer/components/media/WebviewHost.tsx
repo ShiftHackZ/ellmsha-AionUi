@@ -96,20 +96,63 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   const [zoomFactor, setZoomFactor] = useState(1);
   const [webviewReady, setWebviewReady] = useState(false);
 
-  const reportBrowserTarget = useCallback(() => {
-    if (!browserTarget) return;
-    const webContentsId = webviewRef.current?.getWebContentsId?.();
-    if (typeof webContentsId !== 'number') return;
-    void ipcBridge.application.reportBrowserWebContentsId
-      .invoke({ tabId: browserTarget.tabId, webContentsId, active: browserTarget.active })
-      .then((result) => {
-        if (!result.success && result.msg) console.warn('[browser] agent control unavailable:', result.msg);
-      });
-  }, [browserTarget?.active, browserTarget?.tabId]);
+  const reportBrowserTarget = useCallback(
+    (focusRequestId?: string) => {
+      if (!browserTarget) return;
+      const webContentsId = webviewRef.current?.getWebContentsId?.();
+      if (typeof webContentsId !== 'number') return;
+      void ipcBridge.application.reportBrowserWebContentsId
+        .invoke({
+          tabId: browserTarget.tabId,
+          webContentsId,
+          active: browserTarget.active,
+          ...(focusRequestId ? { focusRequestId } : {}),
+        })
+        .then((result) => {
+          if (!result.success && result.msg) console.warn('[browser] agent control unavailable:', result.msg);
+        });
+    },
+    [browserTarget?.active, browserTarget?.tabId]
+  );
 
   useEffect(() => {
     if (webviewReady) reportBrowserTarget();
   }, [reportBrowserTarget, webviewReady]);
+
+  useEffect(() => {
+    if (!browserTarget) return;
+    let frame: number | undefined;
+    const unsubscribe = ipcBridge.application.browserTabCommand.on((command) => {
+      if (command.action !== 'focus' || command.tabId !== browserTarget.tabId) return;
+      // A webview guest's main-process WebContents.focus() is a no-op in
+      // Electron. Focus its owning renderer element, which focuses the OOPIF.
+      frame = requestAnimationFrame(() => {
+        const webview = webviewRef.current;
+        if (webviewReady && browserTarget.active && webview) {
+          try {
+            // Chromium cannot reliably transfer native focus straight from
+            // one guest to another; return it to the host before focusing this guest.
+            if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+            webview.focus();
+            if (document.activeElement === webview) {
+              reportBrowserTarget(command.requestId);
+              return;
+            }
+          } catch {
+            // The guest may have been destroyed between the command and frame.
+          }
+        }
+        void ipcBridge.application.reportBrowserTabCommandFailure.invoke({
+          tabId: command.tabId,
+          reason: 'The exact browser webview could not receive focus. No input was sent.',
+        });
+      });
+    });
+    return () => {
+      unsubscribe();
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [browserTarget?.tabId, browserTarget?.active, webviewReady, reportBrowserTarget]);
 
   // 最近由本组件内部触发的导航地址集合。
   //

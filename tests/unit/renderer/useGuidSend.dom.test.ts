@@ -84,6 +84,19 @@ describe('useGuidSend', () => {
     swrMutateMock.mockResolvedValue(undefined);
   });
 
+  it.each(['claude', 'aionrs'])('keeps the private first prompt out of %s creation metadata', async (backend) => {
+    const deps = createDeps();
+    deps.selectedAssistantBackend = backend;
+    deps.current_model = { id: 'fixture', name: 'Fixture', use_model: 'fixture' } as never;
+    deps.input = 'Check fixture password: example-secret';
+    const { result } = renderHook(() => useGuidSend(deps));
+    await act(async () => {
+      await result.current.handleSend();
+    });
+    expect(createConversationInvokeMock.mock.calls[0][0].name).toBe('conversation.welcome.newConversation');
+    expect(JSON.stringify(createConversationInvokeMock.mock.calls[0][0])).not.toContain('example-secret');
+  });
+
   it('passes selected mode into assistant conversation overrides when creating a preset ACP conversation', async () => {
     const deps = createDeps();
     (deps as any).selectedThoughtLevelValue = 'high';

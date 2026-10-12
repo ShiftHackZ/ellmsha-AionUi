@@ -19,6 +19,21 @@ vi.mock('@/renderer/utils/chat/conversationExport', () => ({
 
 describe('autoTitle', () => {
   describe('buildAutoTitleFromContent', () => {
+    it.each([
+      'Inspect fixture login password: example-secret',
+      'Inspect fixture\n"password": "example secret with spaces"',
+      'Проверь стенд, пароль: example-secret',
+      'Authorization: Bearer test-token',
+      'Inspect fixture at person@example.test',
+      'Inspect https://example.test/callback?code=test-code',
+      'Inspect https://person:secret@example.test',
+      'Use ghp_abcdefghijklmnop',
+      'Fixture password example-secret',
+      'Стенд пароль example-secret',
+    ])('keeps private prompt data out of automatic titles: %s', (content) => {
+      expect(buildAutoTitleFromContent(content)).toBeNull();
+    });
+
     it('returns first line of content', () => {
       const content = 'First line\nSecond line';
       expect(buildAutoTitleFromContent(content)).toBe('First line');

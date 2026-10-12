@@ -180,7 +180,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
       }
       try {
         const conversation = await ipcBridge.conversation.create.invoke({
-          name: input,
+          name: t('conversation.welcome.newConversation'),
           model: current_model,
           assistant: {
             id: assistantConversationId,
@@ -230,7 +230,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
 
     try {
       const conversation = await ipcBridge.conversation.create.invoke({
-        name: input,
+        name: t('conversation.welcome.newConversation'),
         assistant: {
           id: assistantConversationId,
           locale: localeKey,

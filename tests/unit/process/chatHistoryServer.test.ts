@@ -5,6 +5,7 @@ import {
   ChatHistoryApiClient,
   ChatHistoryService,
   createChatHistoryServer,
+  taskContextUpdateSchema,
 } from '@process/resources/builtinMcp/chatHistoryServer';
 
 type RouteResult = { data?: unknown; status?: number; error?: string };
@@ -45,7 +46,7 @@ const root = {
 };
 
 describe('chat history MCP service', () => {
-  it('publishes the three discoverable tools as read-only MCP capabilities', async () => {
+  it('keeps history tools read-only and exposes self-scoped working context separately', async () => {
     const { api } = mockApi({ '/api/conversations/root-1': { data: root } });
     const server = createChatHistoryServer(new ChatHistoryService(api, 'root-1'));
     const client = new Client({ name: 'history-test-client', version: '1.0.0' });
@@ -54,13 +55,23 @@ describe('chat history MCP service', () => {
     await client.connect(clientTransport);
 
     const tools = await client.listTools();
+    expect(client.getInstructions()).toContain('complex multi-step work');
+    expect(client.getInstructions()).toContain('CodeGraph repositories');
+    expect(client.getInstructions()).toContain('unit, integration and UI evidence separately');
 
     expect(tools.tools.map((tool) => tool.name)).toEqual([
       'chat_history_list',
       'chat_history_search',
       'chat_history_read',
+      'task_context_read',
+      'task_context_update',
     ]);
-    expect(tools.tools.every((tool) => tool.annotations?.readOnlyHint === true)).toBe(true);
+    expect(
+      tools.tools
+        .filter((tool) => tool.name !== 'task_context_update')
+        .every((tool) => tool.annotations?.readOnlyHint === true)
+    ).toBe(true);
+    expect(tools.tools.find((tool) => tool.name === 'task_context_update')?.annotations?.readOnlyHint).toBe(false);
     const response = await client.callTool({
       name: 'chat_history_list',
       arguments: { scope: 'conversation', conversation_id: 'root-1' },
@@ -322,5 +333,59 @@ describe('chat history MCP service', () => {
     await expect(service.read({ conversation_id: 'missing', scope: 'all' })).rejects.toEqual(
       expect.objectContaining({ status: 404, message: 'Conversation missing not found' })
     );
+  });
+});
+
+describe('conversation task brief', () => {
+  const update = {
+    expected_revision: 2,
+    based_on_user_message_id: 'user-latest',
+    constraints: [
+      {
+        key: 'browser',
+        kind: 'browser_target' as const,
+        value: 'Use the fixture tab',
+        source_message_id: 'user-latest',
+        source_quote: 'Use the fixture tab',
+      },
+    ],
+    evidence: [],
+  };
+
+  it('uses only the runtime conversation for reads and authenticated replacement', async () => {
+    const { api, fetchMock } = mockApi({
+      '/api/conversations/root-1/task-context': { data: { conversation_id: 'root-1', context: { revision: 3 } } },
+    });
+    const service = new ChatHistoryService(api, 'root-1');
+    await service.readTaskContext();
+    await service.updateTaskContext(update);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('GET');
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'PUT',
+      body: JSON.stringify(update),
+      headers: { 'x-aionui-conversation-id': 'root-1' },
+    });
+    expect(taskContextUpdateSchema.safeParse({ ...update, conversation_id: 'foreign' }).success).toBe(false);
+  });
+
+  it('surfaces stale revision conflicts rather than blindly retrying', async () => {
+    const { api, fetchMock } = mockApi({
+      '/api/conversations/root-1/task-context': { status: 409, error: 'TASK_CONTEXT_CONFLICT' },
+    });
+    await expect(new ChatHistoryService(api, 'root-1').updateTaskContext(update)).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects excessive counts and unexpected fields before network access', async () => {
+    const { api, fetchMock } = mockApi({});
+    await expect(
+      new ChatHistoryService(api, 'root-1').updateTaskContext({
+        ...update,
+        constraints: Array(17).fill(update.constraints[0]),
+      })
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

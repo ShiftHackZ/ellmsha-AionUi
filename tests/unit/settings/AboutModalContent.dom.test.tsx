@@ -35,7 +35,7 @@ describe('eLLMsha About', () => {
       url: 'https://github.com/ChromeDevTools/chrome-devtools-mcp',
       upstream: 'chrome-devtools-mcp-v0.16.0',
       commit: '4f7b06898327ab5be42c85bd98bd176f33d55d89',
-      patch: 2,
+      patch: 3,
     });
     expect(harnessRelease.components.find((component) => component.name === 'Open Computer Use')).toEqual({
       name: 'Open Computer Use',
@@ -43,7 +43,7 @@ describe('eLLMsha About', () => {
       forkUrl: 'https://github.com/ShiftHackZ/ellmsha-open-codex-computer-use',
       upstream: '0.3.6',
       commit: '83a521e546102564efd002f61a6763912081e5c7',
-      patch: 0,
+      patch: 1,
     });
     expect(harnessRelease.components.find((component) => component.name === 'AionRS')).toMatchObject({
       url: 'https://github.com/iOfficeAI/aionrs',

@@ -193,6 +193,10 @@ describe('Chrome DevTools MCP runtime preparation', () => {
     let dataServer: Server | undefined;
     let dataSocket: Socket | undefined;
     const controlServer = createServer((controlSocket) => {
+      // basic-ftp may close its control socket immediately after the data stream ends.
+      controlSocket.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ECONNRESET') throw error;
+      });
       controlSocket.setEncoding('utf8');
       controlSocket.write('220 fixture ready\r\n');
       let buffered = '';

@@ -619,6 +619,8 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     return ipcBridge.application.browserTabCommand.on((command) => {
+      // The mounted WebviewHost owns native frame focus and its acknowledgement.
+      if (command.action === 'focus') return;
       const existing = tabsRef.current.find((tab) => tab.id === command.tabId && tab.content_type === 'browser');
 
       if (command.action === 'create') {

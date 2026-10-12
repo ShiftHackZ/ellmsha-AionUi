@@ -56,6 +56,7 @@ type TargetState = {
   active: boolean;
   onMessage: (event: unknown, method: string, params: unknown, sessionId: string) => void;
   onDestroyed: () => void;
+  onFocus: () => void;
 };
 
 type SocketState = {
@@ -95,6 +96,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
   let lifecycleTail: Promise<void> = Promise.resolve();
   let rendererReady = false;
   let expectedTabIds = new Set<string>();
+  let pendingFocus: { target: TargetState; requestId: string; acknowledged: boolean } | undefined;
 
   const targetInfos = (): TargetInfo[] =>
     [...targets.values()].map((target) =>
@@ -165,6 +167,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     try {
       target.dbg.removeListener('message', target.onMessage);
       target.contents.removeListener('destroyed', target.onDestroyed);
+      target.contents.removeListener('focus', target.onFocus);
       if (target.dbg.isAttached()) target.dbg.detach();
     } catch {
       // Electron throws after a webContents has already been destroyed.
@@ -175,6 +178,12 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     const target = targets.get(tabId);
     if (!target || (expectedContents && target.contents !== expectedContents)) return;
     targets.delete(tabId);
+    if (pendingFocus?.target === target) {
+      rejectTabCommand(
+        tabId,
+        `Browser tab ${tabId} closed or reloaded before receiving input focus. No input was sent.`
+      );
+    }
     if (activeTargetId === tabId) activeTargetId = null;
     detachTarget(target);
     for (const [ws, state] of socketStates) {
@@ -216,6 +225,9 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
 
     const existing = targets.get(tabId);
     if (existing?.contents === contents) {
+      if (pendingFocus?.target === existing && registration.focusRequestId === pendingFocus.requestId) {
+        pendingFocus.acknowledged = true;
+      }
       if (active) {
         for (const target of targets.values()) target.active = target.tabId === tabId;
         activeTargetId = tabId;
@@ -249,9 +261,11 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       }
     };
     const onDestroyed = (): void => removeTarget(tabId, contents);
-    const target: TargetState = { tabId, contents, dbg, active, onMessage, onDestroyed };
+    const onFocus = (): void => notifyWaiters();
+    const target: TargetState = { tabId, contents, dbg, active, onMessage, onDestroyed, onFocus };
     dbg.on('message', onMessage);
     contents.once('destroyed', onDestroyed);
+    contents.on('focus', onFocus);
     targets.set(tabId, target);
 
     if (active) {
@@ -315,6 +329,54 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       return tabId;
     });
 
+  const hasTargetInputFocus = (target: TargetState): boolean => {
+    try {
+      const host = target.contents.hostWebContents;
+      if (!host || host.isDestroyed()) return false;
+      const frame = host.focusedFrame;
+      // Guest isFocused() reflects the shared root view, so the global
+      // getFocusedWebContents() can return a different, even hidden webview.
+      // CDP input follows this native frame even when another macOS app is key.
+      return !!frame && webContents.fromFrame(frame) === target.contents;
+    } catch {
+      // A frame can detach while Chromium changes the focused guest.
+      return false;
+    }
+  };
+
+  const focusTarget = async (target: TargetState): Promise<void> => {
+    if (targets.get(target.tabId) !== target || target.contents.isDestroyed() || activeTargetId !== target.tabId) {
+      throw new Error(`Browser tab ${target.tabId} is no longer the visible input target.`);
+    }
+    if (hasTargetInputFocus(target)) return;
+    const host = target.contents.hostWebContents;
+    if (!host || host.isDestroyed()) throw new Error('The browser host is no longer available. No input was sent.');
+    const request = { target, requestId: randomBytes(12).toString('hex'), acknowledged: false };
+    pendingFocus = request;
+    const focused = waitForState(
+      () => request.acknowledged && hasTargetInputFocus(target),
+      `Browser tab ${target.tabId} did not confirm input focus. No input was sent.`,
+      target.tabId
+    );
+    // Electron does not guarantee a guest focus event when only the focused
+    // frame changes. Observe that native state until the bounded waiter settles.
+    const focusPoll = setInterval(notifyWaiters, 16);
+    try {
+      options.sendTabCommand({ action: 'focus', tabId: target.tabId, requestId: request.requestId });
+      await focused;
+    } catch (error) {
+      rejectTabCommand(target.tabId, error instanceof Error ? error.message : String(error));
+      await focused.catch((): void => undefined);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `${message} (renderer_ack=${request.acknowledged}, exact_frame_focus=${hasTargetInputFocus(target)}, host_focused=${!host.isDestroyed() && host.isFocused()})`
+      );
+    } finally {
+      clearInterval(focusPoll);
+      if (pendingFocus === request) pendingFocus = undefined;
+    }
+  };
+
   const activateTarget = (targetId: string): Promise<void> =>
     runLifecycle(async () => {
       await waitForInventory();
@@ -326,6 +388,10 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       );
       options.sendTabCommand({ action: 'activate', tabId: targetId });
       await activated;
+      const target = targets.get(targetId);
+      if (!target) throw new Error(`No such in-app browser tab: ${targetId}`);
+      // Fail before a locator can clear a field while preparing to type.
+      await focusTarget(target);
     });
 
   const closeTarget = (targetId: string): Promise<void> =>
@@ -435,7 +501,28 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
         );
         return;
       }
-      const result = await target.dbg.sendCommand(method, params ?? {});
+      const dispatch = async (): Promise<unknown> => {
+        if (method.startsWith('Input.')) {
+          // A guest debugger is not an input focus boundary: Electron can send
+          // CDP keystrokes to the focused host (e.g. the chat composer). Check
+          // every event, since the host may regain focus between keystrokes.
+          // Keep focus + dispatch in the lifecycle queue. Never replay failed input.
+          await focusTarget(target);
+          if (
+            targets.get(target.tabId) !== target ||
+            target.contents.isDestroyed() ||
+            activeTargetId !== target.tabId
+          ) {
+            throw new Error(`Browser tab ${target.tabId} is no longer the visible input target.`);
+          }
+          // No await between this final native focus check and sendCommand.
+          if (!hasTargetInputFocus(target)) {
+            throw new Error(`Browser tab ${target.tabId} could not receive input focus. No input was sent.`);
+          }
+        }
+        return target.dbg.sendCommand(method, params ?? {});
+      };
+      const result = method.startsWith('Input.') ? await runLifecycle(dispatch) : await dispatch();
       ws.send(JSON.stringify({ id, result: result ?? {}, sessionId }));
     } catch (error) {
       sendError(ws, id, error instanceof Error ? error.message : String(error));

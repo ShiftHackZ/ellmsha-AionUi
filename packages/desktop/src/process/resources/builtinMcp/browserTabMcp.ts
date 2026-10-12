@@ -9,7 +9,13 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from '@modelcontextprotocol/sdk/types.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  ErrorCode,
+  McpError,
+  type Tool,
+} from '@modelcontextprotocol/sdk/types.js';
 import { WebSocket } from 'ws';
 
 type JsonObject = Record<string, unknown>;
@@ -156,48 +162,183 @@ export const callStableBrowserTool = async (controller: BrowserTabController, na
   }
 };
 
+const PAGE_LIFECYCLE_TOOLS = new Set(['list_pages', 'select_page', 'new_page', 'close_page']);
+// Puppeteer input waits for visible, interactive elements; selecting a CDP target
+// alone does not unhide its Electron webview. Observations can stay in the background.
+const INPUT_TOOLS = new Set(['click', 'click_at', 'hover', 'fill', 'drag', 'fill_form', 'upload_file', 'press_key']);
+const TOOL_TIMEOUT_MS = 60_000;
+
+const addTargetSchema = (tool: Tool): Tool => {
+  const properties = { ...(tool.inputSchema.properties || {}) };
+  delete properties.targetId;
+  if (!PAGE_LIFECYCLE_TOOLS.has(tool.name)) {
+    properties.tab_id = {
+      type: 'string',
+      description:
+        'Exact stable tab ID from browser_tabs_list. Omit to use the last selected tab. Use IDs from a snapshot of this same tab for element actions.',
+    };
+  }
+  return { ...tool, inputSchema: { ...tool.inputSchema, properties } };
+};
+
 export const createBrowserMcpProxy = (upstream: Client, controller: BrowserTabController): Server => {
+  let selectedTabId: string | undefined;
+  let legacySelection = false;
+  let targetSupport: Promise<boolean> | undefined;
+  let uncertainOutcome = false;
+  let tail: Promise<unknown> = Promise.resolve();
   const server = new Server(
     { name: 'aionui-browser', version: '1.0.0' },
     {
       capabilities: { tools: {} },
       instructions:
         'Use browser_tabs_list and browser_tab_* for stable tab lifecycle and exact navigation. ' +
-        'Use the DevTools page tools for reading and interacting with page content.',
+        'Pass tab_id to DevTools observations/actions to operate on that exact tab atomically. ' +
+        'Input actions show their exact target tab before interacting; observations can run in the background. ' +
+        'After switching tabs take a fresh snapshot before using element IDs. ' +
+        'Replies include the actual target ID and URL; never infer identity from a duplicate URL. ' +
+        'Legacy select_page remains supported and changes the default target. ' +
+        'A timed-out action may have completed: do not repeat mutations blindly.',
     }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async (request) => {
     const upstreamResult = await upstream.listTools(request.params);
-    return { ...upstreamResult, tools: [...upstreamResult.tools.flatMap(splitSnapshotTool), ...STABLE_BROWSER_TOOLS] };
+    return {
+      ...upstreamResult,
+      tools: [
+        ...upstreamResult.tools.flatMap(splitSnapshotTool).map(addTargetSchema),
+        ...(request.params?.cursor ? [] : STABLE_BROWSER_TOOLS),
+      ],
+    };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    if (STABLE_BROWSER_TOOLS.some((tool) => tool.name === request.params.name)) {
+  server.setRequestHandler(CallToolRequestSchema, (request, extra) => {
+    // ponytail: one queue per MCP connection; keeps lifecycle/default selection ordered.
+    // Explicit target + action is additionally atomic inside the upstream tool mutex.
+    const result = tail.then(async () => {
+      let commandStarted = false;
       try {
-        return await callStableBrowserTool(controller, request.params.name, request.params.arguments);
+        if (extra.signal.aborted) throw new Error('Browser request was cancelled before execution.');
+        const { name } = request.params;
+        const args = request.params.arguments;
+        if (uncertainOutcome && name !== 'browser_tabs_list') {
+          throw new Error(
+            'Previous browser command timed out; its outcome is unknown. Reconnect browser tools before further actions. Do not replay mutations without checking their outcome.'
+          );
+        }
+        if (STABLE_BROWSER_TOOLS.some((tool) => tool.name === name)) {
+          commandStarted = name !== 'browser_tabs_list';
+          const response = await callStableBrowserTool(controller, name, args);
+          if (name === 'browser_tab_activate' || (name === 'browser_tab_navigate' && args?.activate !== false)) {
+            selectedTabId = stringArgument(args, 'tab_id');
+            legacySelection = false;
+          } else if (name === 'browser_tab_open' && args?.activate !== false) {
+            selectedTabId = (JSON.parse(response.content[0].text) as { tab_id: string }).tab_id;
+            legacySelection = false;
+          }
+          // Keep a closed selected ID pinned: the next action must fail, not hit another tab.
+          return response;
+        }
+        if (name === INLINE_SNAPSHOT_TOOL && args?.filePath !== undefined) {
+          throw new Error(`Use ${FILE_SNAPSHOT_TOOL} when a snapshot must be saved to disk.`);
+        }
+        const upstreamName = name === FILE_SNAPSHOT_TOOL ? INLINE_SNAPSHOT_TOOL : name;
+        if (name === FILE_SNAPSHOT_TOOL) stringArgument(args, 'filePath');
+        if (args?.targetId !== undefined) throw new Error('Use tab_id for stable in-app targeting.');
+        const { tab_id: explicitTabId, ...upstreamArgs } = args || {};
+        let targetId: string | undefined;
+        if (!PAGE_LIFECYCLE_TOOLS.has(name)) {
+          targetId = explicitTabId !== undefined ? stringArgument(args, 'tab_id') : selectedTabId;
+          if (!targetId && !legacySelection) {
+            targetId = (await controller.list()).find((tab) => tab.active)?.id;
+            if (!targetId) throw new Error('No active in-app browser tab. Open or select a tab first.');
+          }
+          if (targetId) {
+            if (!(await controller.list()).some((tab) => tab.id === targetId)) {
+              throw new Error(`Browser tab ${targetId} is closed or unavailable. List tabs again.`);
+            }
+            targetSupport ??= upstream
+              .listTools()
+              .then((catalog) =>
+                catalog.tools.some(
+                  (tool) => tool.name === INLINE_SNAPSHOT_TOOL && tool.inputSchema.properties?.targetId
+                )
+              )
+              .catch((error: unknown) => {
+                targetSupport = undefined;
+                throw error;
+              });
+            if (!(await targetSupport))
+              throw new Error(
+                'Browser runtime does not support exact targeting; update the bundled browser tools before acting.'
+              );
+          }
+        } else if (explicitTabId !== undefined) {
+          throw new Error(`Use browser_tab_* for stable lifecycle, or the original ${name} parameters.`);
+        }
+        if (extra.signal.aborted) throw new Error('Browser request was cancelled before execution.');
+        if (targetId && INPUT_TOOLS.has(name)) {
+          commandStarted = true;
+          // Keep activation and input in the same queue and await the renderer's
+          // active-tab acknowledgement before Puppeteer starts its visibility wait.
+          await controller.activate(targetId);
+          if (extra.signal.aborted) throw new Error('Browser request was cancelled before input.');
+        }
+        commandStarted = true;
+        const response = await upstream.callTool(
+          { ...request.params, name: upstreamName, arguments: { ...upstreamArgs, ...(targetId ? { targetId } : {}) } },
+          undefined,
+          {
+            timeout: TOOL_TIMEOUT_MS,
+            maxTotalTimeout: TOOL_TIMEOUT_MS,
+            resetTimeoutOnProgress: false,
+            signal: extra.signal,
+          }
+        );
+        const target = (
+          response.structuredContent as { target?: { id?: string; url?: string; closed?: boolean } } | undefined
+        )?.target;
+        if (!response.isError && targetId && target?.id !== targetId) {
+          uncertainOutcome = true;
+          throw new Error(
+            'Browser returned an unverified target; action outcome is unknown. Reconnect tools and inspect before repeating an action.'
+          );
+        }
+        if (
+          !response.isError &&
+          (name === 'select_page' || name === 'new_page' || name === 'close_page' || explicitTabId !== undefined)
+        ) {
+          selectedTabId = target?.id;
+          legacySelection = !selectedTabId;
+        }
+        if (target) {
+          return {
+            ...response,
+            // Avoid duplicating the entire snapshot in text and structured JSON.
+            structuredContent: { target },
+            content: [
+              ...(Array.isArray(response.content) ? response.content : []),
+              { type: 'text' as const, text: `Browser target: ${JSON.stringify(target)}` },
+            ],
+          };
+        }
+        return response;
       } catch (error) {
+        if (
+          commandStarted &&
+          ((error instanceof McpError && error.code === ErrorCode.RequestTimeout) || extra.signal.aborted)
+        ) {
+          uncertainOutcome = true;
+        }
         return {
           content: [{ type: 'text' as const, text: error instanceof Error ? error.message : String(error) }],
           isError: true,
         };
       }
-    }
-    if (request.params.name === INLINE_SNAPSHOT_TOOL && request.params.arguments?.filePath !== undefined) {
-      return {
-        content: [{ type: 'text', text: `Use ${FILE_SNAPSHOT_TOOL} when a snapshot must be saved to disk.` }],
-        isError: true,
-      };
-    }
-    if (request.params.name === FILE_SNAPSHOT_TOOL) {
-      const filePath = stringArgument(request.params.arguments, 'filePath');
-      return upstream.callTool({
-        ...request.params,
-        name: INLINE_SNAPSHOT_TOOL,
-        arguments: { ...request.params.arguments, filePath },
-      });
-    }
-    return upstream.callTool(request.params);
+    });
+    tail = result.catch((): void => undefined);
+    return result;
   });
 
   return server;
@@ -206,6 +347,7 @@ export const createBrowserMcpProxy = (upstream: Client, controller: BrowserTabCo
 type PendingRequest = {
   resolve: (value: JsonObject) => void;
   reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
 };
 
 export class CdpBrowserTabController implements BrowserTabController {
@@ -220,13 +362,13 @@ export class CdpBrowserTabController implements BrowserTabController {
     if (this.socket?.readyState === WebSocket.OPEN) return this.socket;
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
-      const response = await fetch(new URL('/json/version', this.browserUrl));
+      const response = await fetch(new URL('/json/version', this.browserUrl), { signal: AbortSignal.timeout(10_000) });
       if (!response.ok) throw new Error(`Browser discovery failed with HTTP ${response.status}.`);
       const payload = (await response.json()) as { webSocketDebuggerUrl?: unknown };
       if (typeof payload.webSocketDebuggerUrl !== 'string') {
         throw new Error('Browser discovery did not return a WebSocket debugger URL.');
       }
-      const socket = new WebSocket(payload.webSocketDebuggerUrl);
+      const socket = new WebSocket(payload.webSocketDebuggerUrl, { handshakeTimeout: 10_000 });
       await new Promise<void>((resolve, reject) => {
         socket.once('open', resolve);
         socket.once('error', reject);
@@ -241,12 +383,16 @@ export class CdpBrowserTabController implements BrowserTabController {
         const request = this.pending.get(message.id);
         if (!request) return;
         this.pending.delete(message.id);
+        clearTimeout(request.timer);
         if (message.error) request.reject(new Error(message.error.message || 'Browser command failed.'));
         else request.resolve(message.result || {});
       });
       const disconnect = (): void => {
         if (this.socket === socket) this.socket = null;
-        for (const request of this.pending.values()) request.reject(new Error('Browser control connection closed.'));
+        for (const request of this.pending.values()) {
+          clearTimeout(request.timer);
+          request.reject(new Error('Browser control connection closed.'));
+        }
         this.pending.clear();
       };
       socket.once('close', disconnect);
@@ -262,7 +408,18 @@ export class CdpBrowserTabController implements BrowserTabController {
   private async request(method: string, params: JsonObject = {}, sessionId?: string): Promise<JsonObject> {
     const socket = await this.connect();
     const id = this.nextId++;
-    const result = new Promise<JsonObject>((resolve, reject) => this.pending.set(id, { resolve, reject }));
+    const result = new Promise<JsonObject>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(
+          new McpError(
+            ErrorCode.RequestTimeout,
+            `Browser command ${method} timed out. Its outcome may be unknown; do not replay a mutation blindly.`
+          )
+        );
+      }, 15_000);
+      this.pending.set(id, { resolve, reject, timer });
+    });
     socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
     return result;
   }

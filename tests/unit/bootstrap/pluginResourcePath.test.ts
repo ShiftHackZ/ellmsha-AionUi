@@ -42,10 +42,11 @@ describe('resolveBuiltinPluginsPath', () => {
       contributes?: { skills?: Array<{ path: string }> };
     };
     expect(linear.name).toBe('linear');
-    expect(linear.version).toBe('1.0.1');
+    expect(linear.version).toBe('1.0.2');
     expect(linear.contributes?.skills?.[0]?.path).toBe('skills/linear-project-work/SKILL.md');
     expect(existsSync('../plugins/linear/skills/linear-project-work/SKILL.md')).toBe(true);
     expect(existsSync('../plugins/linear/skills/linear-project-work/scripts/normalize-linear-images.mjs')).toBe(true);
+    expect(existsSync('../plugins/linear/skills/linear-project-work/scripts/linear-mcp-adapter.mjs')).toBe(true);
     expect(existsSync('../plugins/sd05-fixture')).toBe(false);
   });
 

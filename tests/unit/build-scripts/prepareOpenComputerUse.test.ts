@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 type Preparation = {
   OPEN_COMPUTER_USE_COMMIT: string;
+  OPEN_COMPUTER_USE_SOURCE_DIGEST: string;
   OPEN_COMPUTER_USE_MARKER: string;
   OPEN_COMPUTER_USE_ORIGIN: string;
   OPEN_COMPUTER_USE_UPSTREAM: string;
@@ -13,8 +14,13 @@ type Preparation = {
   OPEN_COMPUTER_USE_VERSION: string;
   assertMacOSVersion: (run: (command: string, args: string[]) => string) => void;
   hashBuildInputs(checkout: string): string;
-  inspectOpenComputerUseCheckout(options: { checkout: string; runGit(args: string[]): string }): {
+  inspectOpenComputerUseCheckout(options: {
+    checkout: string;
+    expectedSourceDigest?: string;
+    runGit(args: string[]): string;
+  }): {
     commit: string;
+    sourceDigest: string;
     upstreamCommit: string;
     version: string;
   };
@@ -57,40 +63,76 @@ function pinnedGit(args: string[]): string {
   throw new Error(`Unexpected git command: ${command}`);
 }
 
+function inspectFixture(directory: string, runGit = pinnedGit) {
+  return preparation.inspectOpenComputerUseCheckout({
+    checkout: directory,
+    expectedSourceDigest: preparation.hashBuildInputs(directory),
+    runGit,
+  });
+}
+
 afterEach(() => {
   for (const directory of tempDirs.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
 describe('Open Computer Use runtime preparation', () => {
   it('accepts only the exact fork baseline and MIT license', () => {
-    expect(preparation.inspectOpenComputerUseCheckout({ checkout: checkout(), runGit: pinnedGit })).toMatchObject({
+    expect(inspectFixture(checkout())).toMatchObject({
       commit: preparation.OPEN_COMPUTER_USE_COMMIT,
       upstreamCommit: preparation.OPEN_COMPUTER_USE_UPSTREAM_COMMIT,
       version: preparation.OPEN_COMPUTER_USE_VERSION,
     });
-    expect(() =>
-      preparation.inspectOpenComputerUseCheckout({ checkout: checkout('0.3.7'), runGit: pinnedGit })
-    ).toThrow('source version 0.3.7; expected 0.3.6');
+    expect(() => inspectFixture(checkout('0.3.7'))).toThrow('source version 0.3.7; expected 0.3.6');
+    const invalidLicense = checkout();
+    writeFileSync(join(invalidLicense, 'LICENSE'), 'Not the MIT license');
+    expect(() => inspectFixture(invalidLicense)).toThrow('MIT LICENSE is missing or unexpected');
   });
 
-  it('rejects untracked source injection before assigning the pinned commit marker', () => {
-    expect(() =>
+  it('accepts approved local patches only when their complete source digest matches', () => {
+    const directory = checkout();
+    writeFileSync(join(directory, 'reviewed.swift'), '// approved isolated patch\n');
+    const expectedSourceDigest = preparation.hashBuildInputs(directory);
+    expect(
       preparation.inspectOpenComputerUseCheckout({
-        checkout: checkout(),
+        checkout: directory,
+        expectedSourceDigest,
         runGit: (args) =>
-          args.join(' ') === 'status --porcelain --untracked-files=all' ? '?? injected.swift' : pinnedGit(args),
+          args.join(' ') === 'status --porcelain --untracked-files=all' ? '?? reviewed.swift' : pinnedGit(args),
       })
-    ).toThrow('checkout changes are present: ?? injected.swift');
+    ).toMatchObject({ sourceDigest: expectedSourceDigest });
   });
 
-  it('rejects dirty README bytes now that the fork documentation is committed', () => {
+  it.each(['injected.swift', 'README.md'])('rejects unexpected bytes in %s despite pinned git metadata', (file) => {
+    const directory = checkout();
+    writeFileSync(join(directory, 'README.md'), '# Reviewed documentation\n');
+    const expectedSourceDigest = preparation.hashBuildInputs(directory);
+    writeFileSync(join(directory, file), 'Unexpected source contents\n');
     expect(() =>
       preparation.inspectOpenComputerUseCheckout({
-        checkout: checkout(),
-        runGit: (args) =>
-          args.join(' ') === 'status --porcelain --untracked-files=all' ? ' M README.md' : pinnedGit(args),
+        checkout: directory,
+        expectedSourceDigest,
+        runGit: pinnedGit,
       })
-    ).toThrow('checkout changes are present:  M README.md');
+    ).toThrow('source digest');
+  });
+
+  it.each([
+    ['rev-parse HEAD', '0000000000000000000000000000000000000000', 'commit'],
+    ['remote get-url origin', 'https://github.com/unexpected/fork.git', 'origin'],
+    ['remote get-url upstream', 'https://github.com/unexpected/upstream.git', 'upstream'],
+  ])('preserves %s validation even for approved source bytes', (command, value, message) => {
+    expect(() => inspectFixture(checkout(), (args) => (args.join(' ') === command ? value : pinnedGit(args)))).toThrow(
+      message
+    );
+  });
+
+  it('preserves the upstream ancestry requirement for approved source bytes', () => {
+    expect(() =>
+      inspectFixture(checkout(), (args) => {
+        if (args[0] === 'merge-base') throw new Error('Not an ancestor');
+        return pinnedGit(args);
+      })
+    ).toThrow('does not descend from pinned upstream');
   });
 
   it('accepts a clean recursive clone without an upstream remote', () => {
@@ -102,6 +144,7 @@ describe('Open Computer Use runtime preparation', () => {
     expect(
       preparation.inspectOpenComputerUseCheckout({
         checkout: directory,
+        expectedSourceDigest: sourceDigest,
         runGit: (args) => {
           if (args.join(' ') === 'remote get-url upstream') throw new Error('No such remote');
           return pinnedGit(args);
@@ -138,6 +181,7 @@ describe('Open Computer Use runtime preparation', () => {
         commit: preparation.OPEN_COMPUTER_USE_COMMIT,
         upstreamCommit: preparation.OPEN_COMPUTER_USE_UPSTREAM_COMMIT,
         version: preparation.OPEN_COMPUTER_USE_VERSION,
+        sourceDigest: preparation.OPEN_COMPUTER_USE_SOURCE_DIGEST,
         platform: 'linux',
         arch: 'x64',
       })
@@ -148,5 +192,19 @@ describe('Open Computer Use runtime preparation', () => {
     expect(() =>
       preparation.verifyOpenComputerUseRuntime({ runtimeRoot, targetPlatform: 'freebsd', targetArch: 'x64' })
     ).toThrow('does not support target freebsd-x64');
+    writeFileSync(
+      join(runtimeRoot, preparation.OPEN_COMPUTER_USE_MARKER),
+      JSON.stringify({
+        commit: preparation.OPEN_COMPUTER_USE_COMMIT,
+        upstreamCommit: preparation.OPEN_COMPUTER_USE_UPSTREAM_COMMIT,
+        version: preparation.OPEN_COMPUTER_USE_VERSION,
+        sourceDigest: 'stale-approved-commit-contents',
+        platform: 'linux',
+        arch: 'x64',
+      })
+    );
+    expect(() =>
+      preparation.verifyOpenComputerUseRuntime({ runtimeRoot, targetPlatform: 'linux', targetArch: 'x64' })
+    ).toThrow('stale checkout contents');
   });
 });

@@ -17,6 +17,21 @@ import { MAX_BROWSER_TABS } from '@/common/config/constants';
 const electronMock = vi.hoisted(() => ({
   browserSession: {},
   contents: new Map<number, FakeContents>(),
+  focusedId: undefined as number | undefined,
+  reportedFocusedId: undefined as number | undefined,
+  windowFocused: true,
+  hostDestroyed: false,
+  frameLookupThrows: false,
+  host: {
+    isDestroyed: () => electronMock.hostDestroyed,
+    isFocused: () => electronMock.windowFocused,
+    focus: vi.fn(() => {
+      electronMock.windowFocused = true;
+    }),
+    get focusedFrame() {
+      return electronMock.focusedId === undefined ? null : { ownerId: electronMock.focusedId };
+    },
+  },
 }));
 
 class FakeDebugger extends EventEmitter {
@@ -39,7 +54,11 @@ class FakeDebugger extends EventEmitter {
 class FakeContents extends EventEmitter {
   readonly debugger = new FakeDebugger();
   readonly session = electronMock.browserSession;
+  readonly hostWebContents = electronMock.host;
   destroyed = false;
+  focus = vi.fn(() => {
+    electronMock.focusedId = this.id;
+  });
 
   constructor(
     readonly id: number,
@@ -73,12 +92,20 @@ class FakeContents extends EventEmitter {
 
 vi.mock('electron', () => ({
   session: { fromPartition: () => electronMock.browserSession },
-  webContents: { fromId: (id: number) => electronMock.contents.get(id) },
+  webContents: {
+    fromId: (id: number) => electronMock.contents.get(id),
+    getFocusedWebContents: () =>
+      electronMock.contents.get(electronMock.reportedFocusedId ?? electronMock.focusedId ?? -1),
+    fromFrame: (frame: { ownerId: number }) => {
+      if (electronMock.frameLookupThrows) throw new Error('Frame detached');
+      return electronMock.contents.get(frame.ownerId);
+    },
+  },
 }));
 
 import { startCdpBridge as startRawCdpBridge, type CdpBridgeHandle } from '@process/resources/builtinMcp/cdpBridge';
 import { CdpBrowserTabController } from '@process/resources/builtinMcp/browserTabMcp';
-import type { BrowserTabCommand } from '@/common/adapter/ipcBridge';
+import type { BrowserTabCommand, BrowserTabRegistration } from '@/common/adapter/ipcBridge';
 
 const createContents = (id: number, url = 'about:blank', title = 'Tab'): FakeContents => {
   const contents = new FakeContents(id, url, title);
@@ -118,13 +145,44 @@ const openBridges: CdpBridgeHandle[] = [];
 const openSockets: WebSocket[] = [];
 
 const startCdpBridge = async (...args: Parameters<typeof startRawCdpBridge>): Promise<CdpBridgeHandle> => {
-  const bridge = await startRawCdpBridge(...args);
+  const registrations = new Map<string, BrowserTabRegistration>();
+  const bridge = await startRawCdpBridge({
+    ...args[0],
+    sendTabCommand: (command) => {
+      if (command.action !== 'focus') return args[0].sendTabCommand(command);
+      // Simulate the renderer's exact webview focus, not main-process guest.focus().
+      queueMicrotask(() => {
+        const registration = registrations.get(command.tabId)!;
+        const contents = electronMock.contents.get(registration.webContentsId)!;
+        contents.focus();
+        if (electronMock.focusedId !== contents.id) {
+          bridge.rejectTabCommand(
+            command.tabId,
+            'The exact browser webview could not receive focus. No input was sent.'
+          );
+          return;
+        }
+        bridge.registerTab({ ...registration, focusRequestId: command.requestId });
+      });
+    },
+  });
+  const register = bridge.registerTab;
+  bridge.registerTab = (registration) => {
+    registrations.set(registration.tabId, registration);
+    return register(registration);
+  };
   bridge.updateTabInventory({ ready: true, tabIds: [] });
   return bridge;
 };
 
 beforeEach(() => {
   electronMock.contents.clear();
+  electronMock.focusedId = undefined;
+  electronMock.reportedFocusedId = undefined;
+  electronMock.windowFocused = true;
+  electronMock.hostDestroyed = false;
+  electronMock.frameLookupThrows = false;
+  electronMock.host.focus.mockClear();
 });
 
 afterEach(async () => {
@@ -135,6 +193,280 @@ afterEach(async () => {
 });
 
 describe('cdpBridge multi-tab routing and lifecycle', () => {
+  it('rejects a closed guest immediately while awaiting renderer focus without sending input', async () => {
+    const commands: BrowserTabCommand[] = [];
+    const bridge = await startRawCdpBridge({ sendTabCommand: (command) => commands.push(command) });
+    bridge.updateTabInventory({ ready: true, tabIds: [] });
+    openBridges.push(bridge);
+    const alpha = createContents(290);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const input = request<{ error: { message: string } }>(ws, {
+      id: 289,
+      method: 'Input.insertText',
+      params: { text: 'A' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    await vi.waitFor(() => expect(commands.at(-1)?.action).toBe('focus'));
+    alpha.destroy();
+    expect((await input).error.message).toContain('closed or reloaded before receiving input focus');
+    expect(alpha.debugger.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('requires matching renderer acknowledgement and native guest focus before activation completes', async () => {
+    const commands: BrowserTabCommand[] = [];
+    const bridge = await startRawCdpBridge({ sendTabCommand: (command) => commands.push(command) });
+    bridge.updateTabInventory({ ready: true, tabIds: [] });
+    openBridges.push(bridge);
+    const alpha = createContents(291);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    let complete = false;
+    const activation = request(ws, { id: 290, method: 'Target.activateTarget', params: { targetId: 'alpha' } }).then(
+      () => {
+        complete = true;
+      }
+    );
+    await vi.waitFor(() => expect(commands.at(-1)?.action).toBe('focus'));
+    const focus = commands.at(-1)!;
+    if (focus.action !== 'focus') throw new Error('Expected focus command');
+    alpha.focus();
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true, focusRequestId: 'stale' });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(complete).toBe(false);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true, focusRequestId: focus.requestId });
+    await activation;
+    expect(complete).toBe(true);
+  });
+
+  it('waits for asynchronous native focus after the renderer acknowledges its request', async () => {
+    const commands: BrowserTabCommand[] = [];
+    const bridge = await startRawCdpBridge({ sendTabCommand: (command) => commands.push(command) });
+    bridge.updateTabInventory({ ready: true, tabIds: [] });
+    openBridges.push(bridge);
+    const alpha = createContents(292);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const input = request(ws, {
+      id: 291,
+      method: 'Input.insertText',
+      params: { text: 'A' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    await vi.waitFor(() => expect(commands.at(-1)?.action).toBe('focus'));
+    const focus = commands.at(-1)!;
+    if (focus.action !== 'focus') throw new Error('Expected focus command');
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true, focusRequestId: focus.requestId });
+    expect(alpha.debugger.sendCommand).not.toHaveBeenCalled();
+    alpha.focus();
+    alpha.emit('focus');
+    await input;
+    expect(alpha.debugger.sendCommand).toHaveBeenCalledExactlyOnceWith('Input.insertText', { text: 'A' });
+  });
+
+  it('keeps typed characters in the exact guest even when the host composer regains focus', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const alpha = createContents(301, 'https://same.example/', 'Alpha');
+    const beta = createContents(302, 'https://same.example/', 'Beta');
+    const host = createContents(303, 'app://host', 'Host composer');
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    bridge.registerTab({ tabId: 'beta', webContentsId: beta.id, active: false });
+    // Real Electron may report this guest focused even while the host composer
+    // owns the focused frame. The global getter must not authorize input.
+    electronMock.reportedFocusedId = alpha.id;
+    const values = new Map<number, string>([
+      [alpha.id, ''],
+      [beta.id, 'BETA_ORIGINAL'],
+      [host.id, ''],
+    ]);
+    alpha.debugger.sendCommand.mockImplementation(async (method, params) => {
+      // Model Electron's observed focus-based input routing, rather than
+      // assuming a debugger attachment alone determines the keyboard target.
+      const focusedId = electronMock.focusedId!;
+      values.set(focusedId, `${values.get(focusedId)}${String(params.text)}`);
+      return { method, params };
+    });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    for (const [index, text] of ['A', 'B'].entries()) {
+      host.focus();
+      await request(ws, {
+        id: 300 + index,
+        method: index === 0 ? 'Input.dispatchKeyEvent' : 'Input.insertText',
+        params: { type: 'char', text },
+        sessionId: sessionIdForTarget('alpha'),
+      });
+    }
+    expect(Object.fromEntries(values)).toEqual({ 301: 'AB', 302: 'BETA_ORIGINAL', 303: '' });
+    expect(alpha.focus).toHaveBeenCalledTimes(2);
+    expect(beta.debugger.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('uses the actual focused frame when the global getter reports a hidden sibling guest', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const alpha = createContents(304);
+    const beta = createContents(305);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    bridge.registerTab({ tabId: 'beta', webContentsId: beta.id, active: false });
+    alpha.focus();
+    electronMock.reportedFocusedId = beta.id;
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    await request(ws, {
+      id: 304,
+      method: 'Input.insertText',
+      params: { text: 'A' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    expect(alpha.debugger.sendCommand).toHaveBeenCalledExactlyOnceWith('Input.insertText', { text: 'A' });
+    expect(beta.debugger.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('routes input to the exact native guest frame without activating a non-key host', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const alpha = createContents(306);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    electronMock.windowFocused = false;
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    await request(ws, {
+      id: 306,
+      method: 'Input.insertText',
+      params: { text: 'A' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    expect(electronMock.host.focus).not.toHaveBeenCalled();
+    expect(electronMock.windowFocused).toBe(false);
+    expect(alpha.focus.mock.invocationCallOrder[0]).toBeLessThan(
+      alpha.debugger.sendCommand.mock.invocationCallOrder[0]
+    );
+    expect(alpha.debugger.sendCommand).toHaveBeenCalledExactlyOnceWith('Input.insertText', { text: 'A' });
+  });
+
+  it('fails closed on a detached focused frame and clears the pending focus request for recovery', async () => {
+    let rejectFocus = true;
+    const bridge = await startRawCdpBridge({
+      sendTabCommand: (command) => {
+        if (command.action !== 'focus') return;
+        bridge.registerTab({ tabId: 'alpha', webContentsId: 307, active: true, focusRequestId: command.requestId });
+        if (rejectFocus) bridge.rejectTabCommand('alpha', 'Focused frame detached');
+      },
+    });
+    bridge.updateTabInventory({ ready: true, tabIds: [] });
+    openBridges.push(bridge);
+    const alpha = createContents(307);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    alpha.focus();
+    electronMock.frameLookupThrows = true;
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const result = await request<{ error: { message: string } }>(ws, {
+      id: 307,
+      method: 'Input.insertText',
+      params: { text: 'A' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    expect(result.error.message).toContain('renderer_ack=true, exact_frame_focus=false');
+    expect(alpha.debugger.sendCommand).not.toHaveBeenCalled();
+    rejectFocus = false;
+    electronMock.frameLookupThrows = false;
+    await request(ws, {
+      id: 308,
+      method: 'Input.insertText',
+      params: { text: 'A' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    expect(alpha.debugger.sendCommand).toHaveBeenCalledExactlyOnceWith('Input.insertText', { text: 'A' });
+  });
+
+  it.each([true, false])('refuses input when the exact frame cannot acquire focus (host key: %s)', async (hostKey) => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const alpha = createContents(311);
+    const host = createContents(312);
+    alpha.focus.mockImplementation(() => undefined);
+    host.focus();
+    electronMock.windowFocused = hostKey;
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const rejected = await request<{ error: { message: string } }>(ws, {
+      id: 310,
+      method: 'Input.insertText',
+      params: { text: 'MUST_NOT_REACH_COMPOSER' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    expect(rejected.error.message).toContain('No input was sent');
+    expect(alpha.debugger.sendCommand).not.toHaveBeenCalled();
+    expect(host.debugger.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('refuses input to a background target while observations stay independent of focus', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const alpha = createContents(321);
+    const beta = createContents(322);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: false });
+    bridge.registerTab({ tabId: 'beta', webContentsId: beta.id, active: true });
+    beta.focus();
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    await request(ws, { id: 320, method: 'Accessibility.getFullAXTree', sessionId: sessionIdForTarget('alpha') });
+    const rejected = await request<{ error: { message: string } }>(ws, {
+      id: 321,
+      method: 'Input.dispatchMouseEvent',
+      params: { type: 'mousePressed', x: 10, y: 10 },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    expect(rejected.error.message).toContain('no longer the visible input target');
+    expect(alpha.focus).not.toHaveBeenCalled();
+    expect(alpha.debugger.sendCommand.mock.calls).toEqual([['Accessibility.getFullAXTree', {}]]);
+  });
+
+  it('keeps a concurrent activation behind the focused input dispatch', async () => {
+    const events: string[] = [];
+    const alpha = createContents(331);
+    const beta = createContents(332);
+    let releaseInput!: () => void;
+    const inputPending = new Promise<void>((resolve) => {
+      releaseInput = resolve;
+    });
+    alpha.debugger.sendCommand.mockImplementation(async (method, params) => {
+      events.push(`input:${electronMock.focusedId}`);
+      await inputPending;
+      events.push('input-complete');
+      return { method, params };
+    });
+    const bridge = await startCdpBridge({
+      sendTabCommand: (command) => {
+        events.push(`activate:${command.tabId}`);
+        bridge.registerTab({ tabId: 'beta', webContentsId: beta.id, active: true });
+      },
+    });
+    openBridges.push(bridge);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    bridge.registerTab({ tabId: 'beta', webContentsId: beta.id, active: false });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const typing = request(ws, {
+      id: 330,
+      method: 'Input.insertText',
+      params: { text: 'A' },
+      sessionId: sessionIdForTarget('alpha'),
+    });
+    await vi.waitFor(() => expect(events).toEqual(['input:331']));
+    const switching = request(ws, { id: 331, method: 'Target.activateTarget', params: { targetId: 'beta' } });
+    releaseInput();
+    await Promise.all([typing, switching]);
+    expect(events).toEqual(['input:331', 'input-complete', 'activate:beta']);
+  });
+
   it('waits for the restored renderer inventory instead of reporting a false empty list', async () => {
     const bridge = await startRawCdpBridge({ sendTabCommand: vi.fn() });
     openBridges.push(bridge);
@@ -298,6 +630,32 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
       sessionId: sessionIdForTarget(targetId),
     });
     expect(stale.error.message).toContain('stale sessionId');
+  });
+
+  it('acknowledges background tab activation only after the renderer reports that exact tab visible', async () => {
+    const sendTabCommand = vi.fn();
+    const bridge = await startCdpBridge({ sendTabCommand });
+    openBridges.push(bridge);
+    const first = createContents(201, 'https://same.example/', 'First');
+    const second = createContents(202, 'https://same.example/', 'Second');
+    bridge.registerTab({ tabId: 'browser-first', webContentsId: first.id, active: true });
+    bridge.registerTab({ tabId: 'browser-second', webContentsId: second.id, active: false });
+    const controller = new CdpBrowserTabController(`http://127.0.0.1:${bridge.port}`);
+    let acknowledged = false;
+    try {
+      const activation = controller.activate('browser-second').then(() => {
+        acknowledged = true;
+      });
+      await vi.waitFor(() =>
+        expect(sendTabCommand).toHaveBeenCalledExactlyOnceWith({ action: 'activate', tabId: 'browser-second' })
+      );
+      expect(acknowledged).toBe(false);
+      bridge.registerTab({ tabId: 'browser-second', webContentsId: second.id, active: true });
+      await activation;
+      expect(acknowledged).toBe(true);
+    } finally {
+      await controller.disconnect();
+    }
   });
 
   it('rebinds a recreated renderer target under the same stable tab and session ids', async () => {

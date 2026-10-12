@@ -508,6 +508,8 @@ export type BrowserTabRegistration = {
   tabId: string;
   webContentsId: number;
   active: boolean;
+  /** Acknowledge only the matching main-process request after focusing the guest frame. */
+  focusRequestId?: string;
 };
 
 export type BrowserTabInventory = {
@@ -518,6 +520,7 @@ export type BrowserTabInventory = {
 export type BrowserTabCommand =
   | { action: 'create'; tabId: string; url: string; activate: boolean }
   | { action: 'activate'; tabId: string }
+  | { action: 'focus'; tabId: string; requestId: string }
   | { action: 'close'; tabId: string };
 
 export type BrowserTabCommandFailure = {

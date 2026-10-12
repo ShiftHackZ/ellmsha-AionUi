@@ -40,7 +40,7 @@ const main = async (): Promise<void> => {
   }
   const upstreamTransport = new StdioClientTransport({
     command: process.execPath,
-    args: [upstreamLauncher, '--browser-url', browserUrl, '--no-usage-statistics'],
+    args: [upstreamLauncher, '--browser-url', browserUrl, '--no-usage-statistics', '--experimental-structured-content'],
     stderr: 'inherit',
   });
   const controller = new CdpBrowserTabController(browserUrl);
