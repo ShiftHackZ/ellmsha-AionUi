@@ -23,7 +23,12 @@ const repoRoot = resolve(__dirname, '../../..');
 
 function createBuilderFixture(directory: string): string {
   const fixtureRoot = join(directory, 'aionui');
-  for (const file of ['scripts/build-with-builder.js', 'package.json', 'packages/desktop/electron-builder.yml']) {
+  for (const file of [
+    'scripts/build-with-builder.js',
+    'scripts/afterSign.js',
+    'package.json',
+    'packages/desktop/electron-builder.yml',
+  ]) {
     const target = join(fixtureRoot, file);
     mkdirSync(resolve(target, '..'), { recursive: true });
     writeFileSync(target, readFileSync(join(repoRoot, file)));

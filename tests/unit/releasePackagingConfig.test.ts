@@ -23,6 +23,84 @@ function yamlBlock(content: string, key: string): string {
 }
 
 describe('release packaging configuration', () => {
+  const recoveryScript = readProjectFile('scripts/build-with-builder.js');
+  const recoveryStart = recoveryScript.indexOf('function verifyMacPrepackagedApp(');
+  const recoveryEnd = recoveryScript.indexOf('// Clean stale Windows packaging outputs', recoveryStart);
+
+  function runPackagingRecovery(failure: 'signature' | 'ticket' | 'gatekeeper' | null, notarize = true) {
+    const calls: string[] = [];
+    let initialBuild = true;
+    const invoke = () => {
+      if (recoveryStart < 0 || recoveryEnd <= recoveryStart)
+        throw new Error('Packaging recovery helper boundary missing');
+      runInNewContext(`${recoveryScript.slice(recoveryStart, recoveryEnd)}\nbuildWithDmgRetry(['--mac'], 'arm64');`, {
+        __dirname: '/fixture/scripts',
+        path: { join, resolve },
+        fs: { readdirSync: () => ['eLLMsha fixture.app'] },
+        process: {
+          platform: 'darwin',
+          env: { ELLM_SHA_SIGNING_REQUIRED: '1', ELLM_SHA_NOTARIZATION_REQUIRED: notarize ? '1' : undefined },
+        },
+        findAppDir: () => '/fixture/mac-arm64',
+        dmgExists: () => false,
+        verifyApplicationSignature: () => {
+          calls.push('signature');
+          if (failure === 'signature') throw new Error('signature invalid');
+        },
+        execFileSync: (command: string, args: string[]) => {
+          const stage = command === 'xcrun' ? 'ticket' : 'gatekeeper';
+          calls.push(stage);
+          expect(args.at(-1)).toBe('/fixture/mac-arm64/eLLMsha fixture.app');
+          if (failure === stage) throw new Error(`${stage} invalid`);
+        },
+        runBuildTool: () => {
+          if (initialBuild) {
+            initialBuild = false;
+            calls.push('initial-build');
+            throw new Error('electron-builder failed');
+          }
+          calls.push('prepackaged');
+        },
+        cleanupDiskImages: () => calls.push('cleanup'),
+        spawnSync: () => calls.push('wait'),
+        console: { log: () => undefined },
+        DMG_RETRY_MAX: 3,
+        DMG_RETRY_DELAY_SEC: 30,
+      });
+    };
+    return { invoke, calls };
+  }
+
+  it.each(['signature', 'ticket', 'gatekeeper'] as const)(
+    'does not clean up or repack a failed signed build when its %s is invalid',
+    (failure) => {
+      const recovery = runPackagingRecovery(failure);
+      expect(recovery.invoke).toThrow(`${failure} invalid`);
+      expect(recovery.calls).not.toContain('prepackaged');
+      expect(recovery.calls).not.toContain('cleanup');
+    }
+  );
+
+  it('repackages only after signature, stapled ticket and Gatekeeper acceptance', () => {
+    const recovery = runPackagingRecovery(null);
+    recovery.invoke();
+    expect(recovery.calls).toEqual([
+      'initial-build',
+      'signature',
+      'ticket',
+      'gatekeeper',
+      'cleanup',
+      'wait',
+      'prepackaged',
+    ]);
+  });
+
+  it('keeps local development signing validation without requiring a notarization ticket', () => {
+    const recovery = runPackagingRecovery(null, false);
+    recovery.invoke();
+    expect(recovery.calls).toEqual(['initial-build', 'signature', 'cleanup', 'wait', 'prepackaged']);
+  });
+
   it('keeps mac zip artifacts enabled', () => {
     const config = readProjectFile('packages/desktop/electron-builder.yml');
     const macBlock = yamlBlock(config, 'mac');

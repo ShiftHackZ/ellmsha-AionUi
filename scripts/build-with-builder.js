@@ -10,7 +10,7 @@
  * - Packaging only: use --pack-only to skip electron-builder distributable creation
  */
 
-const { execSync, spawnSync } = require('child_process');
+const { execFileSync, execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -18,14 +18,15 @@ const { prepareMobileMcpRuntime } = require('../../scripts/prepare-mobile-mcp.js
 const { prepareChromeDevtoolsMcpRuntime } = require('../../scripts/prepare-chrome-devtools-mcp.js');
 const { prepareOpenComputerUseRuntime } = require('../../scripts/prepare-open-computer-use.js');
 const { runLocalPackageBin } = require('../../scripts/run-build-command.js');
+const { verifyApplicationSignature } = require('./afterSign.js');
 
 function runBuildTool(name, args, options = {}) {
   return runLocalPackageBin(path.resolve(__dirname, '..'), name, args, { stdio: 'inherit', ...options });
 }
 
-// DMG retry logic for macOS: detects DMG creation failures by checking artifacts
-// (.app exists but .dmg missing) and retries only the DMG step using
-// electron-builder --prepackaged with the .app path (not the parent directory).
+// macOS packaging recovery reuses an app only after its required signature and
+// notarization pass. The mere presence of .app does not prove signing succeeded.
+// electron-builder --prepackaged bypasses both signing and notarization.
 // This preserves full DMG styling (window size, icon positions, background)
 // Background: GitHub Actions macos-14 runners occasionally suffer from transient
 // "Device not configured" hdiutil errors (electron-builder#8415, actions/runner-images#12323).
@@ -531,8 +532,20 @@ function applyDebugAutoUpdateVersionOverride(packageJsonPath) {
   };
 }
 
+function verifyMacPrepackagedApp(appDir) {
+  if (process.env.ELLM_SHA_SIGNING_REQUIRED !== '1') return;
+  const appName = fs.readdirSync(appDir).find((f) => f.endsWith('.app'));
+  if (!appName) throw new Error(`No .app found in ${appDir}`);
+  const appPath = path.join(appDir, appName);
+  verifyApplicationSignature(appPath);
+  if (process.env.ELLM_SHA_NOTARIZATION_REQUIRED === '1') {
+    execFileSync('xcrun', ['stapler', 'validate', appPath], { stdio: 'pipe' });
+    execFileSync('spctl', ['--assess', '--type', 'execute', '--verbose=2', appPath], { stdio: 'pipe' });
+  }
+}
+
 // Create macOS distributables using electron-builder --prepackaged with .app path.
-// This preserves DMG styling and still emits the zip required by MacUpdater.
+// This preserves DMG styling and still emits the full installer ZIP.
 function createMacArtifactsWithPrepackaged(appDir, targetArch) {
   const appName = fs.readdirSync(appDir).find((f) => f.endsWith('.app'));
   if (!appName) throw new Error(`No .app found in ${appDir}`);
@@ -563,11 +576,13 @@ function buildWithDmgRetry(commandArgs, targetArch) {
     const appDir = isMac ? findAppDir(outDir) : null;
     if (!appDir || dmgExists(outDir)) throw error;
 
-    // .app exists but no .dmg → DMG creation failed
-    console.log('\n🔄 Build failed during DMG creation (.app exists, .dmg missing)');
-    console.log('   Retrying macOS distributable creation with --prepackaged...');
+    console.log('\n🔄 Packaging failed with an existing .app and no DMG.');
+    console.log('   Required signing/notarization checks must pass before prepackaged recovery.');
 
     for (let attempt = 1; attempt <= DMG_RETRY_MAX; attempt++) {
+      // --prepackaged skips the normal signing hooks. Fail before cleanup or retry
+      // if this is actually a signing/notarization failure, including a missing ticket.
+      verifyMacPrepackagedApp(appDir);
       cleanupDiskImages();
       spawnSync('sleep', [String(DMG_RETRY_DELAY_SEC)]);
 
@@ -578,7 +593,6 @@ function buildWithDmgRetry(commandArgs, targetArch) {
         return;
       } catch (retryError) {
         console.log(`   ⚠️  DMG retry ${attempt}/${DMG_RETRY_MAX} failed`);
-        cleanupDiskImages();
         if (attempt === DMG_RETRY_MAX) {
           console.log(`   ❌ DMG creation failed after ${DMG_RETRY_MAX} retries`);
           throw retryError;
