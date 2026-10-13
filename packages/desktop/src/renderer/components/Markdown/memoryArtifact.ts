@@ -16,7 +16,8 @@ export function resolveMemoryArtifactPath(href: string): string | undefined {
     const path = url.searchParams.get('path')!;
     if (
       !/^bmad\/[^/]+\/.+\.md$/.test(path) ||
-      /[\\\x00-\x1f\x7f]/.test(path) ||
+      path.includes('\\') ||
+      [...path].some((character) => character.charCodeAt(0) <= 0x1f || character.charCodeAt(0) === 0x7f) ||
       path.split('/').some((part) => !part || part === '.' || part === '..')
     )
       return undefined;

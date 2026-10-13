@@ -47,7 +47,9 @@ describe('resolveAddressBarInput', () => {
     expect(resolveAddressBarInput('how to configure nginx')).toBe(
       'https://www.google.com/search?q=how%20to%20configure%20nginx'
     );
-    expect(resolveAddressBarInput('example.com is down')).toBe('https://www.google.com/search?q=example.com%20is%20down');
+    expect(resolveAddressBarInput('example.com is down')).toBe(
+      'https://www.google.com/search?q=example.com%20is%20down'
+    );
   });
 
   it('treats a single word with no TLD as a search query', () => {

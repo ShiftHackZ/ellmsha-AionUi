@@ -17,7 +17,11 @@ exports.default = async function afterSign(context) {
     for (const bundle of [appPath, path.join(appPath, 'Contents/Resources/open-computer-use/Open Computer Use.app')]) {
       verifySignature(bundle);
       const details = spawnSync('codesign', ['-d', '--verbose=4', bundle], { encoding: 'utf8' });
-      if (details.status !== 0 || !details.stderr.split('\n').includes(`TeamIdentifier=${expectedTeam}`) || /Signature=adhoc/.test(details.stderr)) {
+      if (
+        details.status !== 0 ||
+        !details.stderr.split('\n').includes(`TeamIdentifier=${expectedTeam}`) ||
+        /Signature=adhoc/.test(details.stderr)
+      ) {
         throw new Error('Application/helper must have the selected Apple team signature');
       }
       const requirement = spawnSync('codesign', ['-d', '-r-', bundle], { encoding: 'utf8' });
