@@ -17,6 +17,11 @@ const crypto = require('crypto');
 const { prepareMobileMcpRuntime } = require('../../scripts/prepare-mobile-mcp.js');
 const { prepareChromeDevtoolsMcpRuntime } = require('../../scripts/prepare-chrome-devtools-mcp.js');
 const { prepareOpenComputerUseRuntime } = require('../../scripts/prepare-open-computer-use.js');
+const { runLocalPackageBin } = require('../../scripts/run-build-command.js');
+
+function runBuildTool(name, args, options = {}) {
+  return runLocalPackageBin(path.resolve(__dirname, '..'), name, args, { stdio: 'inherit', ...options });
+}
 
 // DMG retry logic for macOS: detects DMG creation failures by checking artifacts
 // (.app exists but .dmg missing) and retries only the DMG step using
@@ -533,21 +538,25 @@ function createMacArtifactsWithPrepackaged(appDir, targetArch) {
   if (!appName) throw new Error(`No .app found in ${appDir}`);
   const appPath = path.join(appDir, appName);
 
-  execSync(
-    `./node_modules/.bin/electron-builder --config packages/desktop/electron-builder.yml --mac dmg zip --${targetArch} --prepackaged "${appPath}" --publish=never`,
-    {
-      stdio: 'inherit',
-      shell: process.platform === 'win32',
-    }
-  );
+  runBuildTool('electron-builder', [
+    '--config',
+    'packages/desktop/electron-builder.yml',
+    '--mac',
+    'dmg',
+    'zip',
+    `--${targetArch}`,
+    '--prepackaged',
+    appPath,
+    '--publish=never',
+  ]);
 }
 
-function buildWithDmgRetry(cmd, targetArch) {
+function buildWithDmgRetry(commandArgs, targetArch) {
   const isMac = process.platform === 'darwin';
   const outDir = path.resolve(__dirname, '../out');
 
   try {
-    execSync(cmd, { stdio: 'inherit', shell: process.platform === 'win32' });
+    runBuildTool('electron-builder', commandArgs);
     return;
   } catch (error) {
     // On non-macOS or if .app doesn't exist, just throw
@@ -618,16 +627,15 @@ const skipNative = args.includes('--skip-native');
 const packOnly = args.includes('--pack-only');
 const forceBuild = args.includes('--force');
 
-const builderArgs = args
-  .filter((arg) => {
-    // Filter out 'auto', architecture flags, and special flags
-    if (arg === 'auto') return false;
-    if (arg === '--skip-vite' || arg === '--skip-native' || arg === '--pack-only' || arg === '--force') return false;
-    if (archList.includes(arg)) return false;
-    if (arg.startsWith('--') && archList.includes(arg.slice(2))) return false;
-    return true;
-  })
-  .join(' ');
+const builderArgv = args.filter((arg) => {
+  // Filter out 'auto', architecture flags, and special flags
+  if (arg === 'auto') return false;
+  if (arg === '--skip-vite' || arg === '--skip-native' || arg === '--pack-only' || arg === '--force') return false;
+  if (archList.includes(arg)) return false;
+  if (arg.startsWith('--') && archList.includes(arg.slice(2))) return false;
+  return true;
+});
+const builderArgs = builderArgv.join(' ');
 
 // Get target architecture from electron-builder.yml
 function getTargetArchFromConfig(platform) {
@@ -721,9 +729,7 @@ try {
   if (!skipViteBuild) {
     // Run electron-vite to build all bundles (main + preload + renderer)
     console.log(`📦 Building ${targetArch}...`);
-    execSync(`./node_modules/.bin/electron-vite build --config packages/desktop/electron.vite.config.ts`, {
-      stdio: 'inherit',
-      shell: process.platform === 'win32',
+    runBuildTool('electron-vite', ['build', '--config', 'packages/desktop/electron.vite.config.ts'], {
       env: {
         ...process.env,
         ELECTRON_BUILDER_ARCH: targetArch,
@@ -815,16 +821,16 @@ try {
 
   // 根据模式添加架构标志
   // Add arch flags based on mode
-  let archFlag = '';
+  let archFlags;
   if (multiArch) {
     // 多架构模式：将所有架构标志传递给 electron-builder
     // Multi-arch mode: pass all arch flags to electron-builder
-    archFlag = archArgs.map((arch) => `--${arch}`).join(' ');
+    archFlags = archArgs.map((arch) => `--${arch}`);
     console.log(`🚀 Packaging for multiple architectures: ${archArgs.join(', ')}...`);
   } else {
     // 单架构模式：使用确定的目标架构
     // Single arch mode: use the determined target arch
-    archFlag = `--${targetArch}`;
+    archFlags = [`--${targetArch}`];
     console.log(`🚀 Creating distributables for ${targetArch}...`);
   }
 
@@ -832,7 +838,7 @@ try {
   // Add architecture detection scripts for Windows builds
   // 使用 .onVerifyInstDir 避免与 electron-builder 冲突
   // Use .onVerifyInstDir to avoid conflicts with electron-builder
-  let nsisInclude = '';
+  const nsisArgs = [];
   if (builderArgs.includes('--win') || builderArgs.includes('--all')) {
     if (!multiArch) {
       // 单架构构建：添加对应架构的检测脚本
@@ -840,15 +846,15 @@ try {
       if (targetArch === 'arm64') {
         const arm64Script = 'resources/windows/windows-installer-arm64.nsh';
         if (fs.existsSync(path.resolve(__dirname, '..', arm64Script))) {
-          nsisInclude += ` --config.nsis.include="${arm64Script}"`;
+          nsisArgs.push(`--config.nsis.include=${arm64Script}`);
           console.log(`📋 Including Windows ARM64 architecture check script`);
         }
-        nsisInclude += ' --config.nsis.useZip=true';
+        nsisArgs.push('--config.nsis.useZip=true');
         console.log('📋 Using ZIP payload for Windows ARM64 NSIS installer');
       } else if (targetArch === 'x64') {
         const x64Script = 'resources/windows/windows-installer-x64.nsh';
         if (fs.existsSync(path.resolve(__dirname, '..', x64Script))) {
-          nsisInclude += ` --config.nsis.include="${x64Script}"`;
+          nsisArgs.push(`--config.nsis.include=${x64Script}`);
           console.log(`📋 Including Windows x64 architecture check script`);
         }
       }
@@ -880,7 +886,14 @@ try {
     cleanupWindowsPackOutput();
   }
 
-  const builderCommand = `./node_modules/.bin/electron-builder --config packages/desktop/electron-builder.yml ${builderArgs} ${archFlag} ${nsisInclude} ${publishArg}`;
+  const builderCommand = [
+    '--config',
+    'packages/desktop/electron-builder.yml',
+    ...builderArgv,
+    ...archFlags,
+    ...nsisArgs,
+    publishArg,
+  ];
   try {
     buildWithDmgRetry(builderCommand, targetArch);
   } catch (error) {
@@ -910,7 +923,7 @@ try {
     cleanupWindowsPackOutput();
 
     try {
-      buildWithDmgRetry(`${builderCommand} --config.win.signAndEditExecutable=false`, targetArch);
+      buildWithDmgRetry([...builderCommand, '--config.win.signAndEditExecutable=false'], targetArch);
     } catch (retryError) {
       const retryFailure = formatExecError(retryError);
       throw new Error(

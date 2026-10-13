@@ -5,7 +5,16 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -18,6 +27,17 @@ function createBuilderFixture(directory: string): string {
     const target = join(fixtureRoot, file);
     mkdirSync(resolve(target, '..'), { recursive: true });
     writeFileSync(target, readFileSync(join(repoRoot, file)));
+  }
+  mkdirSync(join(directory, 'scripts'), { recursive: true });
+  writeFileSync(
+    join(directory, 'scripts/run-build-command.js'),
+    readFileSync(resolve(repoRoot, '../scripts/run-build-command.js'))
+  );
+  for (const name of ['electron-vite', 'electron-builder']) {
+    const packageDirectory = join(fixtureRoot, 'node_modules', name);
+    mkdirSync(packageDirectory, { recursive: true });
+    writeFileSync(join(packageDirectory, 'package.json'), JSON.stringify({ bin: { [name]: 'cli.cjs' } }));
+    writeFileSync(join(packageDirectory, 'cli.cjs'), '');
   }
   if (process.platform === 'win32') {
     const appBuilder = join(fixtureRoot, 'node_modules/app-builder-lib');
@@ -72,6 +92,102 @@ function resolveAppBuilderInstallUtil(): string {
 }
 
 describe('build-with-builder', () => {
+  it.each(process.platform === 'darwin' ? [false, true] : [false])(
+    'preserves local Vite/builder arguments in spaced paths (DMG retry: %s)',
+    (retryDmg) => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'aionui-cli-args-test-'));
+      const fixtureRoot = createBuilderFixture(join(tempDir, 'workspace with spaces &'));
+      const hookPath = join(tempDir, 'hook.cjs');
+      const callsPath = join(tempDir, 'tool-calls.jsonl');
+      writeFileSync(
+        hookPath,
+        `
+const childProcess = require('node:child_process');
+const Module = require('node:module');
+const originalLoad = Module._load;
+${runtimePreparationMocks}
+Module._load = function(request, parent, isMain) {
+  if (request.endsWith('packages/shared-scripts/src/prepare-aioncore.js')) return { prepareAioncore: () => ({ prepared: true }) };
+  if (request.endsWith('/resolveAioncoreVersion.js')) return { resolveAioncoreVersion: () => 'fixture' };
+  return runtimePreparationMock(request) || originalLoad.call(this, request, parent, isMain);
+};
+childProcess.execSync = () => Buffer.from('');
+// Never detach real disk images or sleep in this private packaging fixture.
+childProcess.spawnSync = () => ({ status: 0 });
+`
+      );
+      for (const name of ['electron-vite', 'electron-builder']) {
+        writeFileSync(
+          join(fixtureRoot, 'node_modules', name, 'cli.cjs'),
+          `
+const fs = require('node:fs');
+const path = require('node:path');
+fs.appendFileSync(process.env.AIONUI_TOOL_CALLS_FILE, JSON.stringify({ tool: ${JSON.stringify(name)}, args: process.argv.slice(2), arch: process.env.ELECTRON_BUILDER_ARCH }) + '\\n');
+if (${JSON.stringify(name)} === 'electron-vite') {
+  const files = {
+    'out/main/index.js': '', 'out/preload/index.js': '', 'out/renderer/assets/index-test.js': '',
+    'out/renderer/index.html': '<div id="root"></div><script type="module" src="./assets/index-test.js"></script>',
+  };
+  for (const [file, content] of Object.entries(files)) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content); }
+}
+if (${JSON.stringify(name)} === 'electron-builder' && ${retryDmg} && !process.argv.includes('--prepackaged')) {
+  fs.mkdirSync(path.join('out', 'mac-' + process.arch, 'eLLMsha.app'), { recursive: true });
+  process.exit(1);
+}
+`
+        );
+      }
+      try {
+        const platform = process.platform === 'darwin' ? '--mac' : process.platform === 'win32' ? '--win' : '--linux';
+        const literal = '--config.extraMetadata.qa=literal & value';
+        const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', process.arch, platform, literal], {
+          cwd: fixtureRoot,
+          encoding: 'utf8',
+          env: { ...process.env, AIONUI_TOOL_CALLS_FILE: callsPath, NODE_OPTIONS: `--require=${hookPath}` },
+        });
+        expect(result.status, result.stderr || result.stdout).toBe(0);
+        const calls = readFileSync(callsPath, 'utf8')
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line));
+        expect(calls[0]).toEqual({
+          tool: 'electron-vite',
+          args: ['build', '--config', 'packages/desktop/electron.vite.config.ts'],
+          arch: process.arch,
+        });
+        expect(calls[1]).toEqual({
+          tool: 'electron-builder',
+          args: [
+            '--config',
+            'packages/desktop/electron-builder.yml',
+            platform,
+            literal,
+            `--${process.arch}`,
+            '--publish=never',
+          ],
+        });
+        if (retryDmg) {
+          expect(calls[2]).toEqual({
+            tool: 'electron-builder',
+            args: [
+              '--config',
+              'packages/desktop/electron-builder.yml',
+              '--mac',
+              'dmg',
+              'zip',
+              `--${process.arch}`,
+              '--prepackaged',
+              join(realpathSync(fixtureRoot), 'out', `mac-${process.arch}`, 'eLLMsha.app'),
+              '--publish=never',
+            ],
+          });
+        }
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('rejects skip-vite when renderer output is only a source html shell', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'aionui-build-skip-vite-test-'));
     const fixtureRoot = createBuilderFixture(tempDir);
@@ -366,6 +482,9 @@ childProcess.execSync = function mockedExecSync(command) {
     );
   }
   return Buffer.from('');
+};
+childProcess.execFileSync = function mockedExecFileSync(_command, args) {
+  return childProcess.execSync(args[0].includes('electron-vite') ? 'electron-vite build' : args.join(' '));
 };
 `,
         'utf8'
