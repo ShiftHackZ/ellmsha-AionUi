@@ -16,6 +16,9 @@ const { MOBILE_MCP_SOURCE_DIGEST } = require('../../../../scripts/prepare-mobile
 const { CHROME_DEVTOOLS_MCP_SOURCE_DIGEST } = require('../../../../scripts/prepare-chrome-devtools-mcp.js') as {
   CHROME_DEVTOOLS_MCP_SOURCE_DIGEST: string;
 };
+const { OPEN_COMPUTER_USE_UPSTREAM_COMMIT } = require('../../../../scripts/prepare-open-computer-use.js') as {
+  OPEN_COMPUTER_USE_UPSTREAM_COMMIT: string;
+};
 
 describe('resolveBuiltinPluginsPath', () => {
   it('records the maintained AionRS fork in root provenance', () => {
@@ -153,8 +156,15 @@ describe('resolveBuiltinPluginsPath', () => {
     const afterPack = readFileSync('scripts/afterPack.js', 'utf8');
     const webPackager = readFileSync('scripts/pack-web-cli.js', 'utf8');
     expect(gitmodules).toContain('url = https://github.com/ShiftHackZ/ellmsha-open-codex-computer-use.git');
-    expect(dockerfile).toContain('FROM golang:1.22-bookworm AS open-computer-use');
-    expect(dockerfile).toContain('83a521e546102564efd002f61a6763912081e5c7');
+    expect(dockerfile).toContain('FROM golang:1.22.12-bookworm AS open-computer-use');
+    expect(dockerfile).toContain('COPY scripts/prepare-open-computer-use.js /tmp/prepare-open-computer-use.js');
+    expect(dockerfile).toContain("require('/tmp/prepare-open-computer-use.js')");
+    expect(dockerfile).toContain('p.hashBuildInputs(process.cwd())!==p.OPEN_COMPUTER_USE_SOURCE_DIGEST');
+    expect(OPEN_COMPUTER_USE_UPSTREAM_COMMIT).toBe('83a521e546102564efd002f61a6763912081e5c7');
+    const computerUseMarker = dockerfile.split('\n').find((line) => line.includes('p.OPEN_COMPUTER_USE_MARKER'));
+    expect(computerUseMarker).toContain('commit:p.OPEN_COMPUTER_USE_COMMIT');
+    expect(computerUseMarker).toContain('upstreamCommit:p.OPEN_COMPUTER_USE_UPSTREAM_COMMIT');
+    expect(computerUseMarker).toContain('sourceDigest:p.OPEN_COMPUTER_USE_SOURCE_DIGEST');
     expect(dockerfile).toContain('python3-gi gir1.2-atspi-2.0 gir1.2-gtk-3.0');
     expect(dockerfile).toContain('ELLM_SHA_OPEN_COMPUTER_USE_ENTRY=/opt/ellmsha/open-computer-use/open-computer-use');
     expect(launcher).toContain('prepare_open_computer_use --verify-only');
@@ -177,7 +187,8 @@ describe('resolveBuiltinPluginsPath', () => {
     expect(packageJson.dependencies?.['chrome-devtools-mcp']).toBeUndefined();
     expect(migrations).not.toContain("command: 'npx'");
     expect(migrations).toContain('isObsoleteBuiltinChromeDevtools');
-    expect(dockerfile).toContain('FROM node:22-bookworm-slim AS chrome-devtools-mcp');
+    expect(dockerfile).toContain('FROM node:22.20.0-bookworm-slim AS node-base');
+    expect(dockerfile).toContain('FROM node-base AS chrome-devtools-mcp');
     expect(dockerfile).toContain('4f7b06898327ab5be42c85bd98bd176f33d55d89');
     expect(dockerfile).toContain(CHROME_DEVTOOLS_MCP_SOURCE_DIGEST);
     expect(dockerfile).toContain('hashBuildInputs(process.cwd())');
