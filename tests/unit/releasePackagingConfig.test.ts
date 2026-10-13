@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { runInNewContext } from 'node:vm';
 
 const projectRoot = resolve(__dirname, '../..');
 const itWithBash = spawnSync('bash', ['--version'], { encoding: 'utf8' }).status === 0 ? it : it.skip;
@@ -47,8 +48,35 @@ describe('release packaging configuration', () => {
 
   it('retries mac prepackaged builds with both dmg and zip targets', () => {
     const script = readProjectFile('scripts/build-with-builder.js');
-
-    expect(script).toMatch(/--mac\s+dmg\s+zip\s+--\$\{targetArch\}\s+--prepackaged/);
+    const start = script.indexOf('function createMacArtifactsWithPrepackaged(');
+    const end = script.indexOf('\nfunction buildWithDmgRetry(', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const calls: Array<{ name: string; args: string[] }> = [];
+    // Run only the retry helper; no packaging, disk cleanup, or process launch.
+    const createArtifacts = runInNewContext(`(${script.slice(start, end)})`, {
+      fs: { readdirSync: () => ['eLLMsha fixture.app'] },
+      path: { join },
+      runBuildTool: (name: string, args: string[]) => calls.push({ name, args }),
+    });
+    const appDir = resolve(tmpdir(), 'prepackaged fixture & space');
+    createArtifacts(appDir, 'arm64');
+    expect(calls).toEqual([
+      {
+        name: 'electron-builder',
+        args: [
+          '--config',
+          'packages/desktop/electron-builder.yml',
+          '--mac',
+          'dmg',
+          'zip',
+          '--arm64',
+          '--prepackaged',
+          join(appDir, 'eLLMsha fixture.app'),
+          '--publish=never',
+        ],
+      },
+    ]);
   });
 
   itWithBash('fails release asset preparation when a mac zip is missing', () => {
