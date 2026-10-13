@@ -774,6 +774,11 @@ const PreviewPanel: React.FC = () => {
           </div>
         )}
 
+        {metadata?.memoryArtifact && (
+          <div className='px-16px py-6px text-12px text-t-secondary bg-bg-2 border-b border-border-1 break-all'>
+            {t('preview.readOnlyLabel')} · <code>{metadata.memoryArtifact.path}</code>
+          </div>
+        )}
         {/* 预览内容 / Preview content */}
         {renderContent()}
 

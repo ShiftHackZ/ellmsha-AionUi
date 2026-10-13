@@ -5,7 +5,8 @@
  */
 
 import type { BrowserWindow } from 'electron';
-import { app, session } from 'electron';
+import { app, session, webContents } from 'electron';
+import { controlBrowserPopup, registerBrowserPopupOpener } from '../services/browser/popups';
 import { ipcBridge } from '@/common';
 import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 import { ProcessConfig } from '@process/utils/initStorage';
@@ -223,8 +224,19 @@ export function initApplicationBridge(): void {
     }
   });
 
+  ipcBridge.application.browserPopup.provider(async (command) => {
+    try {
+      if (!mainWindowRef || mainWindowRef.isDestroyed()) return { success: false, msg: 'Browser host unavailable.' };
+      return { success: true, data: controlBrowserPopup(mainWindowRef, command) };
+    } catch (error) {
+      return { success: false, msg: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
   ipcBridge.application.reportBrowserWebContentsId.provider(async (registration) => {
     try {
+      const contents = webContents.fromId(registration.webContentsId);
+      if (contents && mainWindowRef) registerBrowserPopupOpener(mainWindowRef, registration.tabId, contents);
       const handle = getCdpBridgeHandle();
       if (!handle) return { success: false, msg: 'Agent browser control is not enabled.' };
       const result = handle.registerTab(registration);

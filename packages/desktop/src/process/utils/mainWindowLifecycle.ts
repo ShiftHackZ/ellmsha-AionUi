@@ -5,12 +5,14 @@
  */
 
 import type { BrowserWindow } from 'electron';
+import { bindBrowserPopups } from '../services/browser/popups';
 import { setApplicationMainWindow } from '../bridge/applicationBridge';
 import { setNotificationMainWindow } from '../bridge/notificationBridge';
 import { setDeepLinkMainWindow } from './deepLink';
 import { setTrayMainWindow } from './tray';
 
 export const bindMainWindowReferences = (window: BrowserWindow): void => {
+  bindBrowserPopups(window);
   setTrayMainWindow(window);
   setDeepLinkMainWindow(window);
   setApplicationMainWindow(window);

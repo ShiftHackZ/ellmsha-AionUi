@@ -173,7 +173,7 @@ export function registerProjectKnowledgeTools(server: McpServer, config: MemoryC
   );
   server.tool(
     'tdai_project_index',
-    'Create or refresh separate Tencent code indexes for all current project repositories, or one selected repository. Asynchronous; poll tdai_project_repositories for completion. No code is changed.',
+    'Create or refresh separate Tencent code indexes for all current project repositories, or one selected repository. Asynchronous; accepted is not ready. Poll tdai_project_repositories for completion. Refresh only a missing or stale index relevant to the task, not on every turn. No code is changed.',
     { repository: repositorySchema },
     async ({ repository }) => result(await client.index(await resolveProjectContext(), repository))
   );
@@ -193,11 +193,23 @@ export function registerProjectKnowledgeTools(server: McpServer, config: MemoryC
   );
   server.tool(
     'tdai_project_code_search',
-    'Search code symbols across current project repositories. Results identify repository and snapshot; incomplete/failed indexes are explicit. Use returned code_graph_id with tdai_code_explore/impact for details.',
+    'Search current-project code symbols by component, class/function name, or route (for example auth handler or PaymentService). For current architecture inspect repository/index freshness first, search relevant symbols, then verify source. Results identify repository and snapshot; incomplete/failed indexes are explicit. Use returned code_graph_id with tdai_code_explore/impact for details.',
     {
-      query: z.string().min(1).max(2048),
+      query: z
+        .string()
+        .min(1)
+        .max(2048)
+        .describe(
+          '1–2048 characters: symbol, component, or route query; use separate focused queries for unrelated topics.'
+        ),
       repository: repositorySchema,
-      limit: z.number().int().min(1).max(10).optional(),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(10)
+        .optional()
+        .describe('Maximum returned matches: 1–10, default 5. Narrow the query or repository for more useful results.'),
     },
     async ({ query, repository, limit }) =>
       result(await client.search(await resolveProjectContext(), query, repository, limit))

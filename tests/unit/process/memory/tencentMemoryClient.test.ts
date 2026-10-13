@@ -67,7 +67,7 @@ describe('TencentDB shared memory client', () => {
       vi.fn(async (url: string, options: RequestInit) => {
         const body = JSON.parse(String(options.body));
         requests.push({ url, body });
-        if (url.endsWith('core/read')) throw new Error('offline');
+        if (body.intent === 'rules') throw new Error('offline');
         if (url.endsWith('scenario/ls'))
           return response({ entries: [{ path: 'bmad/project/prd.md', summary: 'PRD' }] });
         return response({
@@ -101,7 +101,7 @@ describe('TencentDB shared memory client', () => {
     const second = { project_id: 'project-2', name: 'Other', workspace: '/tmp/other', roots: ['/tmp/other'] };
     await client.context('latest task', first, '/tmp/project/mobile');
     await client.context('latest task', second);
-    expect(searches).toEqual([
+    expect(searches.filter((request) => request.intent !== 'rules')).toEqual([
       expect.objectContaining({
         query: 'latest task',
         scope_mode: 'current_project',
@@ -115,6 +115,47 @@ describe('TencentDB shared memory client', () => {
         project_aliases: ['other'],
       }),
     ]);
+  });
+
+  it('delivers scoped active project rules with storage provenance instead of the core persona', async () => {
+    const requests: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, options: RequestInit) => {
+        const body = JSON.parse(String(options.body));
+        requests.push(body);
+        if (url.endsWith('core/read')) throw new Error('Must not request unrelated core persona');
+        if (url.endsWith('scenario/ls')) return response({ entries: [] });
+        return response({
+          items:
+            body.intent === 'rules'
+              ? [
+                  {
+                    id: 'project-rule',
+                    content: 'Use owned staging data.',
+                    source_path: `knowledge/${memoryScope(projectContext.workspace)}/rule.md`,
+                    source_status: 'active',
+                    source_origin: 'v2_import',
+                    guidance_scope: 'project',
+                    guidance_status: 'active',
+                  },
+                ]
+              : [],
+          complete: true,
+          degraded: false,
+        });
+      })
+    );
+    const data = await client.context('fix fixture task', projectContext);
+    expect(data.guidance).toMatchObject([
+      { id: 'project-rule', guidance_status: 'active', guidance_scope: 'project', source_origin: 'v2_import' },
+    ]);
+    expect(data.guidance_retrieval).toMatchObject({ complete: true, degraded: false });
+    expect(requests.find((request) => request.intent === 'rules')).toMatchObject({
+      scope_mode: 'current_project',
+      include_global: true,
+      project_scopes: [memoryScope(projectContext.workspace)],
+    });
   });
 
   it('rejects model-supplied workspace overrides outside the registered project before any gateway call', async () => {

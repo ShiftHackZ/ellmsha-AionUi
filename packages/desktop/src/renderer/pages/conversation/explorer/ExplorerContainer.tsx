@@ -16,6 +16,7 @@
  * reveal / explicit add-to-chat; see {@link SearchPanel}).
  */
 
+import selectedTabStyles from '@/renderer/components/base/SelectedTab.module.css';
 import { Button, Input, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
 import type { ProjectIndexCatalog } from '@/common/types/platform/electron';
 import { DatabaseCode, FolderPlus } from '@icon-park/react';
@@ -370,7 +371,9 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
     <Button
       type='text'
       size='small'
-      className={`flex-shrink-0 !px-8px ${activeTab === key ? '!text-t-primary !font-medium !bg-2' : '!text-t-secondary'}`}
+      role='tab'
+      aria-selected={activeTab === key}
+      className={`${selectedTabStyles.tab} flex-shrink-0 !px-8px ${activeTab === key ? '!text-t-primary !font-medium !bg-2' : '!text-t-secondary'}`}
       onClick={() => setActiveTab(key)}
     >
       {label}
@@ -398,7 +401,7 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           the sider's resize handle covers the leftmost 12px and sits above this
           content, so anything placed to its left cannot be clicked. */}
       <div className='flex items-center gap-4px pl-12px pr-8px py-4px flex-shrink-0 border-b border-[var(--bg-3)]'>
-        <div className='flex items-center gap-2px overflow-x-auto flex-1 min-w-0'>
+        <div role='tablist' className='flex items-center gap-2px overflow-x-auto flex-1 min-w-0'>
           {tabButton('files', t('conversation.explorer.tabs.files'))}
           {tabButton('changes', t('conversation.explorer.tabs.changes'))}
         </div>

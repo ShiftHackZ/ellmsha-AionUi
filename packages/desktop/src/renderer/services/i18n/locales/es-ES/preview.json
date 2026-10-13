@@ -147,6 +147,9 @@
     "tabLimitReached": "Se alcanzó el límite de pestañas ({{count}}). Se reutilizó la pestaña más antigua.",
     "agentFirstUseTitle": "El agente está usando el navegador integrado",
     "agentFirstUseContent": "Puede abrir páginas, hacer clic y leer contenido en este panel. Tu sesión se conserva.",
-    "agentFirstUseAction": "Abrir ajustes"
-  }
+    "agentFirstUseAction": "Abrir ajustes",
+    "openExternal": "Abrir en el navegador predeterminado",
+    "externalAuthHelp": "Si el inicio de sesión integrado o la llave de seguridad no es compatible, usa el navegador predeterminado. Su sesión es independiente de este panel."
+  },
+  "memoryArtifactUnavailable": "Este documento de memoria no está disponible en esta conversación."
 }

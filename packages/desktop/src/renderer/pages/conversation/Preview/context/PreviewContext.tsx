@@ -26,6 +26,7 @@ export interface DomSnippet {
 }
 
 export interface PreviewMetadata {
+  memoryArtifact?: { conversationId: string; path: string };
   language?: string;
   title?: string;
   diff?: string;
@@ -43,6 +44,7 @@ export interface PreviewMetadata {
   targetLine?: number; // 打开文件后定位到的目标行 / Target line to reveal after opening
   targetColumn?: number; // 打开文件后定位到的目标列 / Target column to reveal after opening
   missingFile?: boolean; // 文件不存在或无法读取 / Whether the referenced file is missing or unreadable
+  nativeBrowserPopup?: boolean; // Live native child identity; never restored across process lifetimes.
   favicon?: string; // 浏览器 tab 的站点图标 URL / Site icon URL for browser tabs
   agentActive?: boolean; // Agent 正在操作该浏览器 tab / Agent is currently driving this browser tab
 }
@@ -175,7 +177,13 @@ const sanitizeTabsForPersistence = (input: PreviewTab[]): PreviewTab[] => {
       isDirty: false,
       originalContent: tab.content,
       // Agent activity is a live, per-session signal — never restore it as active.
-      metadata: tab.metadata?.agentActive ? { ...tab.metadata, agentActive: false } : tab.metadata,
+      metadata: tab.metadata
+        ? {
+            ...tab.metadata,
+            agentActive: false,
+            nativeBrowserPopup: undefined as boolean | undefined,
+          }
+        : undefined,
     }));
 };
 
@@ -204,7 +212,7 @@ const parsePersistedTabs = (value: unknown): PreviewTab[] => {
           : tab.metadata;
       return {
         ...tab,
-        metadata,
+        metadata: metadata ? { ...metadata, nativeBrowserPopup: undefined as boolean | undefined } : undefined,
         originalContent: typeof tab.originalContent === 'string' ? tab.originalContent : tab.content,
         isDirty: false,
       };
@@ -228,7 +236,11 @@ const loadScopeState = (scope: string): PersistedScopeState => {
   }
 };
 
-const loadInitialScopeState = (): { scope: PreviewScopeKey; state: PersistedScopeState; ready: boolean } => {
+const loadInitialScopeState = (): {
+  scope: PreviewScopeKey;
+  state: PersistedScopeState;
+  ready: boolean;
+} => {
   try {
     const remembered = localStorage.getItem(LAST_PREVIEW_SCOPE_STORAGE_KEY);
     if (remembered && localStorage.getItem(previewScopeStorageKey(remembered))) {
@@ -268,9 +280,13 @@ const browserTabIds = (tabs: PreviewTab[]): string[] =>
   tabs.filter((tab) => tab.content_type === 'browser').map((tab) => tab.id);
 
 export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const pendingPopupTabs = useRef(new Set<string>());
   const [initialScope] = useState(loadInitialScopeState);
   const [isOpen, setIsOpen] = useState(initialScope.state.isOpen);
   const [tabs, setTabs] = useState<PreviewTab[]>(initialScope.state.tabs);
+  useEffect(() => {
+    for (const tab of tabs) pendingPopupTabs.current.delete(tab.id);
+  }, [tabs]);
   const [activeTabId, setActiveTabId] = useState<string | null>(initialScope.state.activeTabId);
   // The preview scope currently loaded into state (project id / workspace / null).
   const currentScopeRef = useRef<PreviewScopeKey>(initialScope.scope);
@@ -350,6 +366,14 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return (
         tabList.find((tab) => {
           if (tab.content_type !== type) return false;
+          if (meta?.memoryArtifact || tab.metadata?.memoryArtifact) {
+            return Boolean(
+              meta?.memoryArtifact &&
+              tab.metadata?.memoryArtifact &&
+              meta.memoryArtifact.conversationId === tab.metadata.memoryArtifact.conversationId &&
+              meta.memoryArtifact.path === tab.metadata.memoryArtifact.path
+            );
+          }
           const tabFileName = normalize(tab.metadata?.file_name);
           const tabTitle = normalize(tab.metadata?.title);
           const tabFilePath = normalize(tab.metadata?.file_path);
@@ -545,6 +569,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const closePreview = useCallback(() => {
+    pendingPopupTabs.current.clear();
     setIsOpen(false);
     setTabs([]);
     setActiveTabId(null);
@@ -560,6 +585,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     (scopeKey: PreviewScopeKey) => {
       const prev = currentScopeRef.current;
       if (prev === scopeKey) return;
+      pendingPopupTabs.current.clear();
       void ipcBridge.application.reportBrowserTabInventory.invoke({ ready: false, tabIds: [] });
       if (prev != null) persistScopeState(prev, { isOpen, tabs, activeTabId });
       currentScopeRef.current = scopeKey;
@@ -621,6 +647,31 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return ipcBridge.application.browserTabCommand.on((command) => {
       // The mounted WebviewHost owns native frame focus and its acknowledgement.
       if (command.action === 'focus') return;
+      if (command.action === 'adopt') {
+        const opener = tabsRef.current.find((tab) => tab.id === command.openerTabId && tab.content_type === 'browser');
+        const currentTabs = tabsRef.current;
+        for (const id of pendingPopupTabs.current)
+          if (currentTabs.some((tab) => tab.id === id)) pendingPopupTabs.current.delete(id);
+        if (currentTabs.some((tab) => tab.id === command.tabId) || pendingPopupTabs.current.has(command.tabId)) return;
+        const count =
+          currentTabs.filter((tab) => tab.content_type === 'browser').length + pendingPopupTabs.current.size;
+        // A delayed message from a departed scope must never open in the new conversation.
+        if (!opener || count >= MAX_BROWSER_TABS) {
+          void ipcBridge.application.browserPopup.invoke({
+            action: 'dispose',
+            tabId: command.tabId,
+          });
+          return;
+        }
+        pendingPopupTabs.current.add(command.tabId);
+        openPreview(
+          command.url,
+          'browser',
+          { nativeBrowserPopup: true },
+          { tabId: command.tabId, activate: command.activate }
+        );
+        return;
+      }
       const existing = tabsRef.current.find((tab) => tab.id === command.tabId && tab.content_type === 'browser');
 
       if (command.action === 'create') {
@@ -660,9 +711,10 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
+      pendingPopupTabs.current.delete(command.tabId);
       closeTab(command.tabId);
     });
-  }, [closeTab, openBrowserTab]);
+  }, [closeTab, openBrowserTab, openPreview]);
 
   const closePreviewByIdentity = useCallback(
     (type: PreviewContentType, content?: string, meta?: PreviewMetadata) => {
@@ -739,7 +791,11 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           // PUT /content：带 If-Match(上次已知 mtime) 乐观并发，冲突后端返 409
           // PUT /content: optimistic concurrency via If-Match (last-known mtime); backend returns 409 on conflict
           const ifMatch = fileMtimeRef.current.get(saveKey);
-          const success = await ipcBridge.fs.writeContent.invoke({ file: fileRef, data: tab.content, ifMatch });
+          const success = await ipcBridge.fs.writeContent.invoke({
+            file: fileRef,
+            data: tab.content,
+            ifMatch,
+          });
 
           if (success) {
             setTabs((prevTabs) =>

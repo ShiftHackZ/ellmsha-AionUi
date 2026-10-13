@@ -201,6 +201,10 @@ it('advertises code runtime actions through the actual MCP catalog', async () =>
       properties: { action: { enum: ['status', 'allocate', 'deallocate'] } },
     });
     expect(tool?.annotations?.destructiveHint).toBe(false);
+    const search = (await client.listTools()).tools.find((tool) => tool.name === 'tdai_project_code_search');
+    expect(search?.inputSchema).toMatchObject({
+      properties: { query: { minLength: 1, maxLength: 2048 }, limit: { minimum: 1, maximum: 10 } },
+    });
   } finally {
     await client.close();
     await server.close();

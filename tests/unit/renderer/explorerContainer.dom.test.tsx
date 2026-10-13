@@ -71,6 +71,18 @@ afterEach(() => {
 });
 
 describe('ExplorerContainer data integration', () => {
+  it('marks the selected Files/Changes tab explicitly independently of hover', async () => {
+    projectGet.mockResolvedValue(detail([entry({ pe_id: 'peA', display_name: 'Fixture' })]));
+    renderContainer('p1');
+    const files = await screen.findByRole('tab', { name: 'conversation.explorer.tabs.files' });
+    const changes = screen.getByRole('tab', { name: 'conversation.explorer.tabs.changes' });
+    expect(files).toHaveAttribute('aria-selected', 'true');
+    fireEvent.mouseOver(changes);
+    expect(files).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(changes);
+    expect(changes).toHaveAttribute('aria-selected', 'true');
+    expect(files).toHaveAttribute('aria-selected', 'false');
+  });
   it('exposes Code indexes as a compact accessible selected icon action', async () => {
     const electronAPI = window.electronAPI;
     const memoryProject = vi.fn().mockResolvedValue({ repositories: [], errors: [] });

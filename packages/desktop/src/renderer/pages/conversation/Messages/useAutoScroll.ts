@@ -13,7 +13,7 @@
  *   only while auto-follow mode is active.
  * - Use DOM-native scrollIntoView for explicit message jumps.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TMessage } from '@/common/chat/chatLib';
 
 const PROGRAMMATIC_SCROLL_GUARD_MS = 150;
@@ -59,6 +59,34 @@ export function useAutoScroll({ messages, itemCount }: UseAutoScrollOptions): Us
   const initialScrollDoneRef = useRef(false);
   const pendingAutoFollowFrameRef = useRef<number | null>(null);
   const userInputActiveRef = useRef(false);
+  const visibleAnchorRef = useRef<{ id: string; offset: number } | null>(null);
+
+  const captureVisibleAnchor = useCallback(() => {
+    if (!scrollerEl || !contentEl || !userScrolledRef.current) return;
+    const viewport = scrollerEl.getBoundingClientRect();
+    const element = Array.from(contentEl.querySelectorAll<HTMLElement>('[id^="message-"]')).find((item) => {
+      const bounds = item.getBoundingClientRect();
+      return bounds.bottom > viewport.top && bounds.top < viewport.bottom;
+    });
+    visibleAnchorRef.current = element
+      ? { id: element.id, offset: element.getBoundingClientRect().top - viewport.top }
+      : null;
+  }, [contentEl, scrollerEl]);
+
+  const restoreVisibleAnchor = useCallback(() => {
+    const anchor = visibleAnchorRef.current;
+    if (!anchor || !scrollerEl || !contentEl || !userScrolledRef.current) return;
+    const element = Array.from(contentEl.querySelectorAll<HTMLElement>('[id^="message-"]')).find(
+      (item) => item.id === anchor.id
+    );
+    if (!element) return;
+    const delta = element.getBoundingClientRect().top - scrollerEl.getBoundingClientRect().top - anchor.offset;
+    if (Math.abs(delta) > 0.5) {
+      lastProgrammaticScrollTimeRef.current = Date.now();
+      scrollerEl.scrollTop += delta;
+      lastScrollTopRef.current = scrollerEl.scrollTop;
+    }
+  }, [contentEl, scrollerEl]);
 
   const markProgrammaticScroll = useCallback(() => {
     lastProgrammaticScrollTimeRef.current = Date.now();
@@ -124,8 +152,7 @@ export function useAutoScroll({ messages, itemCount }: UseAutoScrollOptions): Us
     (element: HTMLElement | null, options?: ScrollElementIntoViewOptions) => {
       if (!element) return;
 
-      userScrolledRef.current = false;
-      setShowScrollButton(false);
+      userScrolledRef.current = true;
       markProgrammaticScroll();
       element.scrollIntoView({
         behavior: options?.behavior ?? 'smooth',
@@ -161,8 +188,9 @@ export function useAutoScroll({ messages, itemCount }: UseAutoScrollOptions): Us
 
       lastScrollTopRef.current = currentScrollTop;
       updateBottomState(target);
+      captureVisibleAnchor();
     },
-    [updateBottomState]
+    [captureVisibleAnchor, updateBottomState]
   );
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
@@ -179,6 +207,7 @@ export function useAutoScroll({ messages, itemCount }: UseAutoScrollOptions): Us
     if (!scrollerEl || !contentEl) return;
 
     const observer = new ResizeObserver(() => {
+      restoreVisibleAnchor();
       scheduleAutoFollow();
       updateBottomState(scrollerEl);
     });
@@ -187,7 +216,7 @@ export function useAutoScroll({ messages, itemCount }: UseAutoScrollOptions): Us
     observer.observe(contentEl);
 
     return () => observer.disconnect();
-  }, [contentEl, scheduleAutoFollow, scrollerEl, updateBottomState]);
+  }, [contentEl, restoreVisibleAnchor, scheduleAutoFollow, scrollerEl, updateBottomState]);
 
   useEffect(() => {
     if (!scrollerEl || initialScrollDoneRef.current || itemCount === 0) return;
@@ -199,12 +228,18 @@ export function useAutoScroll({ messages, itemCount }: UseAutoScrollOptions): Us
     });
   }, [itemCount, scrollerEl, scrollToBottom]);
 
+  // Preserve the visible message, not total content height: streaming below the
+  // viewport must not count as prepended history, nor may late image layout jump it.
+  useLayoutEffect(() => {
+    restoreVisibleAnchor();
+  }, [messages, itemCount, restoreVisibleAnchor]);
+
   useEffect(() => {
     const currentListLength = messages.length;
     const previousLength = previousListLengthRef.current;
     const lastMessage = messages[messages.length - 1];
     const previousLastMessage = previousLastMessageRef.current;
-    const isNewMessage = currentListLength > previousLength;
+    const isNewMessage = currentListLength > previousLength && lastMessage?.id !== previousLastMessage?.id;
     const isLastMessageUpdated = currentListLength > 0 && lastMessage !== previousLastMessage;
 
     previousListLengthRef.current = currentListLength;

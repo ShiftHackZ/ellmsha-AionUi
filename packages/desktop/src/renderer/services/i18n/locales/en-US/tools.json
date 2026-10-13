@@ -65,5 +65,12 @@
     "create": "create",
     "modify": "modify",
     "delete": "delete"
+  },
+  "approvals": {
+    "title": "Saved MCP permissions",
+    "empty": "No saved tool permissions.",
+    "revoke": "Revoke",
+    "loadFailed": "Could not load saved permissions.",
+    "revokeFailed": "Could not revoke this permission."
   }
 }

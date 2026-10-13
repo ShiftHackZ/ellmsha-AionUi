@@ -558,14 +558,9 @@ const MessageList: React.FC<{ className?: string; emptySlot?: React.ReactNode }>
         return;
       }
 
-      const previousHeight = contentElementRef.current?.scrollHeight ?? 0;
-      void loadPreviousMessagePage().then((loaded) => {
-        if (!loaded) return;
-        requestAnimationFrame(() => {
-          const nextHeight = contentElementRef.current?.scrollHeight ?? previousHeight;
-          scroller.scrollTop += nextHeight - previousHeight;
-        });
-      });
+      // useAutoScroll keeps a stable visible-message anchor through the prepend
+      // and subsequent layout changes, including concurrent streaming below it.
+      void loadPreviousMessagePage();
     },
     [handleScroll, loadPreviousMessagePage, pagination.hasMoreBefore, pagination.isLoadingBefore]
   );

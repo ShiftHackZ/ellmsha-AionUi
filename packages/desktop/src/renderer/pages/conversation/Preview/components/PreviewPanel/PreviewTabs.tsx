@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import selectedTabStyles from '@/renderer/components/base/SelectedTab.module.css';
 import { iconColors } from '@/renderer/styles/colors';
 import { Close, Plus } from '@icon-park/react';
 import { IconShrink } from '@arco-design/web-react/icon';
@@ -154,12 +155,37 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
     >
       <div className='flex items-center h-36px w-full'>
         {/* Tabs 滚动区域 / Tabs scroll area */}
-        <div ref={tabsContainerRef} className='flex items-center h-full flex-1 overflow-x-auto'>
+        <div role='tablist' ref={tabsContainerRef} className='flex items-center h-full flex-1 overflow-x-auto'>
           {tabs.length > 0 ? (
             tabs.map((tab) => (
               <div
                 key={tab.id}
-                className={`flex items-center gap-6px px-10px h-full cursor-pointer transition-colors flex-shrink-0 ${tab.id === activeTabId ? 'bg-bg-1 text-t-primary' : 'text-t-secondary hover:bg-bg-3'}`}
+                role='tab'
+                aria-selected={tab.id === activeTabId}
+                tabIndex={tab.id === activeTabId || (!activeTabId && tab === tabs[0]) ? 0 : -1}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  const index = tabs.indexOf(tab);
+                  const nextIndex =
+                    event.key === 'ArrowRight'
+                      ? (index + 1) % tabs.length
+                      : event.key === 'ArrowLeft'
+                        ? (index - 1 + tabs.length) % tabs.length
+                        : event.key === 'Home'
+                          ? 0
+                          : event.key === 'End'
+                            ? tabs.length - 1
+                            : -1;
+                  if (nextIndex >= 0) {
+                    event.preventDefault();
+                    onSwitchTab(tabs[nextIndex].id);
+                    tabsContainerRef.current?.querySelectorAll<HTMLElement>('[role="tab"]')[nextIndex]?.focus();
+                  } else if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSwitchTab(tab.id);
+                  }
+                }}
+                className={`${selectedTabStyles.tab} flex items-center gap-6px px-10px h-full cursor-pointer transition-colors flex-shrink-0 ${tab.id === activeTabId ? 'bg-bg-1 text-t-primary' : 'text-t-secondary hover:bg-bg-3'}`}
                 style={{ maxWidth: `${MAX_TAB_WIDTH_PX}px` }}
                 onClick={() => onSwitchTab(tab.id)}
                 onContextMenu={(e) => onContextMenu(e, tab.id)}

@@ -147,6 +147,9 @@
     "tabLimitReached": "Tab-Limit erreicht ({{count}}). Der älteste Tab wurde wiederverwendet.",
     "agentFirstUseTitle": "Der Agent nutzt den integrierten Browser",
     "agentFirstUseContent": "Er kann in diesem Bereich Seiten öffnen, klicken und Inhalte lesen. Deine Anmeldung bleibt erhalten.",
-    "agentFirstUseAction": "Einstellungen öffnen"
-  }
+    "agentFirstUseAction": "Einstellungen öffnen",
+    "openExternal": "Im Standardbrowser öffnen",
+    "externalAuthHelp": "Bei blockierter eingebetteter Anmeldung oder Sicherheitsschlüsseln den Standardbrowser verwenden. Seine Anmeldung ist von diesem Bereich getrennt."
+  },
+  "memoryArtifactUnavailable": "Dieses Speicherartefakt ist in dieser Unterhaltung nicht verfügbar."
 }

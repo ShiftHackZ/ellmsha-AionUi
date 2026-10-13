@@ -58,3 +58,37 @@ describe('normalizeToolCall', () => {
     expect(result?.output).toBe('[diff] /workspace/file.ts');
   });
 });
+
+describe('Codex collapsed tool labels', () => {
+  it('shows exact MCP server/tool but no argument previews', async () => {
+    const { normalizeToolCall } = await import('@/common/chat/normalizeToolCall');
+    const message = {
+      content: {
+        call_id: 'x',
+        name: 'mcpToolCall',
+        input: { server: 'browser', tool: 'take_snapshot', arguments: { token: 'PRIVATE' } },
+        description: 'PRIVATE',
+        status: 'running',
+      },
+    };
+    const result = normalizeToolCall(message as never);
+    expect(result).toMatchObject({ name: 'browser · take_snapshot', status: 'running' });
+    expect(result?.description).toBeUndefined();
+    expect(result?.input).toContain('PRIVATE'); // Full details remain available only when expanded.
+  });
+  it('only includes known executable/subcommand words, never shell arguments or assignments', async () => {
+    const { normalizeToolCall } = await import('@/common/chat/normalizeToolCall');
+    for (const [command, expected] of [
+      ['git diff --password=PRIVATE', 'git diff'],
+      ['curl https://user:PRIVATE@host/', 'curl'],
+      ['TOKEN=PRIVATE curl host', 'shell'],
+      ['echo PRIVATE', 'shell'],
+    ]) {
+      const result = normalizeToolCall({
+        content: { call_id: 'x', name: 'commandExecution', input: { command }, description: command },
+      } as never);
+      expect(result?.name).toBe(expected);
+      expect(result?.description).toBeUndefined();
+    }
+  });
+});

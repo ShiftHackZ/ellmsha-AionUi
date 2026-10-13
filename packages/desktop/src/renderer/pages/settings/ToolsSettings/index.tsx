@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import McpApprovals from './McpApprovals';
 import { useTranslation } from 'react-i18next';
 import ToolsModalContent from '@/renderer/components/settings/SettingsModal/contents/ToolsModalContent';
 import SettingsPageWrapper from '../components/SettingsPageWrapper';
@@ -30,6 +31,7 @@ const ToolsSettings: React.FC = () => {
           })}
         />
         <ToolsModalContent />
+        <McpApprovals />
       </div>
     </SettingsPageWrapper>
   );

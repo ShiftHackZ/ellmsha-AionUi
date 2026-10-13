@@ -147,6 +147,9 @@
     "tabLimitReached": "Limite de abas atingido ({{count}}). A aba mais antiga foi reutilizada.",
     "agentFirstUseTitle": "O agente está usando o navegador interno",
     "agentFirstUseContent": "Ele pode abrir páginas, clicar e ler conteúdo neste painel. Seu login é preservado.",
-    "agentFirstUseAction": "Abrir configurações"
-  }
+    "agentFirstUseAction": "Abrir configurações",
+    "openExternal": "Abrir no navegador padrão",
+    "externalAuthHelp": "Se o login integrado ou a chave de segurança não for compatível, use o navegador padrão. A sessão dele é separada deste painel."
+  },
+  "memoryArtifactUnavailable": "Este documento de memória não está disponível nesta conversa."
 }

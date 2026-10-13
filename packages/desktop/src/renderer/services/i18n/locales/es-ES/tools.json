@@ -65,5 +65,12 @@
     "create": "crear",
     "modify": "modificar",
     "delete": "eliminar"
+  },
+  "approvals": {
+    "title": "Permisos MCP guardados",
+    "empty": "No hay permisos de herramientas guardados.",
+    "revoke": "Revocar",
+    "loadFailed": "No se pudieron cargar los permisos.",
+    "revokeFailed": "No se pudo revocar este permiso."
   }
 }

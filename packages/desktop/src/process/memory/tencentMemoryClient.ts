@@ -21,6 +21,11 @@ type MemoryHit = {
   source_path?: string;
   event_date?: string;
   status_hint?: string;
+  source_status?: string;
+  source_origin?: 'scenario_write' | 'v2_import';
+  source_sha256?: string;
+  guidance_scope?: 'project' | 'global';
+  guidance_status?: 'active' | 'unverified';
 };
 type MemorySearchData = {
   strategy?: string;
@@ -162,6 +167,11 @@ export class TencentMemoryClient {
         source_path: hit.source_path,
         event_date: hit.event_date,
         status_hint: hit.status_hint,
+        source_status: hit.source_status,
+        source_origin: hit.source_origin,
+        source_sha256: hit.source_sha256,
+        guidance_scope: hit.guidance_scope,
+        guidance_status: hit.guidance_status,
         content: clip(hit.content, excerptLength),
         truncated: hit.content.length > excerptLength,
       })),
@@ -210,7 +220,12 @@ export class TencentMemoryClient {
     const prefix = `bmad/${scope}/`;
     const values = await Promise.allSettled([
       this.search(query, 4, 1100, { scope_mode: 'current_project', ...projectOptions }),
-      this.call<{ content?: string | null }>('core/read', {}),
+      this.search(query, 4, 1100, {
+        scope_mode: 'current_project',
+        ...projectOptions,
+        intent: 'rules',
+        include_global: true,
+      }),
       this.list(prefix, 0, 8),
     ]);
     const [memories, guidance, artifacts] = values;
@@ -220,7 +235,17 @@ export class TencentMemoryClient {
       bmad_prefix: prefix,
       memories: items,
       memory_retrieval: memories.status === 'fulfilled' ? memoryRetrieval : null,
-      guidance: guidance.status === 'fulfilled' ? clip(guidance.value.content ?? '', 1000) : '',
+      guidance: guidance.status === 'fulfilled' ? guidance.value.items : [],
+      guidance_retrieval:
+        guidance.status === 'fulfilled'
+          ? {
+              complete: guidance.value.complete,
+              next_offset: guidance.value.next_offset,
+              total_candidates: guidance.value.total_candidates,
+              degraded: guidance.value.degraded,
+              message: guidance.value.message,
+            }
+          : null,
       artifacts: artifacts.status === 'fulfilled' ? artifacts.value : null,
       unavailable: values.flatMap((value, index) =>
         value.status === 'rejected' ? [['search', 'guidance', 'artifacts'][index]] : []

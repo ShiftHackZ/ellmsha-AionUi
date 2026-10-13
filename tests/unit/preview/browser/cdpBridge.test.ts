@@ -16,6 +16,7 @@ import { MAX_BROWSER_TABS } from '@/common/config/constants';
 
 const electronMock = vi.hoisted(() => ({
   browserSession: {},
+  popups: new Map<string, { active: boolean; contents: FakeContents }>(),
   contents: new Map<number, FakeContents>(),
   focusedId: undefined as number | undefined,
   reportedFocusedId: undefined as number | undefined,
@@ -103,6 +104,13 @@ vi.mock('electron', () => ({
   },
 }));
 
+vi.mock('@process/services/browser/popups', () => ({
+  getBrowserPopup: (tabId: string, contentsId?: number) => {
+    const popup = electronMock.popups.get(tabId);
+    return popup && (contentsId === undefined || popup.contents.id === contentsId) ? popup : undefined;
+  },
+}));
+
 import { startCdpBridge as startRawCdpBridge, type CdpBridgeHandle } from '@process/resources/builtinMcp/cdpBridge';
 import { CdpBrowserTabController } from '@process/resources/builtinMcp/browserTabMcp';
 import type { BrowserTabCommand, BrowserTabRegistration } from '@/common/adapter/ipcBridge';
@@ -177,6 +185,7 @@ const startCdpBridge = async (...args: Parameters<typeof startRawCdpBridge>): Pr
 
 beforeEach(() => {
   electronMock.contents.clear();
+  electronMock.popups.clear();
   electronMock.focusedId = undefined;
   electronMock.reportedFocusedId = undefined;
   electronMock.windowFocused = true;
@@ -193,6 +202,86 @@ afterEach(async () => {
 });
 
 describe('cdpBridge multi-tab routing and lifecycle', () => {
+  it('waits for exact native popup frame focus before input and rejects a closed pending target', async () => {
+    const alpha = createContents(279);
+    vi.spyOn(alpha, 'getType').mockReturnValue('window');
+    let frameReady = false;
+    Object.defineProperty(alpha, 'focusedFrame', { get: () => (frameReady ? { ownerId: alpha.id } : null) });
+    alpha.focus.mockImplementation(() => undefined);
+    electronMock.popups.set('alpha', { active: true, contents: alpha });
+    const bridge = await startRawCdpBridge({ sendTabCommand: () => undefined });
+    openBridges.push(bridge);
+    bridge.updateTabInventory({ ready: true, tabIds: [] });
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const sessionId = sessionIdForTarget('alpha');
+    const input = request<{ result: unknown }>(ws, {
+      id: 275,
+      method: 'Input.insertText',
+      params: { text: 'OWNED' },
+      sessionId,
+    });
+    await vi.waitFor(() => expect(alpha.focus).toHaveBeenCalledOnce());
+    expect(alpha.debugger.sendCommand).not.toHaveBeenCalled();
+    frameReady = true;
+    expect((await input).result).toBeDefined();
+    expect(alpha.debugger.sendCommand).toHaveBeenCalledTimes(1);
+
+    frameReady = false;
+    const pending = request<{ error: { message: string }; sessionId: string }>(ws, {
+      id: 276,
+      method: 'Input.insertText',
+      params: { text: 'NEVER_SENT' },
+      sessionId,
+    });
+    await vi.waitFor(() => expect(alpha.focus).toHaveBeenCalledTimes(2));
+    alpha.destroy();
+    expect(await pending).toMatchObject({
+      sessionId,
+      error: { message: expect.stringContaining('No input was sent') },
+    });
+    expect(alpha.debugger.sendCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the outer page session on intercepted replies and errors', async () => {
+    const alpha = createContents(280);
+    const bridge = await startCdpBridge({ sendTabCommand: () => undefined });
+    openBridges.push(bridge);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const sessionId = sessionIdForTarget('alpha');
+
+    const activated = await request(ws, { id: 280, method: 'Page.bringToFront', sessionId });
+    expect(activated).toEqual({ id: 280, result: {}, sessionId });
+    const rejected = await request<{ sessionId: string; error: { message: string } }>(ws, {
+      id: 281,
+      method: 'Browser.close',
+      sessionId,
+    });
+    expect(rejected.sessionId).toBe(sessionId);
+    expect(rejected.error.message).toContain('not permitted');
+
+    alpha.debugger.sendCommand.mockRejectedValueOnce(new Error('Fixture command failed'));
+    const forwardedError = await request<{ sessionId: string; error: { message: string } }>(ws, {
+      id: 282,
+      method: 'Page.getFrameTree',
+      sessionId,
+    });
+    expect(forwardedError.sessionId).toBe(sessionId);
+    expect(forwardedError.error.message).toBe('Fixture command failed');
+
+    alpha.destroy();
+    const stale = await request<{ sessionId: string; error: { message: string } }>(ws, {
+      id: 283,
+      method: 'Page.bringToFront',
+      sessionId,
+    });
+    expect(stale.sessionId).toBe(sessionId);
+    expect(stale.error.message).toContain('stale sessionId');
+  });
+
   it('rejects a closed guest immediately while awaiting renderer focus without sending input', async () => {
     const commands: BrowserTabCommand[] = [];
     const bridge = await startRawCdpBridge({ sendTabCommand: (command) => commands.push(command) });

@@ -9,7 +9,7 @@
  * test-connection / edit actions shared by official and custom agents.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
@@ -98,6 +98,29 @@ const renderOfficial = (
   );
 
 describe('AgentCard (official variant)', () => {
+  afterEach(() => {
+    document.body.removeAttribute('arco-theme');
+  });
+
+  it.each(['light', 'dark'])('keeps image logos on a rounded light backing in %s mode', (theme) => {
+    document.body.setAttribute('arco-theme', theme);
+    const logo = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3Cpath fill="black"/%3E%3C/svg%3E';
+    renderOfficial({ id: 'codex', name: 'Codex', icon: logo, backend: 'codex' });
+
+    const image = screen.getByRole('img', { name: 'Codex' });
+    expect(image).toHaveAttribute('src', logo);
+    expect(image.closest('.arco-avatar')).toHaveStyle({ backgroundColor: 'var(--color-white)' });
+    expect(image.closest('.arco-avatar')).toHaveClass('!rounded-8px');
+  });
+
+  it.each(['🤖', undefined])('retains the themed backing when no image logo is available (%s)', (icon) => {
+    document.body.setAttribute('arco-theme', 'dark');
+    const { container } = renderOfficial({ id: 'unknown', name: 'Unknown', icon });
+
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(container.querySelector('.arco-avatar')).toHaveStyle({ backgroundColor: 'var(--color-fill-2)' });
+  });
+
   it('shows status tag plus test-connection and edit actions for a missing official agent', () => {
     renderOfficial({
       id: 'claude',

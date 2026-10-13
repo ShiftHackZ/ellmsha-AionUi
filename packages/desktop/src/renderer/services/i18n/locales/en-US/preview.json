@@ -147,6 +147,9 @@
     "tabLimitReached": "Browser tab limit reached ({{count}}). The oldest tab was reused.",
     "agentFirstUseTitle": "The agent is using the in-app browser",
     "agentFirstUseContent": "It can open pages, click and read content in this panel. Your sign-in state is kept between sessions.",
-    "agentFirstUseAction": "Open settings"
-  }
+    "agentFirstUseAction": "Open settings",
+    "openExternal": "Open in default browser",
+    "externalAuthHelp": "For blocked embedded sign-in or security keys, use your default browser. Its sign-in session is separate from this panel."
+  },
+  "memoryArtifactUnavailable": "This memory artifact is unavailable in this conversation."
 }

@@ -206,3 +206,35 @@ describe('MarkdownView local file links', () => {
     expect(image).toHaveAttribute('alt', '');
   });
 });
+
+describe('typed memory artifact links', () => {
+  it('opens explicit memory links and legacy inline BMAD paths through the memory callback only', () => {
+    const onMemoryArtifact = vi.fn();
+    const onLocalFileLink = vi.fn();
+    const path = 'bmad/owned-fixture/spec.md';
+    const { unmount } = render(
+      <MarkdownView
+        onMemoryArtifact={onMemoryArtifact}
+        onLocalFileLink={onLocalFileLink}
+      >{`[Spec](ellmsha-memory://artifact?path=${encodeURIComponent(path)})`}</MarkdownView>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Spec' }));
+    expect(onMemoryArtifact).toHaveBeenCalledWith(path);
+    expect(onLocalFileLink).not.toHaveBeenCalled();
+    unmount();
+    render(<MarkdownView onMemoryArtifact={onMemoryArtifact}>{`Read \`${path}\` now.`}</MarkdownView>);
+    fireEvent.click(screen.getByRole('button', { name: path }));
+    expect(onMemoryArtifact).toHaveBeenCalledTimes(2);
+  });
+  it('does not turn arbitrary relative code or invalid internal URLs into file/external actions', () => {
+    const onMemoryArtifact = vi.fn();
+    render(
+      <MarkdownView onMemoryArtifact={onMemoryArtifact}>
+        {'[Bad](ellmsha-memory://artifact?path=bmad%2F..%2Fsecret.md) `src/main.ts`'}
+      </MarkdownView>
+    );
+    expect(screen.queryByRole('button', { name: 'Bad' })).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'src/main.ts' })).toBeNull();
+  });
+});

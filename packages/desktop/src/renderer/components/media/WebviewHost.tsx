@@ -6,7 +6,10 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Left, Right, Refresh, Loading } from '@icon-park/react';
+import { Left, Right, Refresh, Loading, Share } from '@icon-park/react';
+import { Button, Tooltip } from '@arco-design/web-react';
+import { openExternalUrl } from '@/renderer/utils/platform';
+import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 import { ipcBridge } from '@/common';
 import { InternalNavTracker, shouldResetHistoryForUrlProp } from './webviewHistory';
 
@@ -53,7 +56,7 @@ const MAX_ZOOM_FACTOR = 1.5;
  * Shared webview host component — extracted from URLViewer.
  *
  * Features:
- * - Link/window.open/form interception → internal navigation
+ * - Native Chromium links, forms, history and browser-session popups
  * - Self-managed history stacks (back / forward)
  * - Loading indicator
  * - Partition support for cache isolation
@@ -269,63 +272,8 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       setCanGoForward(Boolean(webviewEl.canGoForward?.()));
     };
 
-    // Inject script to intercept links / window.open / form submissions
-    const injectClickInterceptor = () => {
-      webviewEl
-        .executeJavaScript(
-          `
-        (function() {
-          if (window.__webviewHostInjected) return;
-          window.__webviewHostInjected = true;
-
-          document.addEventListener('click', function(e) {
-            let target = e.target;
-            while (target && target.tagName !== 'A') {
-              target = target.parentElement;
-            }
-            if (target && target.tagName === 'A') {
-              const href = target.href;
-              if (href && /^https?:/i.test(href)) {
-                e.preventDefault();
-                e.stopPropagation();
-                window.postMessage({ type: '__WEBVIEW_HOST_NAVIGATE__', url: href }, '*');
-              }
-            }
-          }, true);
-
-          const originalOpen = window.open;
-          window.open = function(url) {
-            if (url && /^https?:/i.test(url)) {
-              window.postMessage({ type: '__WEBVIEW_HOST_NAVIGATE__', url: url }, '*');
-              return null;
-            }
-            return originalOpen.apply(this, arguments);
-          };
-
-          document.addEventListener('submit', function(e) {
-            const form = e.target;
-            if (form && form.action && /^https?:/i.test(form.action)) {
-              e.preventDefault();
-              window.postMessage({ type: '__WEBVIEW_HOST_NAVIGATE__', url: form.action }, '*');
-            }
-          }, true);
-        })();
-        true;
-      `
-        )
-        .catch(() => {});
-    };
-
     const handleConsoleMessage = (event: Electron.ConsoleMessageEvent) => {
       try {
-        if (event.message.includes('__WEBVIEW_HOST_NAVIGATE__')) {
-          const match = event.message.match(/"url":"([^"]+)"/);
-          if (match && match[1]) {
-            navigateToWithHistory(match[1]);
-          }
-          return;
-        }
-
         if (event.message.includes('__AIONUI_WEBVIEW_ZOOM__')) {
           const match = event.message.match(/"deltaY":(-?\d+(\.\d+)?)/);
           if (match && match[1]) {
@@ -360,7 +308,6 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     const handleDomReady = () => {
       setWebviewReady(true);
       syncNavState();
-      injectClickInterceptor();
 
       try {
         reportBrowserTarget();
@@ -381,20 +328,6 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
             document.head.appendChild(viewport);
           }
         })();
-        true;
-      `
-        )
-        .catch(() => {});
-
-      // Set up message listener inside webview
-      webviewEl
-        .executeJavaScript(
-          `
-        window.addEventListener('message', function(e) {
-          if (e.data && e.data.type === '__WEBVIEW_HOST_NAVIGATE__') {
-            console.log('__WEBVIEW_HOST_NAVIGATE__', JSON.stringify(e.data));
-          }
-        });
         true;
       `
         )
@@ -632,28 +565,11 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     [currentUrl]
   );
 
-  // Build webview attributes
-  /**
-   * 这个 webview 渲染任意外部网页，所以三个开关都按「不信任页面」来设。
-   *
-   * contextIsolation=yes 是刻意打开的：Electron 官方建议即使关掉 nodeIntegration 也保持
-   * 隔离，多一层纵深。我们不依赖与页面共享 JS 上下文 —— 注入脚本和宿主之间靠
-   * postMessage → console.log → 'console-message' 事件通信（见 handleConsoleMessage），
-   * 全程在页面世界里，隔离开着照样成立。别为了图方便把它关回 no：那样以后任何
-   * preload / IPC 暴露都会被不可信页面直接摸到。
-   *
-   * This webview renders arbitrary external pages, so all three flags assume the page is
-   * untrusted. contextIsolation is deliberately on: Electron recommends keeping it even
-   * with nodeIntegration off, for defence in depth. Nothing here needs a shared JS context
-   * with the page — the injected script talks to the host via
-   * postMessage → console.log → the 'console-message' event (see handleConsoleMessage),
-   * which stays entirely in the page world and works with isolation enabled. Do not flip
-   * this back to `no` for convenience: any future preload or IPC surface would then be
-   * directly reachable by untrusted pages.
-   */
+  // Boolean webview attributes are enabled by presence, even when their value is
+  // "false". Only browser-session guests may open native, main-process-governed popups.
   const webviewAttrs: Record<string, string> = {
-    allowpopups: 'false',
-    webpreferences: 'contextIsolation=yes, nodeIntegration=no, nativeWindowOpen=no',
+    webpreferences: 'contextIsolation=yes, nodeIntegration=no, sandbox=yes',
+    ...(partition === BROWSER_SESSION_PARTITION ? { allowpopups: '' } : {}),
   };
   if (partition) {
     webviewAttrs.partition = partition;
@@ -808,6 +724,18 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
               placeholder={t('preview.browser.addressPlaceholder')}
             />
           </form>
+          {partition === BROWSER_SESSION_PARTITION && (
+            <Tooltip content={t('preview.browser.externalAuthHelp')}>
+              <Button
+                size='mini'
+                className='!rounded-10px flex-shrink-0'
+                icon={<Share size={16} />}
+                aria-label={t('preview.browser.openExternal')}
+                disabled={!/^https?:\/\//i.test(currentUrl)}
+                onClick={() => void openExternalUrl(currentUrl)}
+              />
+            </Tooltip>
+          )}
         </div>
       )}
 

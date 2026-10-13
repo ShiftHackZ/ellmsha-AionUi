@@ -65,5 +65,12 @@
     "create": "créer",
     "modify": "modifier",
     "delete": "supprimer"
+  },
+  "approvals": {
+    "title": "Autorisations MCP enregistrées",
+    "empty": "Aucune autorisation d’outil enregistrée.",
+    "revoke": "Révoquer",
+    "loadFailed": "Impossible de charger les autorisations.",
+    "revokeFailed": "Impossible de révoquer cette autorisation."
   }
 }

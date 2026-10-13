@@ -65,5 +65,12 @@
     "create": "생성",
     "modify": "수정",
     "delete": "삭제"
+  },
+  "approvals": {
+    "title": "저장된 MCP 권한",
+    "empty": "저장된 도구 권한이 없습니다.",
+    "revoke": "취소",
+    "loadFailed": "저장된 권한을 불러오지 못했습니다.",
+    "revokeFailed": "이 권한을 취소하지 못했습니다."
   }
 }

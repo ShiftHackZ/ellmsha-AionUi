@@ -199,6 +199,72 @@ function normalizeToolCallStatus(status?: string): NormalizedToolStatus {
   }
 }
 
+/** Presentation only: never echo raw arguments, URLs, env assignments or shell literals in collapsed rows. */
+function protocolToolLabel(name: string, raw: unknown): string | undefined {
+  let value: unknown = raw;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return undefined;
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const input = value as Record<string, unknown>;
+  const identifier = (item: unknown): string | undefined =>
+    typeof item === 'string' && /^[a-zA-Z0-9_.:-]{1,96}$/.test(item) ? item : undefined;
+  if (name === 'mcpToolCall') {
+    const server = identifier(input.server);
+    const tool = identifier(input.tool);
+    return tool ? [server, tool].filter(Boolean).join(' · ') : undefined;
+  }
+  if (name === 'commandExecution' && typeof input.command === 'string') {
+    // Only recognized executable/subcommand words, never arbitrary positional arguments.
+    const command = input.command.trim().split(/\s+/);
+    const executable = command[0]?.split('/').pop();
+    const verbs = new Set([
+      'rg',
+      'grep',
+      'find',
+      'ls',
+      'cat',
+      'sed',
+      'head',
+      'tail',
+      'git',
+      'npm',
+      'pnpm',
+      'yarn',
+      'bun',
+      'cargo',
+      'node',
+      'python',
+      'python3',
+      'curl',
+      'docker',
+      'swift',
+    ]);
+    if (!executable || !verbs.has(executable)) return undefined;
+    const subcommands = new Set([
+      'status',
+      'diff',
+      'log',
+      'show',
+      'test',
+      'check',
+      'build',
+      'run',
+      'install',
+      'lint',
+      'format',
+      'ps',
+      'inspect',
+    ]);
+    return subcommands.has(command[1]) ? `${executable} ${command[1]}` : executable;
+  }
+  return undefined;
+}
+
 export function normalizeToolCall(message: IMessageToolCall): NormalizedToolCall | undefined {
   const { call_id, name, status, input, output, args, description } = message.content;
   if (!call_id) return undefined;
@@ -211,9 +277,11 @@ export function normalizeToolCall(message: IMessageToolCall): NormalizedToolCall
 
   return {
     key: call_id,
-    name,
+    name:
+      protocolToolLabel(name, input ?? args) ||
+      (name === 'commandExecution' ? 'shell' : name === 'mcpToolCall' ? 'MCP' : name),
     status: normalizeToolCallStatus(status),
-    description: description || undefined,
+    description: name === 'mcpToolCall' || name === 'commandExecution' ? undefined : description || undefined,
     input: displayInput,
     output,
   };

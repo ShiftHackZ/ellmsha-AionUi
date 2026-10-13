@@ -57,6 +57,39 @@ describe('PreviewContext', () => {
     cleanup();
   });
 
+  it('keeps memory artifact identity separate from files and other conversation scopes', () => {
+    const { result } = renderHook(() => usePreviewContext(), { wrapper });
+    act(() => {
+      result.current.openPreview('local', 'markdown', { title: 'Spec' });
+    });
+    act(() => {
+      result.current.openPreview('memory-a', 'markdown', {
+        title: 'Spec',
+        editable: false,
+        memoryArtifact: { conversationId: 'a', path: 'bmad/fixture/spec.md' },
+      });
+    });
+    act(() => {
+      result.current.openPreview('memory-b', 'markdown', {
+        title: 'Spec',
+        editable: false,
+        memoryArtifact: { conversationId: 'b', path: 'bmad/fixture/spec.md' },
+      });
+    });
+    expect(result.current.tabs).toHaveLength(3);
+    act(() => {
+      result.current.openPreview('memory-a-updated', 'markdown', {
+        title: 'Spec',
+        editable: false,
+        memoryArtifact: { conversationId: 'a', path: 'bmad/fixture/spec.md' },
+      });
+    });
+    expect(result.current.tabs).toHaveLength(3);
+    expect(result.current.activeTab?.content).toBe('memory-a-updated');
+    expect(result.current.activeTab?.metadata?.file_path).toBeUndefined();
+    expect(result.current.activeTab?.metadata?.fileRef).toBeUndefined();
+  });
+
   it('initializes with closed state', () => {
     const { result } = renderHook(() => usePreviewContext(), { wrapper });
     expect(result.current.isOpen).toBe(false);

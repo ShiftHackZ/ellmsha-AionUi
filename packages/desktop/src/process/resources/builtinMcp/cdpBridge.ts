@@ -1,3 +1,4 @@
+import { getBrowserPopup } from '../../services/browser/popups';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -77,8 +78,8 @@ const sendEvent = (ws: WebSocket, event: CdpEvent): void => {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(event));
 };
 
-const sendError = (ws: WebSocket, id: number | undefined, message: string, code = -32000): void => {
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ id: id ?? 0, error: { code, message } }));
+const sendError = (ws: WebSocket, id: number | undefined, message: string, code = -32000, sessionId?: string): void => {
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ id: id ?? 0, error: { code, message }, sessionId }));
 };
 
 const writeJson = (res: ServerResponse, body: unknown): void => {
@@ -211,7 +212,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     if (!contents || contents.isDestroyed()) {
       return { ok: false, reason: `No live webContents with id ${webContentsId}` };
     }
-    if (contents.getType() !== 'webview') {
+    if (contents.getType() !== 'webview' && !getBrowserPopup(tabId, contents.id)) {
       return { ok: false, reason: 'Only an in-app browser webview may be exposed.' };
     }
     if (contents.session !== session.fromPartition(BROWSER_SESSION_PARTITION)) {
@@ -331,6 +332,11 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
 
   const hasTargetInputFocus = (target: TargetState): boolean => {
     try {
+      const popup = getBrowserPopup(target.tabId, target.contents.id);
+      if (popup) {
+        const frame = target.contents.focusedFrame;
+        return popup.active && !!frame && webContents.fromFrame(frame) === target.contents;
+      }
       const host = target.contents.hostWebContents;
       if (!host || host.isDestroyed()) return false;
       const frame = host.focusedFrame;
@@ -348,8 +354,36 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     if (targets.get(target.tabId) !== target || target.contents.isDestroyed() || activeTargetId !== target.tabId) {
       throw new Error(`Browser tab ${target.tabId} is no longer the visible input target.`);
     }
+    const nativePopup = getBrowserPopup(target.tabId, target.contents.id);
+    if (nativePopup) {
+      // A WebContentsView owns a native widget (unlike a webview OOPIF).
+      // Focus that exact widget on every dispatch; OS key-window status is irrelevant.
+      if (!nativePopup.active) throw new Error('The popup tab is no longer visible. No input was sent.');
+      target.contents.focus();
+      const isCurrentTarget = () =>
+        targets.get(target.tabId) === target &&
+        !target.contents.isDestroyed() &&
+        activeTargetId === target.tabId &&
+        nativePopup.active;
+      // Native widget focus can reach Chromium after the synchronous focus call.
+      // Observe the exact frame before dispatch; never retry an input event.
+      const focusPoll = setInterval(notifyWaiters, 16);
+      try {
+        await waitForState(
+          () => !isCurrentTarget() || hasTargetInputFocus(target),
+          'The exact popup frame could not receive input. No input was sent.',
+          target.tabId
+        );
+        if (!isCurrentTarget() || !hasTargetInputFocus(target))
+          throw new Error('The popup tab changed before receiving input focus. No input was sent.');
+      } finally {
+        clearInterval(focusPoll);
+      }
+      return;
+    }
     if (hasTargetInputFocus(target)) return;
-    const host = target.contents.hostWebContents;
+    const host =
+      target.contents.hostWebContents ?? getBrowserPopup(target.tabId, target.contents.id)?.window.webContents;
     if (!host || host.isDestroyed()) throw new Error('The browser host is no longer available. No input was sent.');
     const request = { target, requestId: randomBytes(12).toString('hex'), acknowledged: false };
     pendingFocus = request;
@@ -424,7 +458,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     const infos = targetInfos();
     const socketState = socketStates.get(ws);
     if (!isAcceptableSessionId(sessionId, infos, socketState?.manualSessions)) {
-      sendError(ws, id, `Unknown or stale sessionId: ${sessionId}`);
+      sendError(ws, id, `Unknown or stale sessionId: ${sessionId}`, -32000, sessionId);
       return;
     }
 
@@ -445,14 +479,14 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       }
       const decision = decideCdpCommand(req, targetInfos, socketState?.manualSessions);
       if (decision.kind === 'error') {
-        sendError(ws, id, decision.message, -32601);
+        sendError(ws, id, decision.message, -32601, sessionId);
         return;
       }
       if (decision.kind === 'reply' || decision.kind === 'reply-and-emit') {
         if (decision.kind === 'reply-and-emit') {
           for (const event of decision.emit) sendEvent(ws, event);
         }
-        ws.send(JSON.stringify({ id, result: decision.payload }));
+        ws.send(JSON.stringify({ id, result: decision.payload, sessionId }));
         return;
       }
       if (decision.kind === 'attach-target') {
@@ -462,7 +496,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
         const manualSessionId = `aionui-browser-manual:${randomBytes(12).toString('hex')}`;
         socketState.manualSessions.set(manualSessionId, decision.targetId);
         sendEvent(ws, attachedToTargetEvent(info, manualSessionId));
-        ws.send(JSON.stringify({ id, result: { sessionId: manualSessionId } }));
+        ws.send(JSON.stringify({ id, result: { sessionId: manualSessionId }, sessionId }));
         return;
       }
       if (decision.kind === 'detach-session') {
@@ -471,22 +505,22 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
           method: 'Target.detachedFromTarget',
           params: { sessionId: decision.sessionId },
         });
-        ws.send(JSON.stringify({ id, result: {} }));
+        ws.send(JSON.stringify({ id, result: {}, sessionId }));
         return;
       }
       if (decision.kind === 'create-target') {
         const targetId = await createTarget(decision.url, decision.background);
-        ws.send(JSON.stringify({ id, result: { targetId } }));
+        ws.send(JSON.stringify({ id, result: { targetId }, sessionId }));
         return;
       }
       if (decision.kind === 'activate-target') {
         await activateTarget(decision.targetId);
-        ws.send(JSON.stringify({ id, result: {} }));
+        ws.send(JSON.stringify({ id, result: {}, sessionId }));
         return;
       }
       if (decision.kind === 'close-target') {
         await closeTarget(decision.targetId);
-        ws.send(JSON.stringify({ id, result: { success: true } }));
+        ws.send(JSON.stringify({ id, result: { success: true }, sessionId }));
         return;
       }
 
@@ -497,7 +531,9 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
           id,
           decision.targetId
             ? `Browser tab ${decision.targetId} is closed or reloading.`
-            : 'No in-app browser tab is open.'
+            : 'No in-app browser tab is open.',
+          -32000,
+          sessionId
         );
         return;
       }
@@ -525,7 +561,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       const result = method.startsWith('Input.') ? await runLifecycle(dispatch) : await dispatch();
       ws.send(JSON.stringify({ id, result: result ?? {}, sessionId }));
     } catch (error) {
-      sendError(ws, id, error instanceof Error ? error.message : String(error));
+      sendError(ws, id, error instanceof Error ? error.message : String(error), -32000, sessionId);
     }
   };
 

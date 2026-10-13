@@ -65,5 +65,12 @@
     "create": "建立",
     "modify": "修改",
     "delete": "刪除"
+  },
+  "approvals": {
+    "title": "已儲存的 MCP 權限",
+    "empty": "沒有已儲存的工具權限。",
+    "revoke": "撤銷",
+    "loadFailed": "無法載入已儲存的權限。",
+    "revokeFailed": "無法撤銷此權限。"
   }
 }

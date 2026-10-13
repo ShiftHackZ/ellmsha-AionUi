@@ -45,17 +45,17 @@ describe('resolveAddressBarInput', () => {
     // Key behavior: whitespace is never a hostname, so search instead of building
     // an invalid URL.
     expect(resolveAddressBarInput('how to configure nginx')).toBe(
-      'https://www.bing.com/search?q=how%20to%20configure%20nginx'
+      'https://www.google.com/search?q=how%20to%20configure%20nginx'
     );
-    expect(resolveAddressBarInput('example.com is down')).toBe('https://www.bing.com/search?q=example.com%20is%20down');
+    expect(resolveAddressBarInput('example.com is down')).toBe('https://www.google.com/search?q=example.com%20is%20down');
   });
 
   it('treats a single word with no TLD as a search query', () => {
-    expect(resolveAddressBarInput('weather')).toBe('https://www.bing.com/search?q=weather');
+    expect(resolveAddressBarInput('weather')).toBe('https://www.google.com/search?q=weather');
   });
 
   it('percent-encodes characters that would break the search URL', () => {
-    expect(resolveAddressBarInput('a&b=c')).toBe('https://www.bing.com/search?q=a%26b%3Dc');
+    expect(resolveAddressBarInput('a&b=c')).toBe('https://www.google.com/search?q=a%26b%3Dc');
   });
 
   it('trims surrounding whitespace before deciding', () => {

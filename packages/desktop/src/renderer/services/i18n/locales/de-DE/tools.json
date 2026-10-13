@@ -65,5 +65,12 @@
     "create": "erstellen",
     "modify": "ändern",
     "delete": "löschen"
+  },
+  "approvals": {
+    "title": "Gespeicherte MCP-Berechtigungen",
+    "empty": "Keine gespeicherten Werkzeugberechtigungen.",
+    "revoke": "Widerrufen",
+    "loadFailed": "Berechtigungen konnten nicht geladen werden.",
+    "revokeFailed": "Diese Berechtigung konnte nicht widerrufen werden."
   }
 }

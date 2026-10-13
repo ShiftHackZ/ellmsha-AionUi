@@ -8,6 +8,7 @@ import type { IMessageText } from '@/common/chat/chatLib';
 import { AIONUI_FILES_MARKER } from '@/common/config/constants';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
+import { useMemoryArtifactPreview } from '@/renderer/pages/conversation/Preview/hooks/useMemoryArtifactPreview';
 import { useLocalFilePreview } from '@/renderer/pages/conversation/Preview/hooks/useLocalFilePreview';
 import { iconColors } from '@/renderer/styles/colors';
 import { Alert, Message, Tooltip } from '@arco-design/web-react';
@@ -185,6 +186,7 @@ const MessageText: React.FC<{
   const forkConversation = useForkConversation(conversationContext?.conversation_id);
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
+  const handleMemoryArtifact = useMemoryArtifactPreview(conversationContext?.conversation_id);
   const handleLocalFileLink = useLocalFilePreview(conversationContext?.workspace);
   const resolvedFiles = useMemo(
     () => files.map((file_path) => resolveMessageFilePath(file_path, conversationContext?.workspace)),
@@ -312,12 +314,17 @@ const MessageText: React.FC<{
                 <MarkdownView
                   codeStyle={CODE_STYLE}
                   onLocalFileLink={handleLocalFileLink}
+                  onMemoryArtifact={handleMemoryArtifact}
                 >{`\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``}</MarkdownView>
               </div>
             </CollapsibleContent>
           ) : (
             <div data-testid='message-text-content'>
-              <MarkdownView codeStyle={CODE_STYLE} onLocalFileLink={handleLocalFileLink}>
+              <MarkdownView
+                codeStyle={CODE_STYLE}
+                onLocalFileLink={handleLocalFileLink}
+                onMemoryArtifact={handleMemoryArtifact}
+              >
                 {data}
               </MarkdownView>
             </div>

@@ -7,6 +7,7 @@
 import React, { useCallback } from 'react';
 import type { PreviewTab, PreviewTabPatch } from '../context/PreviewContext';
 import BrowserViewer from './BrowserViewer';
+import NativeBrowserViewer from './NativeBrowserViewer';
 
 export interface BrowserTabLayerProps {
   /** 所有浏览器类型的 tab / Every browser-type tab */
@@ -59,6 +60,7 @@ const BrowserTabLayer: React.FC<BrowserTabLayerProps> = ({ browserTabs, activeTa
     <div className='relative flex-1 overflow-hidden' style={{ display: isBrowserActive ? undefined : 'none' }}>
       {browserTabs.map((tab) => {
         const isActive = tab.id === activeTabId;
+        const Viewer = tab.metadata?.nativeBrowserPopup ? NativeBrowserViewer : BrowserViewer;
         return (
           <div
             key={tab.id}
@@ -69,7 +71,7 @@ const BrowserTabLayer: React.FC<BrowserTabLayerProps> = ({ browserTabs, activeTa
               zIndex: isActive ? 1 : 0,
             }}
           >
-            <BrowserViewer
+            <Viewer
               url={tab.content}
               tabId={tab.id}
               active={isActive}

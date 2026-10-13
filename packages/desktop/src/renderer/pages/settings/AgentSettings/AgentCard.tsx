@@ -129,10 +129,14 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
         <Avatar
           size={32}
           shape='square'
-          style={{ flexShrink: 0, backgroundColor: avatar.kind === 'image' ? 'transparent' : 'var(--color-fill-2)' }}
+          className='!rounded-8px'
+          style={{
+            flexShrink: 0,
+            backgroundColor: avatar.kind === 'image' ? 'var(--color-white)' : 'var(--color-fill-2)',
+          }}
         >
           {avatar.kind === 'image' ? (
-            <img src={avatar.value} alt={agent.name} className='h-full w-full object-contain' />
+            <img src={avatar.value} alt={agent.name} className='box-border h-full w-full object-contain p-4px' />
           ) : avatar.kind === 'emoji' ? (
             <span className='text-18px leading-none'>{avatar.value}</span>
           ) : (

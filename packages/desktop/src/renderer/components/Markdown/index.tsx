@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Button } from '@arco-design/web-react';
+import { resolveMemoryArtifactPath } from './memoryArtifact';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 
 import rehypeKatex from 'rehype-katex';
@@ -42,12 +44,22 @@ type MarkdownViewProps = {
   className?: string;
   onRef?: (el?: HTMLDivElement | null) => void;
   onLocalFileLink?: (path: string, reference?: LocalFileLinkReference) => void | Promise<void>;
+  onMemoryArtifact?: (path: string) => void | Promise<void>;
   /** Enable raw HTML rendering in markdown content. Use with caution — only for trusted sources. */
   allowHtml?: boolean;
 };
 
 const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
-  ({ hiddenCodeCopyButton, codeStyle, className, onRef, onLocalFileLink, allowHtml, children: childrenProp }) => {
+  ({
+    hiddenCodeCopyButton,
+    codeStyle,
+    className,
+    onRef,
+    onLocalFileLink,
+    onMemoryArtifact,
+    allowHtml,
+    children: childrenProp,
+  }) => {
     const { t } = useTranslation();
 
     const normalizedChildren = useMemo(() => {
@@ -82,16 +94,52 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             {ch as React.ReactNode}
           </span>
         ),
-        code: (props: Record<string, unknown>) => (
-          <CodeBlock
-            {...(props as Parameters<typeof CodeBlock>[0])}
-            codeStyle={codeStyle}
-            hiddenCodeCopyButton={hiddenCodeCopyButton}
-          />
-        ),
+        code: (props: Record<string, unknown>) => {
+          const text = typeof props.children === 'string' ? props.children : '';
+          const artifactPath =
+            !props.className && !text.includes('\n')
+              ? resolveMemoryArtifactPath(`ellmsha-memory://artifact?path=${encodeURIComponent(text)}`)
+              : undefined;
+          if (artifactPath && onMemoryArtifact) {
+            return (
+              <Button
+                type='text'
+                size='mini'
+                className='!h-auto !leading-normal !align-baseline !rd-6px'
+                onClick={() => void onMemoryArtifact(artifactPath)}
+              >
+                <code>{text}</code>
+              </Button>
+            );
+          }
+          return (
+            <CodeBlock
+              {...(props as Parameters<typeof CodeBlock>[0])}
+              codeStyle={codeStyle}
+              hiddenCodeCopyButton={hiddenCodeCopyButton}
+            />
+          );
+        },
         a: ({ node: _node, ...rest }: Record<string, unknown>) => {
           const anchorProps = rest as React.AnchorHTMLAttributes<HTMLAnchorElement>;
           const rawHref = typeof anchorProps.href === 'string' ? anchorProps.href : '';
+          const artifactPath = resolveMemoryArtifactPath(rawHref);
+          if (artifactPath) {
+            return (
+              <Button
+                type='text'
+                size='mini'
+                className='!h-auto !leading-normal !align-baseline !rd-6px'
+                disabled={!onMemoryArtifact}
+                title={artifactPath}
+                onClick={() => void onMemoryArtifact?.(artifactPath)}
+              >
+                {anchorProps.children}
+              </Button>
+            );
+          }
+          // Invalid internal links must never be handed to an external protocol handler.
+          if (rawHref.startsWith('ellmsha-memory:')) return <span>{anchorProps.children}</span>;
           const localFileReference = resolveLocalFileLinkReference(rawHref);
           if (localFileReference) {
             return (
@@ -137,7 +185,7 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
           return <img {...imgProps} alt={imgProps.alt || ''} />;
         },
       }),
-      [codeStyle, hiddenCodeCopyButton, handleLinkClick, onLocalFileLink]
+      [codeStyle, hiddenCodeCopyButton, handleLinkClick, onLocalFileLink, onMemoryArtifact]
     );
 
     const rehypePlugins = useMemo(() => (allowHtml ? [rehypeRaw, rehypeKatex] : [rehypeKatex]), [allowHtml]);
@@ -150,7 +198,11 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               remarkPlugins={REMARK_PLUGINS}
               rehypePlugins={rehypePlugins}
               components={components}
-              urlTransform={(url) => (resolveLocalFileLinkPath(url) ? url : defaultUrlTransform(url))}
+              urlTransform={(url) =>
+                resolveMemoryArtifactPath(url) || url.startsWith('ellmsha-memory:') || resolveLocalFileLinkPath(url)
+                  ? url
+                  : defaultUrlTransform(url)
+              }
             >
               {normalizedChildren}
             </ReactMarkdown>

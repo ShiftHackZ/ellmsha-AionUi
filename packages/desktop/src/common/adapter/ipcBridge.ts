@@ -179,6 +179,13 @@ export const assistants = {
 // ---------------------------------------------------------------------------
 
 export const conversation = {
+  readMemoryArtifact: httpGet<
+    { path: string; title: string; content: string },
+    { conversation_id: string; path: string }
+  >(
+    (p) =>
+      `/api/conversations/${encodeURIComponent(p.conversation_id)}/memory-artifact?path=${encodeURIComponent(p.path)}`
+  ),
   create: withResponseMap(
     httpPost<TChatConversation, ICreateConversationParams>('/api/conversations', (p) => buildCreateConversationBody(p)),
     fromApiConversation
@@ -519,9 +526,24 @@ export type BrowserTabInventory = {
 
 export type BrowserTabCommand =
   | { action: 'create'; tabId: string; url: string; activate: boolean }
+  | { action: 'adopt'; tabId: string; openerTabId: string; url: string; activate: boolean }
   | { action: 'activate'; tabId: string }
   | { action: 'focus'; tabId: string; requestId: string }
   | { action: 'close'; tabId: string };
+
+export type BrowserPopupState = {
+  tabId: string;
+  webContentsId: number;
+  url: string;
+  title: string;
+  loading: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
+};
+export type BrowserPopupCommand =
+  | { action: 'sync'; tabId: string; active: boolean; bounds: { x: number; y: number; width: number; height: number } }
+  | { action: 'navigate'; tabId: string; url: string }
+  | { action: 'back' | 'forward' | 'reload' | 'focus' | 'dispose'; tabId: string };
 
 export type BrowserTabCommandFailure = {
   tabId: string;
@@ -591,6 +613,10 @@ export const application = {
   ),
   /** Main-process CDP lifecycle request handled by the renderer-owned tab model. */
   browserTabCommand: bridge.buildEmitter<BrowserTabCommand>('app.browser-tab-command'),
+  browserPopup: bridge.buildProvider<IBridgeResponse<BrowserPopupState | undefined>, BrowserPopupCommand>(
+    'app.browser-popup'
+  ),
+  browserPopupState: bridge.buildEmitter<BrowserPopupState>('app.browser-popup-state'),
   getStartOnBootStatus: bridge.buildProvider<IBridgeResponse<IStartOnBootStatus>, void>('app.get-start-on-boot-status'),
   checkComputerUsePermissions: bridge.buildProvider<IBridgeResponse<IComputerUsePermissionStatus>, void>(
     'app.check-computer-use-permissions'
@@ -1043,6 +1069,10 @@ export const acpConversation = {
 // ---------------------------------------------------------------------------
 
 export const mcpService = {
+  listApprovals: httpGet<Array<{ id: string; server: string; tool: string }>>('/api/settings/mcp-approvals'),
+  revokeApproval: httpDelete<{ revoked: boolean }, { id: string }>(
+    (p) => `/api/settings/mcp-approvals/${encodeURIComponent(p.id)}`
+  ),
   listServers: httpGet<IMcpServer[], void>('/api/mcp/servers'),
   createServer: httpPost<
     IMcpServer,

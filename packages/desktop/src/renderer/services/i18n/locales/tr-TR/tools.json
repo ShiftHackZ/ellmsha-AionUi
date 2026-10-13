@@ -65,5 +65,12 @@
     "create": "oluştur",
     "modify": "değiştir",
     "delete": "sil"
+  },
+  "approvals": {
+    "title": "Kaydedilmiş MCP izinleri",
+    "empty": "Kaydedilmiş araç izni yok.",
+    "revoke": "İptal et",
+    "loadFailed": "İzinler yüklenemedi.",
+    "revokeFailed": "Bu izin iptal edilemedi."
   }
 }

@@ -34,6 +34,7 @@ vi.mock('@/common', () => ({
     conversation: { responseStream: { on: () => () => {} } },
     fs: { getFileContent: { invoke: vi.fn() }, writeFile: { invoke: vi.fn() } },
     application: {
+      browserPopup: { invoke: vi.fn().mockResolvedValue({ success: true }) },
       reportBrowserTabCommandFailure: { invoke: reportBrowserTabCommandFailureMock },
       reportBrowserTabInventory: { invoke: reportBrowserTabInventoryMock },
       browserTabCommand: {
@@ -600,4 +601,57 @@ describe('PreviewContext updateTab', () => {
 
     expect(browserTabs()[0].content).toBe('');
   });
+});
+
+describe('native popup adoption', () => {
+  it('adopts a new exact tab without reloading its URL and strips native identity on restore', () => {
+    const view = renderProvider();
+    act(() => ctx.closePreviewIfScopeChanged('owned-popup-scope'));
+    act(() => ctx.openBrowserTab('https://fixture.test', { tabId: 'source-tab' }));
+    act(() =>
+      browserTabCommandHandlers.forEach((handler) =>
+        handler({
+          action: 'adopt',
+          tabId: 'browser-popup-one',
+          openerTabId: 'source-tab',
+          url: 'https://fixture.test/post',
+          activate: true,
+        })
+      )
+    );
+    expect(ctx.activeTabId).toBe('browser-popup-one');
+    expect(browserTabs().find((tab) => tab.id === 'browser-popup-one')?.metadata?.nativeBrowserPopup).toBe(true);
+    view.unmount();
+    renderProvider();
+    expect(browserTabs().find((tab) => tab.id === 'browser-popup-one')?.metadata?.nativeBrowserPopup).toBeUndefined();
+  });
+  it('never inserts a child of an absent opener into another conversation scope', () => {
+    renderProvider();
+    act(() =>
+      browserTabCommandHandlers.forEach((handler) =>
+        handler({
+          action: 'adopt',
+          tabId: 'browser-popup-foreign',
+          openerTabId: 'absent',
+          url: 'https://fixture.test/post',
+          activate: true,
+        })
+      )
+    );
+    expect(browserTabs()).toHaveLength(0);
+  });
+});
+
+it('reserves popup capacity synchronously across batched native create events', () => {
+  renderProvider();
+  for (let i = 0; i < MAX_BROWSER_TABS - 1; i++)
+    act(() => ctx.openBrowserTab('https://fixture.test', { tabId: `source-${i}` }));
+  act(() => {
+    for (const tabId of ['browser-popup-first', 'browser-popup-overflow'])
+      browserTabCommandHandlers.forEach((handler) =>
+        handler({ action: 'adopt', tabId, openerTabId: 'source-0', url: 'about:blank', activate: false })
+      );
+  });
+  expect(browserTabs()).toHaveLength(MAX_BROWSER_TABS);
+  expect(browserTabs().some((tab) => tab.id === 'browser-popup-overflow')).toBe(false);
 });

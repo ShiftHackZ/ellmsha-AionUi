@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { PreviewTab } from './PreviewTabs';
 
@@ -111,6 +112,24 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
 }) => {
   const { t } = useTranslation();
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
+
+  useLayoutEffect(() => {
+    if (!contextMenu.show || !contextMenu.tabId) return;
+    const placeMenu = () => {
+      const rect = contextMenuRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const margin = 8;
+      const next = {
+        x: Math.max(margin, Math.min(contextMenu.x, window.innerWidth - rect.width - margin)),
+        y: Math.max(margin, Math.min(contextMenu.y, window.innerHeight - rect.height - margin)),
+      };
+      setPosition((previous) => (previous.x === next.x && previous.y === next.y ? previous : next));
+    };
+    placeMenu();
+    window.addEventListener('resize', placeMenu);
+    return () => window.removeEventListener('resize', placeMenu);
+  }, [contextMenu.show, contextMenu.tabId, contextMenu.x, contextMenu.y, t]);
 
   // 点击外部关闭上下文菜单 / Close context menu when clicking outside
   useEffect(() => {
@@ -141,13 +160,19 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
   const hasRightTabs = currentIndex >= 0 && currentIndex < tabs.length - 1;
   const hasOtherTabs = tabs.length > 1;
 
-  return (
+  // clientX/Y are viewport coordinates. The animated preview panel creates a
+  // transformed containing block, so fixed content must escape it to the body.
+  return createPortal(
     <div
       ref={contextMenuRef}
+      data-native-browser-overlay
       className='fixed shadow-lg rd-8px py-4px z-9999'
       style={{
-        left: `${contextMenu.x}px`,
-        top: `${contextMenu.y}px`,
+        left: position.x,
+        top: position.y,
+        maxWidth: 'calc(100vw - 16px)',
+        maxHeight: 'calc(100vh - 16px)',
+        overflow: 'auto',
         backgroundColor: currentTheme === 'dark' ? '#1d1d1f' : '#ffffff',
         border: '1px solid var(--border-base, #e5e6eb)',
         minWidth: '140px',
@@ -187,7 +212,8 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
       >
         {t('preview.closeAll')}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

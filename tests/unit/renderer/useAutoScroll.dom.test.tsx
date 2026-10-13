@@ -387,3 +387,67 @@ describe('useAutoScroll', () => {
     });
   });
 });
+
+describe('history anchoring', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+  });
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+  it('does not treat prepended history as a newly sent user message', () => {
+    const last = createRightMessage('current');
+    const scroller = createScroller();
+    const content = createContent();
+    const { result, rerender } = renderHook(({ messages }) => useAutoScroll({ messages, itemCount: messages.length }), {
+      initialProps: { messages: [last] },
+    });
+    attachElements(result, scroller, content);
+    act(() => {
+      vi.runAllTimers();
+      vi.advanceTimersByTime(200);
+    });
+    fireScroll(result.current.handleScroll, scroller, 100);
+    vi.mocked(scroller.scrollTo).mockClear();
+    rerender({ messages: [{ ...createLeftMessage('old'), id: 'old' }, last] });
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(scroller.scrollTop).toBe(100);
+    expect(scroller.scrollTo).not.toHaveBeenCalled();
+  });
+  it('anchors the same visible message through prepend and late layout without counting streaming below', () => {
+    const last = createLeftMessage('stream');
+    const scroller = createScroller();
+    const content = createContent();
+    const anchor = document.createElement('div');
+    anchor.id = 'message-anchor';
+    content.append(anchor);
+    let documentTop = 120;
+    scroller.getBoundingClientRect = () => ({ top: 0, bottom: 400 }) as DOMRect;
+    anchor.getBoundingClientRect = () =>
+      ({ top: documentTop - scroller.scrollTop, bottom: documentTop + 100 - scroller.scrollTop }) as DOMRect;
+    const { result, rerender } = renderHook(({ messages }) => useAutoScroll({ messages, itemCount: messages.length }), {
+      initialProps: { messages: [last] },
+    });
+    attachElements(result, scroller, content);
+    act(() => {
+      vi.runAllTimers();
+      vi.advanceTimersByTime(200);
+    });
+    fireScroll(result.current.handleScroll, scroller, 100); // Anchor is 20px from viewport top.
+    documentTop += 200;
+    Object.defineProperty(scroller, 'scrollHeight', { value: 1800, writable: true }); // Includes 600px streaming below.
+    rerender({ messages: [{ ...last, id: 'older' }, last] });
+    expect(scroller.scrollTop).toBe(300);
+    documentTop += 50; // Image above the anchor resolves later.
+    act(() => {
+      resizeObserverCallback?.([], {} as ResizeObserver);
+      vi.runAllTimers();
+    });
+    expect(scroller.scrollTop).toBe(350);
+    expect(anchor.getBoundingClientRect().top).toBe(20);
+  });
+});

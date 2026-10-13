@@ -96,3 +96,30 @@ describe('exact browser renderer focus', () => {
     });
   });
 });
+
+describe('page-owned navigation', () => {
+  it('leaves native forms, SPA click propagation and window.open untouched', async () => {
+    const webview = await fixture();
+    const scripts = vi
+      .mocked(webview.executeJavaScript)
+      .mock.calls.map(([script]) => script)
+      .join('\n');
+    expect(scripts).not.toContain('__WEBVIEW_HOST_NAVIGATE__');
+    expect(scripts).not.toContain("addEventListener('submit'");
+    expect(scripts).not.toContain("addEventListener('click'");
+    expect(scripts).not.toContain('window.open =');
+    const originalUrl = webview.getAttribute('src');
+    const event = new Event('console-message');
+    Object.assign(event, { message: '__WEBVIEW_HOST_NAVIGATE__ {"url":"https://untrusted.example/"}' });
+    await act(async () => {
+      webview.dispatchEvent(event);
+    });
+    expect(webview.getAttribute('src')).toBe(originalUrl);
+  });
+  it('uses presence-only popup permission exclusively for browser-partition guests', () => {
+    const { container, rerender } = render(<WebviewHost url='about:blank' partition='persist:aionui-browser' />);
+    expect(container.querySelector('webview')).toHaveAttribute('allowpopups');
+    rerender(<WebviewHost url='about:blank' partition='persist:extension' />);
+    expect(container.querySelector('webview')).not.toHaveAttribute('allowpopups');
+  });
+});
