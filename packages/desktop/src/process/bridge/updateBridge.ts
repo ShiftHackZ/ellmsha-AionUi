@@ -6,867 +6,435 @@
 
 import { ipcBridge } from '@/common';
 import type {
-  AutoUpdateReadyResult,
+  GitHubReleaseAsset,
   UpdateCheckResult,
-  UpdateDownloadCancelRequest,
   UpdateDownloadProgressEvent,
   UpdateDownloadRequest,
   UpdateDownloadResult,
   UpdateReleaseInfo,
-  GitHubReleaseAsset,
-  InstallerLastFailureMarker,
 } from '@/common/update/updateTypes';
-import { uuid } from '@/common/utils';
-import { app } from 'electron';
-import log from 'electron-log';
-import * as fs from 'fs';
-import { load as loadYaml } from 'js-yaml';
-import * as path from 'path';
-import semver from 'semver';
-import { autoUpdaterService } from '../services/autoUpdaterService';
+import { app, shell } from 'electron';
+import { createHash, randomUUID } from 'node:crypto';
+import { createReadStream, mkdirSync, mkdtempSync } from 'node:fs';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { consumeInstallerLastFailure } from '../services/installerLastFailure';
 
-/** Lazily loads i18n to avoid pulling in initStorage chain at module load time */
-let _i18nCache: Promise<typeof import('../services/i18n')> | null = null;
-const getI18n = async () => {
-  if (!_i18nCache) {
-    _i18nCache = import('../services/i18n');
-  }
-  const m = await _i18nCache;
-  return m.default;
-};
-
-type GitHubReleaseApiAsset = {
-  name: string;
-  browser_download_url: string;
-  size: number;
-  content_type?: string;
-};
-
-type GitHubReleaseApi = {
-  tag_name: string;
-  name?: string;
-  body?: string;
-  html_url: string;
-  published_at?: string;
-  prerelease: boolean;
-  draft: boolean;
-  assets?: GitHubReleaseApiAsset[];
-};
-
-/** Parameters for auto-update check via electron-updater */
-interface AutoUpdateCheckParams {
-  /** Whether to include prerelease/dev builds in update check */
-  includePrerelease?: boolean;
-}
-
-const DEFAULT_REPO = 'ShiftHackZ/ellmsha-AionUi';
-const DEFAULT_USER_AGENT = 'eLLMsha';
-const ALLOWED_ASSET_EXTS = new Set(['.exe', '.msi', '.dmg', '.zip', '.deb', '.rpm']);
-const CDN_HOST = 'static.aionui.com';
-const CDN_BASE_URL = `https://${CDN_HOST}/releases`;
-const ALLOWED_DOWNLOAD_HOSTS = new Set<string>([
-  CDN_HOST,
+const REPOSITORY = 'ShiftHackZ/ellmsha';
+const RELEASES_API = `https://api.github.com/repos/${REPOSITORY}/releases`;
+const RELEASES_URL = `https://github.com/${REPOSITORY}/releases`;
+const REDIRECT_HOSTS = new Set([
   'github.com',
   'objects.githubusercontent.com',
   'github-releases.githubusercontent.com',
   'release-assets.githubusercontent.com',
 ]);
-const MAX_REDIRECTS = 8;
+const MAX_INSTALLER_BYTES = 16 * 1024 ** 3;
+const REQUEST_TIMEOUT_MS = 60_000;
 
-const isAllowedAssetName = (name: string) => {
-  const ext = path.extname(name);
-  return ALLOWED_ASSET_EXTS.has(ext);
-};
-
-const normalizeTagToSemver = (tag: string): string | null => {
-  const trimmed = tag.trim();
-  const withoutV = trimmed.startsWith('v') ? trimmed.slice(1) : trimmed;
-  // Ensure it looks like a semver prefix at least.
-  if (!/^\d+\.\d+\.\d+/.test(withoutV)) return null;
-  return semver.valid(withoutV);
-};
-
-/**
- * Rewrite a GitHub release asset URL to the CDN URL for faster download.
- * The CDN path follows the fixed convention `{base}/{version}/{original-filename}`,
- * matching electron-builder's artifactName output, so no name conversion is needed.
- */
-const rewriteAssetUrlToCDN = (assetName: string, version: string): string => {
-  return `${CDN_BASE_URL}/${version}/${assetName}`;
-};
-
-type RuntimePlatformInfo = {
-  platform: NodeJS.Platform;
-  arch: string;
-};
-
-type CanonicalArch = 'x64' | 'arm64' | 'ia32';
-
-const normalizeArch = (arch: string): CanonicalArch => {
-  if (arch === 'arm64') return 'arm64';
-  if (arch === 'ia32' || arch === 'x32') return 'ia32';
-  return 'x64';
-};
-
-const detectAssetArchs = (nameLower: string): Set<CanonicalArch> => {
-  const detected = new Set<CanonicalArch>();
-
-  if (/\b(arm64|aarch64)\b/.test(nameLower)) detected.add('arm64');
-  if (/\b(x64|x86_64|amd64)\b/.test(nameLower)) detected.add('x64');
-
-  const hasX86Token = /\bx86\b/.test(nameLower) && !/\bx86[_-]?64\b/.test(nameLower);
-  if (/\b(ia32|x32|32bit)\b/.test(nameLower) || hasX86Token) detected.add('ia32');
-
-  return detected;
-};
-
-const getPlatformHints = (runtime: RuntimePlatformInfo = { platform: process.platform, arch: process.arch }) => {
-  const platform = runtime.platform;
-  const arch = runtime.arch;
-  const normalizedArch = normalizeArch(arch);
-
-  const archHints =
-    normalizedArch === 'arm64'
-      ? ['arm64', 'aarch64']
-      : normalizedArch === 'ia32'
-        ? ['ia32', 'x86', 'x32', '32bit']
-        : ['x64', 'x86_64', 'amd64'];
-
-  // electron-builder artifact names often include one of these
-  const platformHints =
-    platform === 'win32' ? ['win', 'win32', 'windows'] : platform === 'darwin' ? ['mac', 'darwin', 'osx'] : ['linux'];
-
-  return { platform, arch, normalizedArch, archHints, platformHints };
-};
-
-const scoreAsset = (asset: GitHubReleaseAsset, runtime?: RuntimePlatformInfo): number => {
-  const { platform, normalizedArch, archHints, platformHints } = getPlatformHints(runtime);
-  const nameLower = asset.name.toLowerCase();
-  const ext = path.extname(asset.name);
-
-  const detectedArchs = detectAssetArchs(nameLower);
-  if (detectedArchs.size > 0 && !detectedArchs.has(normalizedArch)) {
-    return -1;
+type RuntimePlatform = { platform: NodeJS.Platform; arch: string };
+type InstallerFailure =
+  | 'checkFailed'
+  | 'invalidRelease'
+  | 'downloadFailed'
+  | 'verificationFailed'
+  | 'unverifiedInstaller'
+  | 'openFailed';
+class InstallerError extends Error {
+  constructor(readonly code: InstallerFailure) {
+    super(code);
   }
-
-  let score = 0;
-
-  // Platform match
-  if (platformHints.some((hint) => nameLower.includes(hint))) score += 20;
-
-  // Arch match
-  if (archHints.some((hint) => nameLower.includes(hint))) score += 10;
-  if (detectedArchs.has(normalizedArch)) score += 15;
-
-  // Prefer installer formats per platform
-  if (platform === 'win32') {
-    if (ext === '.exe') score += 100;
-    if (ext === '.msi') score += 90;
-    if (ext === '.zip') score += 50;
-  } else if (platform === 'darwin') {
-    if (ext === '.dmg') score += 100;
-    if (ext === '.zip') score += 70;
-  } else {
-    if (ext === '.deb') score += 100;
-    if (ext === '.rpm') score += 80;
-    if (ext === '.zip') score += 40;
-  }
-
-  return score;
+}
+const fail = (code: InstallerFailure): never => {
+  throw new InstallerError(code);
 };
 
-export const pickRecommendedAsset = (
-  assets: GitHubReleaseAsset[],
-  runtime?: RuntimePlatformInfo
-): GitHubReleaseAsset | undefined => {
-  if (!assets.length) return undefined;
-
-  const scored = assets
-    .map((asset) => ({ asset, score: scoreAsset(asset, runtime) }))
-    .filter((item) => item.score >= 0)
-    .toSorted((a, b) => b.score - a.score);
-
-  return scored[0]?.asset;
-};
-
-export type CdnManifestFile = { url: string; size?: number };
-export type CdnLatestManifest = { version: string; files: CdnManifestFile[]; releaseDate?: string };
-
-/**
- * Pick the electron-builder channel file for the current platform/arch,
- * matching the names build-and-release uploads to the CDN root.
- */
-export const resolveCdnChannelFile = (
-  runtime: RuntimePlatformInfo = { platform: process.platform, arch: process.arch }
-): string => {
-  const isArm64 = normalizeArch(runtime.arch) === 'arm64';
-  if (runtime.platform === 'win32') return isArm64 ? 'latest-win-arm64.yml' : 'latest.yml';
-  if (runtime.platform === 'darwin') return isArm64 ? 'latest-arm64-mac.yml' : 'latest-mac.yml';
-  return isArm64 ? 'latest-linux-arm64.yml' : 'latest-linux.yml';
-};
-
-/** Parse an electron-builder channel yml; null when the shape is unusable. */
-export const parseCdnManifest = (raw: string): CdnLatestManifest | null => {
-  let doc: unknown;
-  try {
-    doc = loadYaml(raw);
-  } catch {
+/** Strict numeric release-date/patch ordering, including patch 9 -> 10. */
+export const parseReleaseVersion = (value: string): number[] | null => {
+  const match = /^v?(\d{4})\.(\d{1,2})\.(\d{1,2})-patch\.([1-9]\d*)$/.exec(value);
+  if (!match) return null;
+  const parts = match.slice(1).map(Number);
+  const [year, month, day] = parts;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parts.some((n) => !Number.isSafeInteger(n)) ||
+    year < 2000 ||
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  )
     return null;
-  }
-  if (!doc || typeof doc !== 'object') return null;
-  const { version, files, releaseDate } = doc as Record<string, unknown>;
-  if (typeof version !== 'string' || !Array.isArray(files)) return null;
-  const mappedFiles = files
-    .filter((file): file is Record<string, unknown> => Boolean(file) && typeof file === 'object')
-    .filter((file) => typeof file.url === 'string')
-    .map((file) => ({ url: file.url as string, size: typeof file.size === 'number' ? file.size : undefined }));
-  if (!mappedFiles.length) return null;
+  return parts;
+};
+export const compareReleaseVersions = (left: string, right: string): number => {
+  const a = parseReleaseVersion(left);
+  const b = parseReleaseVersion(right);
+  if (!a || !b) return fail('invalidRelease');
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
+  return 0;
+};
+const releaseAssetUrl = (tag: string, name: string) => `${RELEASES_URL}/download/${tag}/${name}`;
+
+/** Exact naming prevents selecting a different OS/architecture or source archive. */
+export const installerNames = (version: string, runtime: RuntimePlatform) => {
+  if (!['arm64', 'x64'].includes(runtime.arch)) return null;
+  const os =
+    runtime.platform === 'darwin'
+      ? 'mac'
+      : runtime.platform === 'win32'
+        ? 'win'
+        : runtime.platform === 'linux'
+          ? 'linux'
+          : null;
+  if (!os) return null;
+  const extension = os === 'mac' ? 'dmg' : os === 'win' ? 'exe' : 'deb';
   return {
-    version,
-    files: mappedFiles,
-    releaseDate: typeof releaseDate === 'string' ? releaseDate : undefined,
+    installer: `eLLMsha-${version}-${os}-${runtime.arch}.${extension}`,
+    checksums: `SHA256SUMS-${os}-${runtime.arch}.txt`,
   };
 };
 
-/**
- * Build an UpdateReleaseInfo from the CDN manifest alone. `htmlUrl`/`body`
- * stay empty here — the GitHub best-effort enrichment fills them when
- * reachable. fallbackUrl follows GitHub's fixed release-asset URL scheme, so
- * no API call is needed to construct it.
- */
-export const mapCdnManifestToRelease = (manifest: CdnLatestManifest, repo: string): UpdateReleaseInfo | null => {
-  const version = semver.valid(manifest.version);
-  if (!version) return null;
+type CheckedRelease = { info: UpdateReleaseInfo; checksum?: GitHubReleaseAsset };
+export const parseRelease = (raw: unknown, runtime: RuntimePlatform): CheckedRelease | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const item = raw as Record<string, unknown>;
+  if (
+    item.draft !== false ||
+    item.prerelease !== false ||
+    typeof item.tag_name !== 'string' ||
+    !item.tag_name.startsWith('v') ||
+    !parseReleaseVersion(item.tag_name)
+  )
+    return null;
+  const tagName = item.tag_name;
+  const version = tagName.slice(1);
   const assets: GitHubReleaseAsset[] = [];
-  for (const file of manifest.files) {
-    const name = path.basename(file.url.trim());
-    if (!name || !isAllowedAssetName(name)) continue;
-    assets.push({
-      name,
-      url: rewriteAssetUrlToCDN(name, version),
-      fallbackUrl: `https://github.com/${repo}/releases/download/v${version}/${name}`,
-      size: file.size ?? 0,
-    });
-  }
+  if (Array.isArray(item.assets))
+    for (const rawAsset of item.assets) {
+      if (!rawAsset || typeof rawAsset !== 'object') continue;
+      const asset = rawAsset as Record<string, unknown>;
+      if (
+        typeof asset.name !== 'string' ||
+        typeof asset.size !== 'number' ||
+        !Number.isSafeInteger(asset.size) ||
+        asset.size <= 0 ||
+        asset.size > MAX_INSTALLER_BYTES
+      )
+        continue;
+      if (!/^[A-Za-z0-9._-]+$/.test(asset.name) || asset.browser_download_url !== releaseAssetUrl(tagName, asset.name))
+        continue;
+      assets.push({ name: asset.name, size: asset.size, url: asset.browser_download_url as string });
+    }
+  const names = installerNames(version, runtime);
+  const exact = (name?: string) => {
+    const matches = assets.filter((a) => a.name === name);
+    return matches.length === 1 ? matches[0] : undefined;
+  };
+  const installer = exact(names?.installer);
+  const checksum = exact(names?.checksums);
   return {
-    tagName: `v${version}`,
-    version,
-    htmlUrl: '',
-    publishedAt: manifest.releaseDate,
-    prerelease: false,
-    draft: false,
-    assets,
-    recommendedAsset: pickRecommendedAsset(assets),
+    info: {
+      tagName,
+      version,
+      name: typeof item.name === 'string' ? item.name : tagName,
+      body: typeof item.body === 'string' ? item.body.slice(0, 100_000) : '',
+      htmlUrl: `${RELEASES_URL}/tag/${tagName}`,
+      publishedAt: typeof item.published_at === 'string' ? item.published_at : undefined,
+      prerelease: false,
+      draft: false,
+      assets,
+      recommendedAsset: checksum ? installer : undefined,
+      installUnavailable: !names
+        ? 'unsupportedPlatform'
+        : !installer
+          ? 'missingInstaller'
+          : !checksum
+            ? 'missingChecksum'
+            : undefined,
+    },
+    checksum,
   };
 };
 
-const resolveRepo = (requestRepo?: string): string => {
-  const envRepo = process.env.AIONUI_GITHUB_REPO?.trim();
-  const repo = (requestRepo || envRepo || DEFAULT_REPO).trim();
-  return repo || DEFAULT_REPO;
+export const parseInstallerChecksum = (text: string, name: string): string => {
+  const matches = text
+    .split(/\r?\n/)
+    .map((line) => /^([a-fA-F0-9]{64})[ \t]+\*?([^\r\n]+)$/.exec(line))
+    .filter((match) => match?.[2] === name);
+  if (matches.length !== 1) return fail('verificationFailed');
+  return matches[0]![1].toLowerCase();
 };
 
-const assertAllowedUrl = async (rawUrl: string) => {
-  let parsed: URL;
-  try {
-    parsed = new URL(rawUrl);
-  } catch {
-    throw new Error((await getI18n()).t('update.errors.invalidUrl'));
-  }
-
-  if (parsed.protocol !== 'https:') {
-    throw new Error((await getI18n()).t('update.errors.httpsOnly'));
-  }
-  if (!ALLOWED_DOWNLOAD_HOSTS.has(parsed.hostname)) {
-    throw new Error((await getI18n()).t('update.errors.hostNotAllowed', { host: parsed.hostname }));
-  }
+const assertDownloadUrl = (value: string) => {
+  const url = new URL(value);
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.hash ||
+    !REDIRECT_HOSTS.has(url.hostname)
+  )
+    fail('invalidRelease');
+  if (url.hostname === 'github.com' && !url.pathname.startsWith(`/${REPOSITORY}/releases/download/`))
+    fail('invalidRelease');
 };
-
-const fetchWithAllowlistedRedirects = async (rawUrl: string, signal: AbortSignal): Promise<Response> => {
-  let current = rawUrl;
-
-  for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    await assertAllowedUrl(current);
-
-    const res = await fetch(current, {
-      signal,
-      redirect: 'manual',
-      headers: {
-        'User-Agent': DEFAULT_USER_AGENT,
-      },
-    });
-
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location) {
-        throw new Error((await getI18n()).t('update.errors.redirectNoLocation'));
-      }
-      current = new URL(location, current).toString();
+const fetchAsset = async (url: string, signal: AbortSignal): Promise<Response> => {
+  for (let redirects = 0; redirects <= 5; redirects++) {
+    assertDownloadUrl(url);
+    const response = await fetch(url, { redirect: 'manual', signal, credentials: 'omit' });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location');
+      await response.body?.cancel();
+      if (!location) return fail('downloadFailed');
+      url = new URL(location, url).href;
       continue;
     }
-
-    return res;
+    if (!response.ok) return fail('downloadFailed');
+    return response;
   }
-
-  throw new Error((await getI18n()).t('update.errors.tooManyRedirects'));
+  return fail('downloadFailed');
 };
-
-const fetchGitHubReleases = async (repo: string, timeoutMs = 30000): Promise<GitHubReleaseApi[]> => {
-  const url = `https://api.github.com/repos/${repo}/releases`;
-
-  // 添加超时控制，防止网络问题导致无限等待 / Add timeout to prevent infinite wait on network issues
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
+const readBounded = async (response: Response, limit: number): Promise<string> => {
+  if (!response.body) return fail('downloadFailed');
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
   try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': DEFAULT_USER_AGENT,
-      },
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
-      throw new Error((await getI18n()).t('update.errors.githubApiFailed', { status: res.status }));
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      size += part.value.byteLength;
+      if (size > limit) return fail('invalidRelease');
+      chunks.push(part.value);
     }
-
-    const json = (await res.json()) as unknown;
-    if (!Array.isArray(json)) {
-      throw new Error((await getI18n()).t('update.errors.githubApiNotArray'));
-    }
-    return json as GitHubReleaseApi[];
-  } catch (err: unknown) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error((await getI18n()).t('update.errors.githubApiTimeout'), { cause: err });
-    }
-    throw err;
   } finally {
-    clearTimeout(timeoutId);
+    await reader.cancel().catch(() => {});
   }
+  return Buffer.concat(chunks).toString('utf8');
 };
 
-const CDN_MANIFEST_TIMEOUT_MS = 15000;
-const GITHUB_NOTES_TIMEOUT_MS = 10000;
+/** Main-owned release registry: renderer URLs and paths cannot authorize downloads or launches. */
+export class ReleaseInstaller {
+  private checked?: CheckedRelease;
+  private checkInFlight?: Promise<UpdateCheckResult>;
+  private active?: { id: string; controller: AbortController; result: UpdateDownloadResult; done: Promise<void> };
+  private verified = new Map<string, { filePath: string; size: number; sha256: string }>();
+  constructor(
+    private readonly directory: string,
+    private readonly runtime: RuntimePlatform,
+    private readonly currentVersion: string,
+    private readonly emit: (event: UpdateDownloadProgressEvent) => void,
+    private readonly openPath: (filePath: string) => Promise<string>
+  ) {}
 
-/**
- * Fetch and parse the authoritative CDN channel manifest for the current
- * platform/arch. Any failure here fails the manual check — the CDN is the
- * single source of truth for "is there an update".
- */
-const fetchCdnManifest = async (): Promise<CdnLatestManifest> => {
-  const url = `${CDN_BASE_URL}/${resolveCdnChannelFile()}`;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CDN_MANIFEST_TIMEOUT_MS);
-
-  log.info('[manual-update] Checking CDN manifest:', url);
-  try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': DEFAULT_USER_AGENT },
-      signal: controller.signal,
+  check(): Promise<UpdateCheckResult> {
+    if (this.checkInFlight) return this.checkInFlight;
+    this.checkInFlight = this.checkRelease().finally(() => {
+      this.checkInFlight = undefined;
     });
-    if (!res.ok) {
-      throw new Error((await getI18n()).t('update.errors.cdnManifestFailed', { status: res.status }));
-    }
-    const manifest = parseCdnManifest(await res.text());
-    if (!manifest) {
-      throw new Error((await getI18n()).t('update.errors.cdnManifestInvalid'));
-    }
-    log.info('[manual-update] CDN manifest resolved:', {
-      url,
-      version: manifest.version,
-      files: manifest.files.length,
-    });
-    return manifest;
-  } catch (err: unknown) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error((await getI18n()).t('update.errors.cdnManifestTimeout'), { cause: err });
-    }
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
+    return this.checkInFlight;
   }
-};
-
-type ReleaseNotesEnrichment = { body?: string; htmlUrl?: string; name?: string; publishedAt?: string };
-
-/**
- * Best-effort GitHub lookup for the release matching the CDN version. The
- * manual check must work without GitHub (the repo stays the changelog source
- * but may be unreachable), so every failure path resolves to an empty object.
- */
-const fetchReleaseNotesEnrichment = async (repo: string, version: string): Promise<ReleaseNotesEnrichment> => {
-  try {
-    const releases = await fetchGitHubReleases(repo, GITHUB_NOTES_TIMEOUT_MS);
-    const match = releases.find((rel) => rel && !rel.draft && normalizeTagToSemver(rel.tag_name) === version);
-    if (!match) return {};
-    return {
-      body: match.body,
-      htmlUrl: match.html_url,
-      name: match.name,
-      publishedAt: match.published_at,
-    };
-  } catch {
-    return {};
-  }
-};
-
-type DownloadState = {
-  abortController: AbortController;
-  file_path: string;
-};
-
-type ActiveManualDownload = {
-  downloadId: string;
-  file_path: string;
-};
-
-const downloads = new Map<string, DownloadState>();
-const activeManualDownloads = new Map<string, ActiveManualDownload>();
-const manualDownloadKeysById = new Map<string, string>();
-const cancelledManualDownloadIds = new Set<string>();
-
-const sanitizeFileName = (name: string): string => {
-  // Keep only base name and trim weird whitespace.
-  const base = path.basename(name).trim();
-  // Avoid empty names.
-  return base || `AionUi-update-${Date.now()}`;
-};
-
-const ensureUniquePath = (target: string): string => {
-  if (!fs.existsSync(target)) return target;
-  const dir = path.dirname(target);
-  const ext = path.extname(target);
-  const base = path.basename(target, ext);
-  for (let i = 1; i < 1000; i++) {
-    const next = path.join(dir, `${base} (${i})${ext}`);
-    if (!fs.existsSync(next)) return next;
-  }
-  return path.join(dir, `${base}-${Date.now()}${ext}`);
-};
-
-const buildManualDownloadKey = (url: string, fallbackUrl: string | undefined, fileName: string): string => {
-  const primary = new URL(url).toString();
-  const fallback = fallbackUrl ? new URL(fallbackUrl).toString() : '';
-  return [primary, fallback, fileName].join('\n');
-};
-
-const emitProgress = (evt: UpdateDownloadProgressEvent) => {
-  ipcBridge.update.downloadProgress.emit(evt);
-};
-
-const cleanupManualDownload = (downloadId: string) => {
-  downloads.delete(downloadId);
-  const activeKey = manualDownloadKeysById.get(downloadId);
-  if (activeKey) {
-    activeManualDownloads.delete(activeKey);
-    manualDownloadKeysById.delete(downloadId);
-  }
-};
-
-type DownloadAttempt = {
-  ok: boolean;
-  isAbort: boolean;
-  message: string;
-  receivedBytes: number;
-  totalBytes?: number;
-};
-
-/**
- * Attempt to download from a single URL into `file_path`.
- * Emits `starting`/`downloading` progress events but NOT the terminal
- * completed/error/cancelled events — the caller decides whether to retry
- * or surface the final state.
- */
-const attemptDownload = async (
-  downloadId: string,
-  url: string,
-  file_path: string,
-  abortController: AbortController
-): Promise<DownloadAttempt> => {
-  let receivedBytes = 0;
-  let totalBytes: number | undefined;
-
-  const startedAt = Date.now();
-  let lastEmitAt = 0;
-
-  const emitThrottled = (status: UpdateDownloadProgressEvent['status']) => {
-    const now = Date.now();
-    const shouldEmit = now - lastEmitAt >= 250 || status !== 'downloading';
-    if (!shouldEmit) return;
-
-    const elapsedSec = Math.max(0.001, (now - startedAt) / 1000);
-    const bytesPerSecond = receivedBytes / elapsedSec;
-    const percent = totalBytes ? Math.min(100, (receivedBytes / totalBytes) * 100) : undefined;
-
-    lastEmitAt = now;
-    emitProgress({
-      downloadId,
-      status,
-      receivedBytes,
-      totalBytes,
-      percent,
-      bytesPerSecond,
-    });
-  };
-
-  emitThrottled('starting');
-
-  log.info('[update-download] Downloading from URL:', url);
-
-  let stream: fs.WriteStream | null = null;
-  try {
-    const res = await fetchWithAllowlistedRedirects(url, abortController.signal);
-
-    if (!res.ok) {
-      throw new Error((await getI18n()).t('update.errors.downloadFailed', { status: res.status }));
-    }
-
-    const contentLengthHeader = res.headers.get('content-length');
-    if (contentLengthHeader) {
-      const parsed = parseInt(contentLengthHeader, 10);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        totalBytes = parsed;
+  private async checkRelease(): Promise<UpdateCheckResult> {
+    this.checked = undefined;
+    const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    let latest: CheckedRelease | undefined;
+    // Bounded pagination; never call a truncated catalog "up to date".
+    for (let page = 1; page <= 3; page++) {
+      const response = await fetch(`${RELEASES_API}?per_page=100&page=${page}`, {
+        signal,
+        redirect: 'error',
+        credentials: 'omit',
+        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'eLLMsha' },
+      });
+      if (!response.ok) return fail('checkFailed');
+      const rows: unknown = JSON.parse(await readBounded(response, 4 * 1024 ** 2));
+      if (!Array.isArray(rows)) return fail('invalidRelease');
+      for (const row of rows) {
+        const release = parseRelease(row, this.runtime);
+        if (release && (!latest || compareReleaseVersions(release.info.version, latest.info.version) > 0))
+          latest = release;
       }
+      if (rows.length < 100) break;
+      if (page === 3) return fail('checkFailed');
     }
+    if (!latest) return fail('invalidRelease');
+    const updateAvailable = compareReleaseVersions(latest.info.version, this.currentVersion) > 0;
+    this.checked = latest;
+    return { currentVersion: this.currentVersion, updateAvailable, latest: latest.info };
+  }
 
-    if (!res.body) {
-      throw new Error((await getI18n()).t('update.errors.downloadNoBody'));
+  async download(request: UpdateDownloadRequest): Promise<UpdateDownloadResult> {
+    const release = this.checked;
+    const asset = release?.info.recommendedAsset;
+    if (
+      !release ||
+      !asset ||
+      !release.checksum ||
+      request.url !== asset.url ||
+      request.file_name !== asset.name ||
+      request.fallbackUrl ||
+      compareReleaseVersions(release.info.version, this.currentVersion) <= 0
+    )
+      return fail('invalidRelease');
+    if (this.active?.controller.signal.aborted) {
+      await this.active.done;
+      return this.download(request);
     }
-
-    stream = fs.createWriteStream(file_path);
-    const reader = res.body.getReader();
-
-    let doneReading = false;
-    while (!doneReading) {
-      const { done, value } = await reader.read();
-      doneReading = done;
-      if (doneReading) break;
-      if (!value) continue;
-
-      receivedBytes += value.byteLength;
-
-      const buf = Buffer.from(value);
-      if (!stream.write(buf)) {
-        await new Promise<void>((resolve) => stream?.once('drain', () => resolve()));
-      }
-
-      emitThrottled('downloading');
+    if (this.active) {
+      if (path.basename(this.active.result.file_path) !== asset.name) return fail('invalidRelease');
+      return this.active.result;
     }
-
-    await new Promise<void>((resolve, reject) => {
-      if (!stream) {
-        resolve();
-        return;
-      }
-      stream.end(() => resolve());
-      stream.on('error', reject);
+    const id = request.downloadId || randomUUID();
+    if (!/^[A-Za-z0-9-]{1,100}$/.test(id) || this.verified.has(id)) return fail('invalidRelease');
+    mkdirSync(this.directory, { recursive: true, mode: 0o700 });
+    const directory = mkdtempSync(path.join(this.directory, 'installer-'));
+    const filePath = path.join(directory, asset.name);
+    const controller = new AbortController();
+    const result = { downloadId: id, file_path: filePath };
+    // Set active before the async worker starts; the result is not launchable until verified.
+    const active = { id, controller, result, done: Promise.resolve() };
+    this.active = active;
+    active.done = this.transfer(active, asset, release.checksum).finally(() => {
+      if (this.active === active) this.active = undefined;
     });
-
-    return { ok: true, isAbort: false, message: '', receivedBytes, totalBytes };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    const isAbort = abortController.signal.aborted || message.toLowerCase().includes('aborted');
-
+    return result;
+  }
+  private async transfer(
+    active: NonNullable<ReleaseInstaller['active']>,
+    asset: GitHubReleaseAsset,
+    checksum: GitHubReleaseAsset
+  ): Promise<void> {
+    const { id, controller, result } = active;
+    const partial = `${result.file_path}.part`;
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30 * 60_000)]);
+    let received = 0;
+    const started = Date.now();
+    let lastProgress = 0;
+    this.emit({ downloadId: id, status: 'starting', receivedBytes: 0, totalBytes: asset.size });
     try {
-      stream?.close();
-    } catch {
-      // ignore
-    }
-
-    // Remove partial file before retrying or reporting failure.
-    try {
-      if (fs.existsSync(file_path)) {
-        fs.rmSync(file_path, { force: true });
+      const checksumSignal = AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
+      const expected = parseInstallerChecksum(
+        await readBounded(await fetchAsset(checksum.url, checksumSignal), 64 * 1024),
+        asset.name
+      );
+      const response = await fetchAsset(asset.url, signal);
+      const length = response.headers.get('content-length');
+      if (!response.body || (length !== null && Number(length) !== asset.size)) {
+        await response.body?.cancel();
+        return fail('verificationFailed');
       }
-    } catch {
-      // ignore
-    }
-
-    return { ok: false, isAbort, message, receivedBytes, totalBytes };
-  }
-};
-
-const startDownloadInBackground = async (
-  downloadId: string,
-  url: string,
-  file_path: string,
-  abortController: AbortController,
-  fallbackUrl?: string
-) => {
-  const runWithFallback = async (): Promise<DownloadAttempt> => {
-    const primary = await attemptDownload(downloadId, url, file_path, abortController);
-    if (primary.ok) return primary;
-    if (primary.isAbort) return primary;
-    if (!fallbackUrl || fallbackUrl === url) return primary;
-
-    try {
-      await assertAllowedUrl(fallbackUrl);
-    } catch (err) {
-      // Fallback URL itself is invalid — keep the primary failure result.
-      log.warn('[update-download] Fallback URL rejected by allowlist:', err);
-      return primary;
-    }
-
-    log.warn(`[update-download] Primary download failed (${primary.message}). Retrying with fallback URL.`);
-    return attemptDownload(downloadId, fallbackUrl, file_path, abortController);
-  };
-
-  const finalResult = await runWithFallback();
-
-  try {
-    if (cancelledManualDownloadIds.has(downloadId)) {
-      return;
-    }
-    if (finalResult.ok) {
-      emitProgress({
-        downloadId,
+      const file = await fs.open(partial, 'wx', 0o600);
+      const reader = response.body.getReader();
+      const hash = createHash('sha256');
+      try {
+        for (;;) {
+          const part = await reader.read();
+          signal.throwIfAborted();
+          if (part.done) break;
+          received += part.value.byteLength;
+          if (received > asset.size) return fail('verificationFailed');
+          hash.update(part.value);
+          // FileHandle.writeFile handles partial writes for this chunk at the current offset.
+          await file.writeFile(part.value);
+          const now = Date.now();
+          if (now - lastProgress > 150) {
+            this.emit({
+              downloadId: id,
+              status: 'downloading',
+              receivedBytes: received,
+              totalBytes: asset.size,
+              percent: Math.min(99, (received / asset.size) * 100),
+              bytesPerSecond: received / Math.max(1, (now - started) / 1000),
+            });
+            lastProgress = now;
+          }
+        }
+        if (received !== asset.size || hash.digest('hex') !== expected) return fail('verificationFailed');
+        await file.sync();
+      } finally {
+        await file.close();
+        await reader.cancel().catch(() => {});
+      }
+      signal.throwIfAborted();
+      await fs.rename(partial, result.file_path);
+      signal.throwIfAborted();
+      this.verified.set(id, { filePath: result.file_path, size: asset.size, sha256: expected });
+      this.emit({
+        downloadId: id,
         status: 'completed',
-        receivedBytes: finalResult.receivedBytes,
-        totalBytes: finalResult.totalBytes,
-        percent: finalResult.totalBytes
-          ? Math.min(100, (finalResult.receivedBytes / finalResult.totalBytes) * 100)
-          : undefined,
-        file_path,
+        receivedBytes: received,
+        totalBytes: asset.size,
+        percent: 100,
+        file_path: result.file_path,
       });
-    } else {
-      emitProgress({
-        downloadId,
-        status: finalResult.isAbort ? 'cancelled' : 'error',
-        receivedBytes: finalResult.receivedBytes,
-        totalBytes: finalResult.totalBytes,
-        error: finalResult.message,
+    } catch (error) {
+      await fs.rm(path.dirname(result.file_path), { recursive: true, force: true }).catch(() => {});
+      this.emit({
+        downloadId: id,
+        status: controller.signal.aborted ? 'cancelled' : 'error',
+        receivedBytes: received,
+        error: error instanceof InstallerError ? error.code : 'downloadFailed',
       });
     }
-  } finally {
-    cleanupManualDownload(downloadId);
-    cancelledManualDownloadIds.delete(downloadId);
   }
-};
-
-/**
- * Create a status broadcast callback that sends updates via ipcBridge.autoUpdate.status.emit.
- * This is a pure emitter: it does not bind to any specific window.
- * The ipcBridge channel broadcasts to all renderer listeners, so no window guard is needed here.
- */
-export function createAutoUpdateStatusBroadcast(): (
-  status: import('../services/autoUpdaterService').AutoUpdateStatus
-) => void {
-  return (status) => {
-    ipcBridge.autoUpdate.status.emit(status);
-  };
+  async cancel(id: string): Promise<void> {
+    const active = this.active;
+    if (!active || active.id !== id) return;
+    active.controller.abort();
+    await active.done;
+  }
+  async open(id: string): Promise<void> {
+    const record = this.verified.get(id);
+    if (!record) return fail('unverifiedInstaller');
+    const stat = await fs.lstat(record.filePath);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== record.size) return fail('verificationFailed');
+    const hash = createHash('sha256');
+    for await (const chunk of createReadStream(record.filePath)) hash.update(chunk);
+    if (hash.digest('hex') !== record.sha256) return fail('verificationFailed');
+    const error = await this.openPath(record.filePath);
+    if (error) return fail('openFailed');
+  }
 }
 
 export function initUpdateBridge(): void {
-  ipcBridge.update.consumeInstallerLastFailure.provider(
-    async (): Promise<{ success: boolean; data: InstallerLastFailureMarker | null; msg?: string }> => {
-      try {
-        return {
-          success: true,
-          data: await consumeInstallerLastFailure({ appDataDir: app.getPath('appData') }),
-        };
-      } catch (err: unknown) {
-        return { success: false, data: null, msg: err instanceof Error ? err.message : String(err) };
-      }
-    }
+  const installer = new ReleaseInstaller(
+    path.join(app.getPath('userData'), 'installers'),
+    { platform: process.platform, arch: process.arch },
+    app.getVersion(),
+    (event) => ipcBridge.update.downloadProgress.emit(event),
+    (filePath) => shell.openPath(filePath)
   );
-
-  ipcBridge.update.check.provider(
-    async (params): Promise<{ success: boolean; data?: UpdateCheckResult; msg?: string }> => {
-      try {
-        const repo = resolveRepo(params?.repo);
-        const currentVersion = app.getVersion();
-
-        // EN: Versioning note
-        // Update comparisons are pure semver: `app.getVersion()` (packaged app version) vs the CDN
-        // manifest `version`. If you want dev/prerelease updates to work reliably, CI must inject a
-        // prerelease semver into `package.json#version` for dev builds (e.g. `1.7.2-dev.1234+sha.abcdef0`)
-        // so semver ordering holds.
-        //
-        // 中文：版本号说明
-        // 更新比较严格使用 semver：`app.getVersion()`（应用自身版本号）对比 CDN manifest 的 `version`。
-        // 若要 dev/预发布版本更新可靠生效，需要 CI 在 dev 构建时把 `package.json#version`
-        // 注入为带 prerelease 的 semver（如 `1.7.2-dev.1234+sha.abcdef0`），以保证比较顺序正确。
-
-        // The CDN channel manifest is the authoritative source. It serves a single
-        // stable channel, so `includePrerelease` no longer affects detection.
-        const manifest = await fetchCdnManifest();
-        const latest = mapCdnManifestToRelease(manifest, repo);
-
-        const currentSemver = semver.valid(currentVersion) || semver.coerce(currentVersion)?.version;
-        if (!currentSemver || !latest) {
-          return { success: true, data: { currentVersion, updateAvailable: false } };
-        }
-
-        // GitHub only enriches the result with release notes; it never blocks.
-        const enrichment = await fetchReleaseNotesEnrichment(repo, latest.version);
-
-        return {
-          success: true,
-          data: {
-            currentVersion,
-            updateAvailable: semver.gt(latest.version, currentSemver),
-            latest: {
-              ...latest,
-              body: enrichment.body,
-              name: enrichment.name,
-              htmlUrl: enrichment.htmlUrl ?? '',
-              publishedAt: enrichment.publishedAt ?? latest.publishedAt,
-            },
-          },
-        };
-      } catch (err: unknown) {
-        return { success: false, msg: err instanceof Error ? err.message : String(err) };
-      }
-    }
-  );
-
-  ipcBridge.update.download.provider(
-    async (params: UpdateDownloadRequest): Promise<{ success: boolean; data?: UpdateDownloadResult; msg?: string }> => {
-      try {
-        if (!params?.url) {
-          return { success: false, msg: (await getI18n()).t('update.errors.missingUrl') };
-        }
-
-        // Defense-in-depth: do not allow arbitrary downloads from renderer.
-        // EN: Only allowlisted hosts (CDN + GitHub release hosts) are permitted;
-        // each redirect hop is re-validated against the allowlist.
-        // 中文：仅允许白名单内的域名（CDN + GitHub release 相关），并手动处理重定向，每一跳都校验白名单。
-        await assertAllowedUrl(params.url);
-        if (params.fallbackUrl) {
-          await assertAllowedUrl(params.fallbackUrl);
-        }
-
-        const downloadId = params.downloadId || uuid();
-        const abortController = new AbortController();
-
-        const downloadsDir = app.getPath('downloads');
-        const urlObj = new URL(params.url);
-        const urlName = path.basename(urlObj.pathname);
-        const baseName = sanitizeFileName(params.file_name || urlName);
-        const activeKey = buildManualDownloadKey(params.url, params.fallbackUrl, baseName);
-        const activeDownload = activeManualDownloads.get(activeKey);
-        if (activeDownload) {
-          return Promise.resolve({ success: true, data: activeDownload });
-        }
-
-        const targetPath = ensureUniquePath(path.join(downloadsDir, baseName));
-        downloads.set(downloadId, { abortController, file_path: targetPath });
-        activeManualDownloads.set(activeKey, { downloadId, file_path: targetPath });
-        manualDownloadKeysById.set(downloadId, activeKey);
-
-        // Start background download, but return immediately so the UI stays responsive.
-        void startDownloadInBackground(downloadId, params.url, targetPath, abortController, params.fallbackUrl);
-
-        return Promise.resolve({ success: true, data: { downloadId, file_path: targetPath } });
-      } catch (err: unknown) {
-        return Promise.resolve({ success: false, msg: err instanceof Error ? err.message : String(err) });
-      }
-    }
-  );
-
-  ipcBridge.update.cancelDownload.provider(
-    async (params: UpdateDownloadCancelRequest): Promise<{ success: boolean; msg?: string }> => {
-      try {
-        const downloadId = params?.downloadId;
-        if (!downloadId) {
-          return { success: false, msg: (await getI18n()).t('update.errors.missingDownloadId') };
-        }
-
-        const activeDownload = downloads.get(downloadId);
-        if (!activeDownload) {
-          return { success: true };
-        }
-
-        cancelledManualDownloadIds.add(downloadId);
-        activeDownload.abortController.abort();
-        emitProgress({
-          downloadId,
-          status: 'cancelled',
-          receivedBytes: 0,
-          file_path: activeDownload.file_path,
-        });
-        cleanupManualDownload(downloadId);
-
-        return { success: true };
-      } catch (err: unknown) {
-        return { success: false, msg: err instanceof Error ? err.message : String(err) };
-      }
-    }
-  );
-
-  // Auto-updater IPC handlers (electron-updater)
-  ipcBridge.autoUpdate.check.provider(
-    async (
-      params: AutoUpdateCheckParams
-    ): Promise<{
-      success: boolean;
-      data?: { updateInfo?: { version: string; releaseDate?: string; releaseNotes?: string } };
-      msg?: string;
-    }> => {
-      try {
-        // Set prerelease preference before checking
-        const includePrerelease = Boolean(params?.includePrerelease);
-        autoUpdaterService.setAllowPrerelease(includePrerelease);
-
-        const result = await autoUpdaterService.checkForUpdates();
-        if (result.success && result.updateInfo) {
-          // autoUpdaterService.checkForUpdates() only returns updateInfo when
-          // electron-updater confirms isUpdateAvailable, so we can trust it directly.
-          return {
-            success: true,
-            data: {
-              updateInfo: {
-                version: result.updateInfo.version,
-                releaseDate: result.updateInfo.releaseDate,
-                releaseNotes:
-                  typeof result.updateInfo.releaseNotes === 'string' ? result.updateInfo.releaseNotes : undefined,
-              },
-            },
-          };
-        }
-        return { success: result.success, msg: result.error };
-      } catch (err: unknown) {
-        return { success: false, msg: err instanceof Error ? err.message : String(err) };
-      }
-    }
-  );
-
-  ipcBridge.autoUpdate.download.provider(async (): Promise<{ success: boolean; msg?: string }> => {
+  const reply = async <T>(operation: () => Promise<T>, fallback: InstallerFailure = 'downloadFailed') => {
     try {
-      const result = await autoUpdaterService.downloadUpdate();
-      return { success: result.success, msg: result.error };
-    } catch (err: unknown) {
-      return { success: false, msg: err instanceof Error ? err.message : String(err) };
+      return { success: true, data: await operation() };
+    } catch (error) {
+      return { success: false, msg: error instanceof InstallerError ? error.code : fallback };
     }
-  });
-
-  ipcBridge.autoUpdate.restoreDownloaded.provider(
-    async (): Promise<{ success: boolean; data: AutoUpdateReadyResult; msg?: string }> => {
-      try {
-        const result = await autoUpdaterService.restoreDownloadedUpdateIfAvailable();
-        return { success: result.success, data: result.data, msg: result.error };
-      } catch (err: unknown) {
-        return {
-          success: false,
-          data: { ready: false },
-          msg: err instanceof Error ? err.message : String(err),
-        };
-      }
-    }
+  };
+  ipcBridge.update.check.provider(() => reply(() => installer.check(), 'checkFailed'));
+  ipcBridge.update.download.provider((request) => reply(() => installer.download(request)));
+  ipcBridge.update.cancelDownload.provider(({ downloadId }) =>
+    reply(async () => {
+      await installer.cancel(downloadId);
+      return {};
+    })
   );
-
-  ipcBridge.autoUpdate.cancelDownload.provider(async (): Promise<{ success: boolean; msg?: string }> => {
-    try {
-      const result = await autoUpdaterService.cancelDownload();
-      return { success: result.success, msg: result.error };
-    } catch (err: unknown) {
-      return { success: false, msg: err instanceof Error ? err.message : String(err) };
-    }
-  });
-
-  ipcBridge.autoUpdate.quitAndInstall.provider(async (): Promise<void> => {
-    await autoUpdaterService.quitAndInstall();
+  ipcBridge.update.openInstaller.provider(({ downloadId }) =>
+    reply(async () => {
+      await installer.open(downloadId);
+      return {};
+    })
+  );
+  ipcBridge.update.consumeInstallerLastFailure.provider(() =>
+    reply(() => consumeInstallerLastFailure({ appDataDir: app.getPath('appData') }))
+  );
+  // Retired IPCs explicitly fail closed, including calls from an older renderer.
+  ipcBridge.autoUpdate.check.provider(async () => ({ success: false, msg: 'manualInstallerOnly' }));
+  ipcBridge.autoUpdate.download.provider(async () => ({ success: false, msg: 'manualInstallerOnly' }));
+  ipcBridge.autoUpdate.cancelDownload.provider(async () => ({ success: true }));
+  ipcBridge.autoUpdate.restoreDownloaded.provider(async () => ({ success: true, data: { ready: false } }));
+  ipcBridge.autoUpdate.quitAndInstall.provider(async () => {
+    throw new Error('manualInstallerOnly');
   });
 }

@@ -23,7 +23,7 @@ const renderNotificationLayer = (node: React.ReactElement) => {
 
 const UpdateNotificationCard: React.FC = () => {
   const { t } = useTranslation();
-  const { state, versionLabel, actions } = useUpdateNotificationController();
+  const { state, opening, cancelling, versionLabel, actions } = useUpdateNotificationController();
   const { openFeedback } = useFeedback();
   const [releaseLogVisible, setReleaseLogVisible] = React.useState(false);
 
@@ -47,8 +47,8 @@ const UpdateNotificationCard: React.FC = () => {
       );
 
     return renderNotificationLayer(
-      <button
-        type='button'
+      <Button
+        type='text'
         data-testid='update-notification-mini-progress'
         data-mini-status={state.status}
         data-ring-stroke-width='8'
@@ -66,7 +66,7 @@ const UpdateNotificationCard: React.FC = () => {
           showText={false}
         />
         <span className='absolute inset-0 flex items-center justify-center pointer-events-none'>{miniContent}</span>
-      </button>
+      </Button>
     );
   }
 
@@ -96,7 +96,11 @@ const UpdateNotificationCard: React.FC = () => {
   const renderBody = () => {
     switch (state.status) {
       case 'checking':
-        return <div className='py-16px text-13px text-t-secondary'>{t('update.checking')}</div>;
+        return (
+          <div className='py-16px text-13px text-t-secondary' role='status'>
+            {t('update.checking')}
+          </div>
+        );
       case 'upToDate':
         return (
           <div className='py-16px flex items-center gap-10px text-13px text-t-secondary'>
@@ -109,14 +113,17 @@ const UpdateNotificationCard: React.FC = () => {
           <div className='flex items-center gap-10px text-13px text-t-secondary'>
             <span>
               {state.currentVersion} → {versionLabel}
+              {state.updateInfo?.installUnavailable && (
+                <span className='block mt-8px'>{t(`update.installer.${state.updateInfo.installUnavailable}`)}</span>
+              )}
             </span>
-            <button
-              type='button'
+            <Button
+              type='text'
               className='bg-transparent border-none p-0 cursor-pointer text-inherit underline underline-offset-2'
               onClick={() => setReleaseLogVisible(true)}
             >
               {t('update.releaseLog')}
-            </button>
+            </Button>
           </div>
         );
       case 'downloading':
@@ -125,14 +132,14 @@ const UpdateNotificationCard: React.FC = () => {
         return (
           <div className='flex items-start gap-10px text-13px text-t-secondary leading-relaxed'>
             <CheckOne theme='filled' size='18' fill='rgb(var(--success-6))' className='mt-2px shrink-0' />
-            <span>{t('update.downloadCompleteTitle')}</span>
+            <span>{t('update.installer.ready')}</span>
           </div>
         );
       case 'preparing-install':
         return (
           <div className='flex items-start gap-10px text-13px text-t-secondary leading-relaxed'>
             <CheckOne theme='filled' size='18' fill='rgb(var(--success-6))' className='mt-2px shrink-0' />
-            <span>{t('update.downloadCompleteTitle')}</span>
+            <span>{t('update.installer.ready')}</span>
           </div>
         );
       case 'success':
@@ -167,8 +174,15 @@ const UpdateNotificationCard: React.FC = () => {
           <Button size='small' className={ACTION_BTN_CLASS} onClick={() => actions.dismiss('later')}>
             {t('update.later')}
           </Button>
-          <Button type='primary' size='small' className={ACTION_BTN_CLASS} onClick={actions.quitAndInstall}>
-            {t('update.restartNow')}
+          <Button
+            type='primary'
+            size='small'
+            className={ACTION_BTN_CLASS}
+            onClick={actions.openFile}
+            loading={opening}
+            disabled={opening}
+          >
+            {t('update.installer.open')}
           </Button>
         </>
       );
@@ -180,7 +194,7 @@ const UpdateNotificationCard: React.FC = () => {
             {t('update.later')}
           </Button>
           <Button type='primary' size='small' className={ACTION_BTN_CLASS} onClick={actions.openFile}>
-            {t('update.installNow')}
+            {t('update.installer.open')}
           </Button>
         </>
       );
@@ -239,7 +253,13 @@ const UpdateNotificationCard: React.FC = () => {
           <Button size='small' className={ACTION_BTN_CLASS} onClick={() => actions.dismiss('later')}>
             {t('update.later')}
           </Button>
-          <Button type='primary' size='small' className={ACTION_BTN_CLASS} onClick={actions.startDownload}>
+          <Button
+            type='primary'
+            size='small'
+            className={ACTION_BTN_CLASS}
+            onClick={actions.startDownload}
+            disabled={cancelling || !state.updateInfo?.recommendedAsset}
+          >
             {t('update.downloadButton')}
           </Button>
         </>
@@ -286,6 +306,8 @@ const UpdateNotificationCard: React.FC = () => {
                 className='!p-0 !w-24px !h-24px !text-t-tertiary hover:!text-t-primary'
                 icon={<Close size='16' />}
                 onClick={actions.cancelDownload}
+                loading={cancelling}
+                disabled={cancelling}
                 aria-label={t('update.cancel')}
               />
             </div>
@@ -319,17 +341,17 @@ const UpdateNotificationCard: React.FC = () => {
             <div className='flex items-center gap-6px'>
               <span>{t('update.releaseNotesFailed')}</span>
               {state.releasePageUrl && (
-                <button
-                  type='button'
+                <Button
+                  type='text'
                   className='bg-transparent border-none p-0 cursor-pointer text-[rgb(var(--primary-6))] underline underline-offset-2'
                   onClick={actions.openReleasePage}
                 >
                   {t('update.viewRelease')}
-                </button>
+                </Button>
               )}
             </div>
           ) : releaseNotes ? (
-            <MarkdownView allowHtml>{releaseNotes}</MarkdownView>
+            <MarkdownView>{releaseNotes}</MarkdownView>
           ) : (
             <span>{t('update.releaseNotesLoading')}</span>
           )}

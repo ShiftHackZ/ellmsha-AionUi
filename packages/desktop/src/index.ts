@@ -558,38 +558,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   registerWindowMaximizeListeners(mainWindow);
   attachWindowBoundsPersistence(mainWindow, (bounds) => ProcessConfig.set('window.bounds', bounds));
 
-  // Initialize auto-updater service (skip when disabled via env, e.g. E2E / CI)
-  // 初始化自动更新服务（通过环境变量禁用时跳过，例如 E2E / CI 场景）
-  const isCiRuntime = process.env.CI === 'true' || process.env.CI === '1' || process.env.GITHUB_ACTIONS === 'true';
-  const disableAutoUpdater =
-    process.env.AIONUI_DISABLE_AUTO_UPDATE === '1' || process.env.AIONUI_E2E_TEST === '1' || isCiRuntime;
-  if (!disableAutoUpdater) {
-    Promise.all([import('./process/services/autoUpdaterService'), import('./process/bridge/updateBridge')])
-      .then(([{ autoUpdaterService }, { createAutoUpdateStatusBroadcast }]) => {
-        // Create status broadcast callback that emits via ipcBridge (pure emitter, no window binding)
-        const statusBroadcast = createAutoUpdateStatusBroadcast();
-        autoUpdaterService.initialize(statusBroadcast);
-        autoUpdaterService.setBeforeQuitAndInstall(async () => {
-          await backendManager.stop();
-        });
-        // Check for updates after 3 seconds delay. Skipped in the discontinued
-        // build: AionUi's final version guides users to the website instead of
-        // auto-checking, so startup stays silent. The flag is a compile-time
-        // literal, so this branch is tree-shaken out of non-discontinued builds.
-        // 3秒后检查更新。停更版启动静默，不做应用内检测。
-        if (!process.env.IS_DISCONTINUED_BUILD) {
-          setTimeout(() => {
-            void autoUpdaterService.checkForUpdatesAndNotify();
-          }, 3000);
-        }
-      })
-      .catch((error) => {
-        console.error('[App] Failed to initialize autoUpdaterService:', error);
-      });
-  } else {
-    console.log('[AionUi] Auto-updater disabled via env/CI guard');
-  }
-
+  // Updates download full installers through updateBridge. Never start Squirrel or quit active tasks.
   // A branded dev Electron binary reports isPackaged=true; electron-vite's explicit
   // renderer URL remains the source of truth for live source/HMR, including recovery.
   const rendererUrl = process.env['ELECTRON_RENDERER_URL'];

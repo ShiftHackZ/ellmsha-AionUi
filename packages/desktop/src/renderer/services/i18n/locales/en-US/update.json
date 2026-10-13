@@ -92,5 +92,17 @@
       "promise4": "The open-source repository stays actively maintained, core features stay in sync, and the open-source spirit remains.",
       "noRush": "If you would rather wait, the current version keeps working as usual — it simply no longer receives updates. And once you have completed the first sign-in on the new version, your local data has already moved there, so please use the new version as your day-to-day entry point."
     }
+  },
+  "installer": {
+    "check": "Check for updates",
+    "open": "Open installer",
+    "ready": "Installer verified. Open it to update manually when your work is finished. eLLMsha will keep running.",
+    "missingInstaller": "This release has no installer for your OS and architecture.",
+    "missingChecksum": "This release is missing the installer checksum.",
+    "unsupportedPlatform": "Installers are unavailable for this platform.",
+    "invalidRelease": "The release metadata is invalid. Please retry later.",
+    "verificationFailed": "Installer verification failed. Download it again.",
+    "unverifiedInstaller": "No verified installer is available. Download it again.",
+    "openFailed": "Could not open the installer. Please try again."
   }
 }

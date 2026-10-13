@@ -92,5 +92,17 @@
       "promise4": "Le dépôt open source reste activement maintenu, les fonctionnalités clés restent synchronisées, l'esprit open source demeure.",
       "noRush": "Si vous préférez attendre, la version actuelle continue de fonctionner normalement — elle ne recevra simplement plus de mises à jour. En revanche, dès votre première connexion à la nouvelle version, vos données locales y ont déjà été transférées : utilisez alors la nouvelle version comme point d'accès quotidien."
     }
+  },
+  "installer": {
+    "check": "Rechercher des mises à jour",
+    "open": "Ouvrir le programme d’installation",
+    "ready": "Programme vérifié. Ouvrez-le après votre travail pour effectuer la mise à jour manuellement. eLLMsha restera ouvert.",
+    "missingInstaller": "Cette version ne propose pas de programme pour votre système et architecture.",
+    "missingChecksum": "La somme de contrôle du programme est manquante.",
+    "unsupportedPlatform": "Aucun programme d’installation pour cette plateforme.",
+    "invalidRelease": "Les données de version sont invalides. Réessayez plus tard.",
+    "verificationFailed": "La vérification a échoué. Téléchargez à nouveau le programme.",
+    "unverifiedInstaller": "Aucun programme vérifié disponible. Téléchargez-le à nouveau.",
+    "openFailed": "Impossible d’ouvrir le programme. Réessayez."
   }
 }

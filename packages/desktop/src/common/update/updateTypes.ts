@@ -6,9 +6,9 @@
 
 export interface GitHubReleaseAsset {
   name: string;
-  /** Primary download URL — rewritten to CDN for faster download. */
+  /** Exact asset URL from the published eLLMsha GitHub release. */
   url: string;
-  /** Original GitHub download URL — used as fallback when CDN fails. */
+  /** Legacy field; alternative URLs are not accepted by the installer downloader. */
   fallbackUrl?: string;
   size: number;
   contentType?: string;
@@ -25,6 +25,8 @@ export interface UpdateReleaseInfo {
   draft: boolean;
   assets: GitHubReleaseAsset[];
   recommendedAsset?: GitHubReleaseAsset;
+  /** A newer release exists but cannot be installed on this OS/architecture. */
+  installUnavailable?: 'unsupportedPlatform' | 'missingInstaller' | 'missingChecksum';
 }
 
 export interface UpdateCheckResult {
@@ -35,7 +37,7 @@ export interface UpdateCheckResult {
 
 export interface UpdateCheckRequest {
   includePrerelease?: boolean;
-  /** Defaults to iOfficeAI/AionUi when omitted */
+  /** Retained for IPC compatibility; the release repository is fixed by the host. */
   repo?: string;
 }
 

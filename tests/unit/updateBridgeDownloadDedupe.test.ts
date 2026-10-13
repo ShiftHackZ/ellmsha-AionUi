@@ -1,225 +1,174 @@
-/**
- * @license
- * Copyright 2026 AionUi (aionui.com)
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import fs from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as fs from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import * as path from 'node:path';
+import { createHash } from 'node:crypto';
+vi.mock('@/common', () => ({ ipcBridge: {} }));
+vi.mock('electron', () => ({ app: {}, shell: {} }));
+import { ReleaseInstaller } from '@process/bridge/updateBridge';
+import type { UpdateDownloadProgressEvent } from '@/common/update/updateTypes';
+const runtime = { platform: 'darwin' as const, arch: 'arm64' };
+const version = '2026.10.13-patch.10';
+const name = `eLLMsha-${version}-mac-arm64.dmg`;
+const baseUrl = `https://github.com/ShiftHackZ/ellmsha/releases/download/v${version}/`;
+const bytes = Buffer.from('owned synthetic installer');
+const sha = createHash('sha256').update(bytes).digest('hex');
+const checksum = `${sha}  ${name}\n`;
+const release = (override: Record<string, unknown> = {}) => ({
+  tag_name: `v${version}`,
+  draft: false,
+  prerelease: false,
+  assets: [
+    { name, browser_download_url: baseUrl + name, size: bytes.length },
+    {
+      name: 'SHA256SUMS-mac-arm64.txt',
+      browser_download_url: baseUrl + 'SHA256SUMS-mac-arm64.txt',
+      size: checksum.length,
+    },
+  ],
+  ...override,
+});
+let directory: string;
+let events: UpdateDownloadProgressEvent[];
+let openPath: ReturnType<typeof vi.fn>;
+let installer: ReleaseInstaller;
+const request = (id = 'owned-id') => ({ downloadId: id, url: baseUrl + name, file_name: name });
+const json = (data: unknown) => new Response(JSON.stringify(data));
+const mockDownload = (payload = bytes) =>
+  vi
+    .fn()
+    .mockResolvedValueOnce(json([release()]))
+    .mockResolvedValueOnce(new Response(checksum))
+    .mockResolvedValueOnce(new Response(payload));
+beforeEach(async () => {
+  directory = await fs.mkdtemp(path.join(tmpdir(), 'ellmsha-installer-test-'));
+  events = [];
+  openPath = vi.fn().mockResolvedValue('');
+  installer = new ReleaseInstaller(directory, runtime, '2026.10.13-patch.9', (event) => events.push(event), openPath);
+});
+afterEach(async () => {
+  await installer.cancel('owned-id');
+  vi.unstubAllGlobals();
+  await fs.rm(directory, { recursive: true, force: true });
+});
 
-vi.mock('@/common/platform/bridge', () => ({
-  bridge: {
-    buildProvider: vi.fn(() => {
-      const handlerMap = new Map<string, Function>();
-      return {
-        provider: vi.fn((handler: Function) => {
-          handlerMap.set('handler', handler);
-          return vi.fn();
-        }),
-        invoke: vi.fn(),
-        _getHandler: () => handlerMap.get('handler'),
-      };
-    }),
-    buildEmitter: vi.fn(() => ({
-      emit: vi.fn(),
-      on: vi.fn(),
-    })),
-  },
-}));
-
-vi.mock('electron', () => ({
-  app: {
-    getVersion: vi.fn(() => '1.0.0'),
-    getPath: vi.fn(() => '/tmp/aionui-update-dedupe-test'),
-    exit: vi.fn(),
-    isPackaged: true,
-  },
-}));
-
-vi.mock('electron-updater', () => ({
-  autoUpdater: {
-    logger: null,
-    autoDownload: false,
-    autoInstallOnAppQuit: true,
-    allowPrerelease: false,
-    allowDowngrade: false,
-    setFeedURL: vi.fn(),
-    on: vi.fn(),
-    removeListener: vi.fn(),
-    checkForUpdates: vi.fn(),
-    downloadUpdate: vi.fn(),
-    quitAndInstall: vi.fn(),
-    checkForUpdatesAndNotify: vi.fn(),
-  },
-}));
-
-vi.mock('electron-log', () => ({
-  default: {
-    transports: { file: { level: 'info' } },
-    debug: vi.fn(),
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
-
-const getDownloadHandler = async () => {
-  vi.resetModules();
-  const { initUpdateBridge } = await import('@process/bridge/updateBridge');
-  const { ipcBridge } = await import('@/common');
-
-  initUpdateBridge();
-
-  const provider = vi.mocked(ipcBridge.update.download.provider);
-  const lastCall = provider.mock.calls.at(-1);
-  if (!lastCall) throw new Error('update.download handler not registered');
-  return lastCall[0];
-};
-
-const getDownloadHandlers = async () => {
-  vi.resetModules();
-  const { initUpdateBridge } = await import('@process/bridge/updateBridge');
-  const { ipcBridge } = await import('@/common');
-
-  initUpdateBridge();
-
-  const downloadProvider = vi.mocked(ipcBridge.update.download.provider);
-  const cancelProvider = vi.mocked(ipcBridge.update.cancelDownload.provider);
-  const downloadCall = downloadProvider.mock.calls.at(-1);
-  const cancelCall = cancelProvider.mock.calls.at(-1);
-  if (!downloadCall) throw new Error('update.download handler not registered');
-  if (!cancelCall) throw new Error('update.download.cancel handler not registered');
-  return {
-    download: downloadCall[0],
-    cancel: cancelCall[0],
-    ipcBridge,
-  };
-};
-
-describe('updateBridge manual download dedupe', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('verified full installer download', () => {
+  it('deduplicates concurrent requests, writes atomically, and opens only the owned verified id', async () => {
+    vi.stubGlobal('fetch', mockDownload());
+    await installer.check();
+    const [first, second] = await Promise.all([installer.download(request()), installer.download(request('second'))]);
+    expect(second).toEqual(first);
+    await expect.poll(() => events.some((e) => e.status === 'completed')).toBe(true);
+    expect(await fs.readFile(first.file_path)).toEqual(bytes);
+    await expect(installer.open('../elsewhere')).rejects.toThrow('unverifiedInstaller');
+    await installer.open(first.downloadId);
+    expect(openPath).toHaveBeenCalledOnce();
+  });
+  it.each([Buffer.from('same length wrong content'), Buffer.from('short'), Buffer.alloc(100)])(
+    'rejects mismatched checksum or size and removes partial files (%s)',
+    async (payload) => {
+      vi.stubGlobal('fetch', mockDownload(payload));
+      await installer.check();
+      const result = await installer.download(request());
+      await expect.poll(() => events.some((e) => e.status === 'error')).toBe(true);
+      await expect(fs.stat(path.dirname(result.file_path))).rejects.toThrow();
+      await expect(installer.open(result.downloadId)).rejects.toThrow('unverifiedInstaller');
+    }
+  );
+  it('verifies multiple streamed chunks and rejects an incorrect Content-Length', async () => {
+    const streamed = new ReadableStream({
+      start(controller) {
+        controller.enqueue(bytes.subarray(0, 8));
+        controller.enqueue(bytes.subarray(8));
+        controller.close();
+      },
+    });
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => new Promise<Response>(() => {}))
+      vi
+        .fn()
+        .mockResolvedValueOnce(json([release()]))
+        .mockResolvedValueOnce(new Response(checksum))
+        .mockResolvedValueOnce(new Response(streamed))
     );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('reuses the active manual download for the same URL, fallback URL, and file name', async () => {
-    const handler = await getDownloadHandler();
-    const request = {
-      url: 'https://static.aionui.com/releases/2.2.0/AionUi-2.2.0-mac-arm64.dmg',
-      fallbackUrl: 'https://github.com/iOfficeAI/AionUi/releases/download/v2.2.0/AionUi-2.2.0-mac-arm64.dmg',
-      file_name: 'AionUi-2.2.0-mac-arm64.dmg',
-    };
-
-    const first = await handler({
-      ...request,
-      downloadId: 'first-download',
-    });
-    const second = await handler({
-      ...request,
-      downloadId: 'second-download',
-    });
-
-    expect(first.success).toBe(true);
-    expect(second.success).toBe(true);
-    expect(second.data).toEqual(first.data);
-    expect(first.data?.downloadId).toBe('first-download');
-  });
-
-  it('creates a new manual download after the prior matching task reaches a terminal state', async () => {
-    fs.mkdirSync('/tmp/aionui-update-dedupe-test', { recursive: true });
+    await installer.check();
+    const result = await installer.download(request());
+    await expect.poll(() => events.some((e) => e.status === 'completed')).toBe(true);
+    expect(await fs.readFile(result.file_path)).toEqual(bytes);
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-length': '0' }),
-        body: {
-          getReader: () => ({
-            read: async () => ({ done: true, value: undefined }),
-          }),
-        },
-      })
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(checksum))
+        .mockResolvedValueOnce(new Response(bytes, { headers: { 'content-length': '999' } }))
     );
-
-    const handler = await getDownloadHandler();
-    const request = {
-      url: 'https://static.aionui.com/releases/2.2.0/AionUi-2.2.0-mac-arm64.dmg',
-      fallbackUrl: 'https://github.com/iOfficeAI/AionUi/releases/download/v2.2.0/AionUi-2.2.0-mac-arm64.dmg',
-      file_name: 'AionUi-2.2.0-mac-arm64.dmg',
-    };
-
-    const first = await handler({
-      ...request,
-      downloadId: 'first-download',
-    });
-
-    const { ipcBridge } = await import('@/common');
-    await expect
-      .poll(() =>
-        vi.mocked(ipcBridge.update.downloadProgress.emit).mock.calls.some(([evt]) => evt.status === 'completed')
+    const invalid = await installer.download(request('invalid-length'));
+    await expect.poll(() => events.some((e) => e.downloadId === 'invalid-length' && e.status === 'error')).toBe(true);
+    await expect(installer.open(invalid.downloadId)).rejects.toThrow('unverifiedInstaller');
+  });
+  it('rejects a replaced verified installer on opening', async () => {
+    vi.stubGlobal('fetch', mockDownload());
+    await installer.check();
+    const result = await installer.download(request());
+    await expect.poll(() => events.some((e) => e.status === 'completed')).toBe(true);
+    await fs.writeFile(result.file_path, Buffer.alloc(bytes.length));
+    await expect(installer.open(result.downloadId)).rejects.toThrow('verificationFailed');
+    expect(openPath).not.toHaveBeenCalled();
+  });
+  it('cleans up cancellation and permits a fresh retry', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(json([release()]))
+      .mockImplementation(
+        (_url, options) =>
+          new Promise((_resolve, reject) => {
+            options.signal.addEventListener('abort', () => reject(new Error('aborted')));
+          })
+      );
+    vi.stubGlobal('fetch', fetcher);
+    await installer.check();
+    const result = await installer.download(request());
+    await installer.cancel(result.downloadId);
+    expect(events.at(-1)?.status).toBe('cancelled');
+    await expect(fs.stat(path.dirname(result.file_path))).rejects.toThrow();
+    fetcher.mockReset().mockResolvedValueOnce(new Response(checksum)).mockResolvedValueOnce(new Response(bytes));
+    await installer.download(request('retry'));
+    await expect.poll(() => events.some((e) => e.status === 'completed')).toBe(true);
+  });
+  it('waits for aborted-transfer cleanup before starting an immediate retry', async () => {
+    let finishAbort!: () => void;
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(json([release()]))
+      .mockImplementationOnce(
+        (_url, options) =>
+          new Promise((_resolve, reject) => {
+            options.signal.addEventListener('abort', () => {
+              finishAbort = () => reject(new Error('aborted'));
+            });
+          })
       )
-      .toBe(true);
-
-    const second = await handler({
-      ...request,
-      downloadId: 'second-download',
-    });
-
-    expect(first.success).toBe(true);
-    expect(second.success).toBe(true);
-    expect(first.data?.downloadId).toBe('first-download');
-    expect(second.data?.downloadId).toBe('second-download');
+      .mockResolvedValueOnce(new Response(checksum))
+      .mockResolvedValueOnce(new Response(bytes));
+    vi.stubGlobal('fetch', fetcher);
+    await installer.check();
+    const first = await installer.download(request());
+    const cancellation = installer.cancel(first.downloadId);
+    const retry = installer.download(request('retry'));
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    finishAbort();
+    await cancellation;
+    const second = await retry;
+    expect(second.downloadId).toBe('retry');
+    expect(second.file_path).not.toBe(first.file_path);
+    await expect.poll(() => events.some((e) => e.downloadId === 'retry' && e.status === 'completed')).toBe(true);
   });
-
-  it('cancels an active manual download by download id and clears its dedupe slot', async () => {
-    fs.mkdirSync('/tmp/aionui-update-dedupe-test', { recursive: true });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((_url: string, init?: RequestInit) => {
-        const signal = init?.signal;
-        return new Promise<Response>((_resolve, reject) => {
-          signal?.addEventListener('abort', () => {
-            reject(new DOMException('aborted', 'AbortError'));
-          });
-        });
-      })
-    );
-
-    const { download, cancel, ipcBridge } = await getDownloadHandlers();
-    const request = {
-      url: 'https://static.aionui.com/releases/2.2.0/AionUi-2.2.0-mac-arm64.dmg',
-      fallbackUrl: 'https://github.com/iOfficeAI/AionUi/releases/download/v2.2.0/AionUi-2.2.0-mac-arm64.dmg',
-      file_name: 'AionUi-2.2.0-mac-arm64.dmg',
-    };
-
-    const first = await download({
-      ...request,
-      downloadId: 'first-download',
-    });
-    const cancelResult = await cancel({ downloadId: 'first-download' });
-
-    expect(first.success).toBe(true);
-    expect(cancelResult).toEqual({ success: true });
-    await expect
-      .poll(() =>
-        vi
-          .mocked(ipcBridge.update.downloadProgress.emit)
-          .mock.calls.some(([evt]) => evt.downloadId === 'first-download' && evt.status === 'cancelled')
-      )
-      .toBe(true);
-
-    const second = await download({
-      ...request,
-      downloadId: 'second-download',
-    });
-
-    expect(second.success).toBe(true);
-    expect(second.data?.downloadId).toBe('second-download');
+  it('propagates OS installer-open failure without quitting anything', async () => {
+    vi.stubGlobal('fetch', mockDownload());
+    await installer.check();
+    const result = await installer.download(request());
+    await expect.poll(() => events.some((e) => e.status === 'completed')).toBe(true);
+    openPath.mockResolvedValue('OS refused');
+    await expect(installer.open(result.downloadId)).rejects.toThrow('openFailed');
   });
 });

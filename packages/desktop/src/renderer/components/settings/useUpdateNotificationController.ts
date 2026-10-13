@@ -3,491 +3,260 @@
  * Copyright 2026 AionUi (aionui.com)
  * SPDX-License-Identifier: Apache-2.0
  */
-
 import { ipcBridge } from '@/common';
-import type { AutoUpdateStatus, UpdateDownloadProgressEvent } from '@/common/update/updateTypes';
+import type { UpdateDownloadProgressEvent } from '@/common/update/updateTypes';
 import { uuid } from '@/common/utils';
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   initialUpdateNotificationState,
   updateNotificationReducer,
   type UpdateNotificationEvent,
-  type UpdateNotificationActiveTask,
   type UpdateNotificationOpenSource,
-  type UpdateNotificationProgress,
   type UpdateNotificationState,
 } from './updateNotificationState';
-import { getIncludePrerelease, runUpdateCheck, type CheckUpdateOutcome } from './checkForUpdatesShared';
+import { runUpdateCheck, type CheckUpdateOutcome } from './checkForUpdatesShared';
+import { isElectronDesktop } from '@/renderer/utils/platform';
 import { setUpdateReadyState } from './updateReadyState';
-import { IS_DISCONTINUED_BUILD } from '@/renderer/utils/discontinuedBuild';
-import { OPEN_MIGRATION_DIALOG_EVENT } from './UpdateMigrationDialog';
-
-type AvailableOutcome = Extract<CheckUpdateOutcome, { kind: 'available' }>;
-
-export const UPDATE_AVAILABLE_EVENT = 'aionui-update-available';
 
 declare const __APP_VERSION__: string;
-
-const formatSpeed = (bytesPerSecond: number) => {
-  if (bytesPerSecond > 1024 * 1024) {
-    return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
-  }
-  return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
-};
-
-export const formatUpdateSize = (bytes: number) => {
-  if (bytes >= 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-  return `${(bytes / 1024).toFixed(1)} KB`;
-};
-
-const toAutoProgress = (evt: AutoUpdateStatus): UpdateNotificationProgress | null => {
-  if (!evt.progress) return null;
-  return {
-    percent: Math.round(evt.progress.percent),
-    transferred: evt.progress.transferred,
-    total: evt.progress.total,
-    speed: formatSpeed(evt.progress.bytesPerSecond),
-  };
-};
-
-const toManualProgress = (evt: UpdateDownloadProgressEvent): UpdateNotificationProgress => ({
-  percent: Math.round(evt.percent ?? 0),
-  transferred: evt.receivedBytes ?? 0,
-  total: evt.totalBytes ?? 0,
-  speed: formatSpeed(evt.bytesPerSecond ?? 0),
-});
-
-const createInitialState = (): UpdateNotificationState => ({
-  ...initialUpdateNotificationState,
-  currentVersion: __APP_VERSION__,
-});
-
-const reduceNotificationState = (
-  current: UpdateNotificationState,
-  event: UpdateNotificationEvent
-): UpdateNotificationState => updateNotificationReducer(current, event).state;
-
-const RELEASES_PAGE_URL = 'https://github.com/ShiftHackZ/ellmsha-AionUi/releases';
-
-const getVersionLabelFromState = (state: UpdateNotificationState): string =>
-  state.updateInfo?.version || state.autoUpdateInfo?.version || '';
+export const UPDATE_AVAILABLE_EVENT = 'aionui-update-available';
+export const formatUpdateSize = (bytes: number) =>
+  bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
+const reduceState = (state: UpdateNotificationState, event: UpdateNotificationEvent) =>
+  updateNotificationReducer(state, event).state;
 
 export const useUpdateNotificationController = () => {
   const { t } = useTranslation();
-  const [state, dispatchState] = useReducer(reduceNotificationState, undefined, createInitialState);
+  const [state, reduce] = useReducer(reduceState, {
+    ...initialUpdateNotificationState,
+    currentVersion: __APP_VERSION__,
+  });
+  const [opening, setOpening] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const cancellationPending = useRef(false);
+  const pendingDownload = useRef<ReturnType<typeof ipcBridge.update.download.invoke> | undefined>(undefined);
   const stateRef = useRef(state);
-  const restoreDownloadedPendingRef = useRef(true);
-  const pendingAutoAvailableRef = useRef<AutoUpdateStatus | null>(null);
+  const downloadId = useRef<string | undefined>(undefined);
+  const checking = useRef(false);
+  const cancelled = useRef<string | undefined>(undefined);
   const dispatch = useCallback((event: UpdateNotificationEvent) => {
-    stateRef.current = reduceNotificationState(stateRef.current, event);
-    dispatchState(event);
+    stateRef.current = reduceState(stateRef.current, event);
+    reduce(event);
   }, []);
-
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
-  const loadManualReleaseInfoForDisplay = useCallback(async () => {
-    try {
-      const res = await ipcBridge.update.check.invoke({
-        includePrerelease: getIncludePrerelease(),
-      });
-      if (res?.success && res.data?.latest) {
-        dispatch({
-          type: 'manualReleaseInfoLoaded',
-          updateInfo: res.data.latest,
-          releasePageUrl: res.data.latest.htmlUrl || '',
-        });
-      }
-    } catch (error) {
-      console.warn('Manual release info check error:', error);
-      dispatch({
-        type: 'manualReleaseInfoFailed',
-        releasePageUrl: stateRef.current.releasePageUrl || RELEASES_PAGE_URL,
-      });
-    }
-  }, []);
-
-  const dispatchAutoAvailable = useCallback(
-    (evt: AutoUpdateStatus) => {
-      dispatch({
-        type: 'autoStatusAvailable',
-        version: evt.version || '',
-        currentVersion: evt.currentVersion || __APP_VERSION__,
-        releaseNotes: evt.releaseNotes,
-      });
-      void loadManualReleaseInfoForDisplay();
-    },
-    [loadManualReleaseInfoForDisplay]
-  );
-
-  const checkForUpdates = useCallback(async () => {
-    dispatch({ type: 'checkStarted' });
-
-    const outcome = await runUpdateCheck({
-      includePrerelease: getIncludePrerelease(),
-      fallbackVersion: __APP_VERSION__,
-      checkFailedLabel: t('update.checkFailed'),
-    });
-
-    switch (outcome.kind) {
-      case 'available':
-        dispatch({
-          type: 'checkAvailable',
-          currentVersion: outcome.currentVersion,
-          updateInfo: outcome.updateInfo,
-          releasePageUrl: outcome.releasePageUrl,
-          autoUpdateAvailable: outcome.autoUpdateAvailable,
-          autoUpdateInfo: outcome.autoUpdateInfo,
-        });
-        return;
-      case 'upToDate':
-        dispatch({
-          type: 'checkUpToDate',
-          currentVersion: outcome.currentVersion,
-          updateInfo: outcome.updateInfo,
-          releasePageUrl: outcome.releasePageUrl,
-        });
-        return;
-      case 'error':
-        dispatch({ type: 'checkError', message: outcome.message });
-        return;
-    }
-  }, [t]);
-
-  // Present an already-fetched "available" outcome directly, with no checking
-  // flash and no second IPC check. Respects an in-progress/ready download so a
-  // background download is never clobbered by a fresh available result.
-  const presentAvailableOutcome = useCallback((outcome: AvailableOutcome) => {
-    const current = stateRef.current;
-    if (current.status === 'downloading' || current.status === 'downloaded' || current.status === 'preparing-install') {
-      dispatch({ type: 'openRequested', source: 'about', userInitiated: true });
-      return;
-    }
-    dispatch({
-      type: 'checkAvailable',
-      currentVersion: outcome.currentVersion,
-      updateInfo: outcome.updateInfo,
-      releasePageUrl: outcome.releasePageUrl,
-      autoUpdateAvailable: outcome.autoUpdateAvailable,
-      autoUpdateInfo: outcome.autoUpdateInfo,
-    });
-  }, []);
-
-  const restoreDownloadedUpdate = useCallback(async () => {
-    try {
-      const res = await ipcBridge.autoUpdate.restoreDownloaded.invoke();
-      if (!res?.success || !res.data?.ready || !res.data.version) {
-        restoreDownloadedPendingRef.current = false;
-        const pendingAutoAvailable = pendingAutoAvailableRef.current;
-        pendingAutoAvailableRef.current = null;
-        if (pendingAutoAvailable) {
-          dispatchAutoAvailable(pendingAutoAvailable);
-        }
-        return;
-      }
-      pendingAutoAvailableRef.current = null;
-      dispatch({
-        type: 'autoDownloadedRestored',
-        version: res.data.version,
-        currentVersion: res.data.currentVersion || __APP_VERSION__,
-        releaseNotes: res.data.releaseNotes,
-        size: res.data.size,
-      });
-    } catch (error) {
-      console.warn('Restore downloaded auto-update error:', error);
-      const pendingAutoAvailable = pendingAutoAvailableRef.current;
-      pendingAutoAvailableRef.current = null;
-      if (pendingAutoAvailable) {
-        dispatchAutoAvailable(pendingAutoAvailable);
-      }
-    } finally {
-      restoreDownloadedPendingRef.current = false;
-    }
-  }, [dispatchAutoAvailable]);
-
-  useEffect(() => {
-    void restoreDownloadedUpdate();
-  }, [restoreDownloadedUpdate]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void ipcBridge.update.consumeInstallerLastFailure
-      .invoke()
-      .then((res) => {
-        if (cancelled || !res?.success || !res.data) return;
-        dispatch({ type: 'installerLastFailureConsumed', marker: res.data });
-      })
-      .catch((error) => {
-        console.warn('Consume installer last failure marker error:', error);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [dispatch]);
-
-  const openUpdateNotification = useCallback(
-    (source: UpdateNotificationOpenSource, userInitiated: boolean) => {
-      // Discontinued build: every manual entry point (tray / menu / IPC-open)
-      // opens the migration card instead of checking. Flag is compile-time, so
-      // this branch is stripped from normal builds.
-      if (IS_DISCONTINUED_BUILD) {
-        window.dispatchEvent(new CustomEvent(OPEN_MIGRATION_DIALOG_EVENT));
-        return;
-      }
-      const current = stateRef.current;
-      dispatch({ type: 'openRequested', source, userInitiated });
-      if (
-        current.status !== 'downloading' &&
-        current.status !== 'downloaded' &&
-        current.status !== 'preparing-install'
-      ) {
-        void checkForUpdates();
+  const errorText = useCallback(
+    (code?: string) => {
+      switch (code) {
+        case 'invalidRelease':
+          return t('update.installer.invalidRelease');
+        case 'verificationFailed':
+          return t('update.installer.verificationFailed');
+        case 'unverifiedInstaller':
+          return t('update.installer.unverifiedInstaller');
+        case 'openFailed':
+          return t('update.installer.openFailed');
+        case 'checkFailed':
+          return t('update.checkFailed');
+        default:
+          return t('update.downloadFailed');
       }
     },
-    [checkForUpdates]
+    [t]
   );
-
-  useEffect(() => {
-    const removeOpenListener = ipcBridge.update.open.on((evt) => {
-      openUpdateNotification(evt?.source ?? 'menu', true);
-    });
-    const handleWindowOpen = (evt: Event) => {
-      const source = (evt as CustomEvent<{ source?: UpdateNotificationOpenSource }>).detail?.source ?? 'about';
-      openUpdateNotification(source, true);
-    };
-    window.addEventListener('aionui-open-update-modal', handleWindowOpen);
-
-    // The About button runs its own check and only reveals the card when an
-    // update is actually available, handing over the already-fetched outcome.
-    const handleAvailable = (evt: Event) => {
-      const outcome = (evt as CustomEvent<AvailableOutcome>).detail;
-      if (outcome?.kind === 'available') {
-        presentAvailableOutcome(outcome);
+  const showOutcome = useCallback(
+    (outcome: CheckUpdateOutcome) => {
+      if (outcome.kind === 'error') {
+        dispatch({ type: 'checkError', message: errorText(outcome.message) });
+        return;
       }
-    };
-    window.addEventListener(UPDATE_AVAILABLE_EVENT, handleAvailable);
-
-    return () => {
-      removeOpenListener();
-      window.removeEventListener('aionui-open-update-modal', handleWindowOpen);
-      window.removeEventListener(UPDATE_AVAILABLE_EVENT, handleAvailable);
-    };
-  }, [openUpdateNotification, presentAvailableOutcome]);
-
-  useEffect(() => {
-    const removeListener = ipcBridge.autoUpdate.status.on((evt: AutoUpdateStatus) => {
-      if (!evt) return;
-
-      switch (evt.status) {
-        case 'available':
-          if (restoreDownloadedPendingRef.current) {
-            pendingAutoAvailableRef.current = evt;
-            break;
-          }
-          dispatchAutoAvailable(evt);
-          break;
-        case 'downloading': {
-          const progress = toAutoProgress(evt);
-          if (progress) {
-            dispatch({ type: 'autoProgress', progress });
-          }
-          break;
-        }
-        case 'downloaded':
-          dispatch({ type: 'autoDownloaded' });
-          break;
-        case 'preparing-install':
-          dispatch({ type: 'autoPreparingInstall', version: evt.version });
-          break;
-        case 'error':
-          dispatch({ type: 'autoError', message: evt.error || t('update.downloadFailed') });
-          break;
-        case 'checking':
-        case 'not-available':
-        case 'cancelled':
-          break;
-      }
-    });
-
-    return () => removeListener();
-  }, [dispatchAutoAvailable, t]);
-
-  useEffect(() => {
-    const removeProgressListener = ipcBridge.update.downloadProgress.on((evt: UpdateDownloadProgressEvent) => {
-      if (!evt) return;
-      dispatch({
-        type: 'manualProgress',
-        downloadId: evt.downloadId,
-        status: evt.status,
-        progress: toManualProgress(evt),
-        filePath: evt.file_path,
-        error: evt.error || t('update.downloadFailed'),
-      });
-    });
-
-    return () => removeProgressListener();
-  }, [t]);
-
-  const openReleasePage = useCallback(() => {
-    if (!state.releasePageUrl) return;
-    void ipcBridge.shell.openExternal.invoke(state.releasePageUrl).catch((error) => {
-      console.error('Failed to open release page:', error);
-    });
-  }, [state.releasePageUrl]);
-
-  const startAutoDownload = useCallback(async () => {
-    dispatch({ type: 'autoDownloadStarted' });
-    const res = await ipcBridge.autoUpdate.download.invoke();
-    if (!res?.success) {
-      dispatch({ type: 'autoError', message: res?.msg || t('update.downloadStartFailed') });
-    }
-  }, [t]);
-
-  const startManualInstallDownload = useCallback(async () => {
-    const asset = state.updateInfo?.recommendedAsset;
-    if (!asset) return;
-
-    const callerDownloadId = uuid();
-    dispatch({ type: 'manualDownloadStarted', downloadId: callerDownloadId });
-
-    const res = await ipcBridge.update.download.invoke({
-      downloadId: callerDownloadId,
-      url: asset.url,
-      fallbackUrl: asset.fallbackUrl,
-      file_name: asset.name,
-    });
-    if (!res?.success || !res.data) {
-      dispatch({ type: 'checkError', message: res?.msg || t('update.downloadStartFailed') });
-      return;
-    }
-    dispatch({
-      type: 'manualDownloadReady',
-      downloadId: res.data.downloadId,
-      filePath: res.data.file_path,
-    });
-  }, [state.updateInfo?.recommendedAsset, t]);
-
-  const startDownload = useCallback(() => {
-    if (state.autoUpdateAvailable) {
-      void startAutoDownload();
-      return;
-    }
-    void startManualInstallDownload();
-  }, [startAutoDownload, startManualInstallDownload, state.autoUpdateAvailable]);
-
-  const quitAndInstall = useCallback(() => {
-    const current = stateRef.current;
-    if (current.status === 'preparing-install') return;
-    if (current.downloadPath) {
-      void ipcBridge.shell.openFile.invoke(current.downloadPath);
-      return;
-    }
-    const version = getVersionLabelFromState(current);
-    dispatch({ type: 'autoPreparingInstall', version });
-    setUpdateReadyState({
-      ready: true,
-      version,
-      preparing: true,
-    });
-    void ipcBridge.autoUpdate.quitAndInstall.invoke().catch(() => {
-      if (stateRef.current.status !== 'preparing-install') return;
-      dispatch({
-        type: 'autoError',
-        message: t('update.errors.prepareInstallFailed'),
-      });
-    });
-  }, [dispatch, t]);
-
-  const openFile = useCallback(() => {
-    if (!state.downloadPath) return;
-    void ipcBridge.shell.openFile.invoke(state.downloadPath);
-  }, [state.downloadPath]);
-
-  const showInFolder = useCallback(() => {
-    if (!state.downloadPath) return;
-    void ipcBridge.shell.showItemInFolder.invoke(state.downloadPath);
-  }, [state.downloadPath]);
-
-  const viewInstallerLastFailureLog = useCallback(() => {
-    const logPath = state.installerLastFailure?.logPath;
-    if (!logPath) return;
-    void ipcBridge.shell.showItemInFolder.invoke(logPath);
-  }, [state.installerLastFailure?.logPath]);
-
-  const dismiss = useCallback((reason: 'later' | 'close') => {
-    dispatch({ type: 'dismissRequested', reason });
-  }, []);
-
-  const cancelTask = useCallback(async (task: UpdateNotificationActiveTask | null) => {
-    if (!task) return;
-    if (task.kind === 'manual') {
-      await ipcBridge.update.cancelDownload.invoke({ downloadId: task.id });
-      return;
-    }
-    await ipcBridge.autoUpdate.cancelDownload.invoke();
-  }, []);
-
-  const cancelDownload = useCallback(() => {
-    const task = stateRef.current.activeTask;
-    dispatch({ type: 'cancelDownloadRequested' });
-    void cancelTask(task).catch((error) => {
-      dispatch({
-        type: 'autoError',
-        message: error instanceof Error ? error.message : String(error),
-      });
-    });
-  }, [cancelTask]);
-
-  const minimize = useCallback(() => {
-    dispatch({ type: 'minimizeRequested' });
-  }, []);
-
-  const restore = useCallback(() => {
-    dispatch({ type: 'restoreRequested' });
-  }, []);
-
-  const versionLabel = useMemo(() => getVersionLabelFromState(state), [state]);
-  const showManualInstallFallback = Boolean(state.autoUpdateAvailable && state.updateInfo?.recommendedAsset);
-
-  useEffect(() => {
-    if ((state.status === 'downloaded' || state.status === 'preparing-install') && versionLabel) {
-      setUpdateReadyState({
-        ready: true,
-        version: versionLabel,
-        filePath: state.downloadPath || undefined,
-        preparing: state.status === 'preparing-install',
-      });
-      return;
-    }
-    if (state.status === 'available' || state.status === 'idle' || state.status === 'error') {
       setUpdateReadyState({
         ready: false,
-        version: '',
+        available: outcome.kind === 'available',
+        version: outcome.updateInfo?.version || '',
       });
+      dispatch({
+        type: outcome.kind === 'available' ? 'checkAvailable' : 'checkUpToDate',
+        currentVersion: outcome.currentVersion,
+        updateInfo: outcome.updateInfo,
+        releasePageUrl: outcome.releasePageUrl,
+        autoUpdateAvailable: false,
+        autoUpdateInfo: null,
+      });
+    },
+    [dispatch, errorText]
+  );
+  const checkForUpdates = useCallback(async () => {
+    if (checking.current || stateRef.current.status === 'downloading') return;
+    checking.current = true;
+    dispatch({ type: 'checkStarted' });
+    try {
+      showOutcome(
+        await runUpdateCheck({
+          includePrerelease: false,
+          fallbackVersion: __APP_VERSION__,
+          checkFailedLabel: 'checkFailed',
+        })
+      );
+    } finally {
+      checking.current = false;
     }
-  }, [state.downloadPath, state.status, versionLabel]);
+  }, [dispatch, showOutcome]);
 
+  useEffect(() => {
+    if (!isElectronDesktop()) return;
+    // Ignore legacy Squirrel readiness; only explicit installer actions are supported.
+    setUpdateReadyState({ ready: false, version: '' });
+    let disposed = false;
+    const timer = setTimeout(() => {
+      // Metadata only: startup failures and no-update results stay quiet.
+      void runUpdateCheck({
+        includePrerelease: false,
+        fallbackVersion: __APP_VERSION__,
+        checkFailedLabel: 'checkFailed',
+      }).then((outcome) => {
+        if (disposed || outcome.kind !== 'available') return;
+        setUpdateReadyState({ ready: false, available: true, version: outcome.updateInfo?.version || '' });
+      });
+    }, 3000);
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const open = (source: UpdateNotificationOpenSource = 'about') => {
+      const current = stateRef.current.status;
+      dispatch({ type: 'openRequested', source, userInitiated: true });
+      if (current !== 'downloading' && current !== 'downloaded') void checkForUpdates();
+    };
+    const remove = ipcBridge.update.open.on((event) => open(event?.source));
+    const onOpen = () => open();
+    const onAvailable = (event: Event) => {
+      if (['downloading', 'downloaded'].includes(stateRef.current.status)) {
+        open();
+        return;
+      }
+      const outcome = (event as CustomEvent<CheckUpdateOutcome>).detail;
+      if (outcome?.kind === 'available') showOutcome(outcome);
+    };
+    window.addEventListener('aionui-open-update-modal', onOpen);
+    window.addEventListener(UPDATE_AVAILABLE_EVENT, onAvailable);
+    return () => {
+      remove();
+      window.removeEventListener('aionui-open-update-modal', onOpen);
+      window.removeEventListener(UPDATE_AVAILABLE_EVENT, onAvailable);
+    };
+  }, [checkForUpdates, dispatch, showOutcome]);
+  useEffect(
+    () =>
+      ipcBridge.update.downloadProgress.on((event: UpdateDownloadProgressEvent) => {
+        dispatch({
+          type: 'manualProgress',
+          downloadId: event.downloadId,
+          status: event.status,
+          filePath: event.file_path,
+          error: errorText(event.error),
+          progress: {
+            percent: Math.round(event.percent ?? 0),
+            transferred: event.receivedBytes,
+            total: event.totalBytes ?? 0,
+            speed: `${formatUpdateSize(event.bytesPerSecond ?? 0)}/s`,
+          },
+        });
+      }),
+    [dispatch, errorText]
+  );
+
+  const startDownload = useCallback(async () => {
+    const asset = stateRef.current.updateInfo?.recommendedAsset;
+    if (!asset || cancellationPending.current || pendingDownload.current || stateRef.current.status === 'downloading')
+      return;
+    const id = uuid();
+    downloadId.current = id;
+    cancelled.current = undefined;
+    dispatch({ type: 'manualDownloadStarted', downloadId: id });
+    try {
+      const request = ipcBridge.update.download.invoke({
+        downloadId: id,
+        url: asset.url,
+        file_name: asset.name,
+      });
+      pendingDownload.current = request;
+      const response = await request;
+      if (!response.success || !response.data) {
+        dispatch({ type: 'checkError', message: errorText(response.msg) });
+        return;
+      }
+      downloadId.current = response.data.downloadId;
+      if (cancelled.current === id) return;
+      dispatch({
+        type: 'manualDownloadReady',
+        downloadId: response.data.downloadId,
+        filePath: response.data.file_path,
+      });
+    } catch {
+      dispatch({ type: 'checkError', message: errorText() });
+    } finally {
+      pendingDownload.current = undefined;
+    }
+  }, [dispatch, errorText]);
+  const cancelDownload = useCallback(async () => {
+    const id = downloadId.current;
+    if (!id || cancellationPending.current) return;
+    cancelled.current = id;
+    cancellationPending.current = true;
+    setCancelling(true);
+    try {
+      // Wait for the host's actual ID before cancelling; no retry may bind to the old transfer.
+      const started = await pendingDownload.current;
+      if (started && (!started.success || !started.data)) throw new Error('downloadFailed');
+      const response = await ipcBridge.update.cancelDownload.invoke({ downloadId: started?.data?.downloadId || id });
+      if (!response.success) throw new Error('downloadFailed');
+      dispatch({ type: 'cancelDownloadRequested' });
+    } catch {
+      dispatch({ type: 'checkError', message: errorText() });
+    } finally {
+      cancellationPending.current = false;
+      setCancelling(false);
+    }
+  }, [dispatch, errorText]);
+  const openFile = useCallback(async () => {
+    if (!downloadId.current || opening) return;
+    setOpening(true);
+    try {
+      const result = await ipcBridge.update.openInstaller.invoke({ downloadId: downloadId.current });
+      if (!result.success) dispatch({ type: 'checkError', message: errorText(result.msg) });
+    } catch {
+      dispatch({ type: 'checkError', message: errorText('openFailed') });
+    } finally {
+      setOpening(false);
+    }
+  }, [dispatch, errorText, opening]);
+  const openReleasePage = useCallback(() => {
+    if (stateRef.current.releasePageUrl) void ipcBridge.shell.openExternal.invoke(stateRef.current.releasePageUrl);
+  }, []);
   return {
     state,
-    versionLabel,
-    showManualInstallFallback,
+    opening,
+    cancelling,
+    versionLabel: state.updateInfo?.version || '',
+    showManualInstallFallback: false,
     actions: {
       checkForUpdates,
       openReleasePage,
-      startManualInstallDownload,
       startDownload,
-      quitAndInstall,
+      startManualInstallDownload: startDownload,
       openFile,
-      showInFolder,
-      viewInstallerLastFailureLog,
-      dismiss,
+      quitAndInstall: openFile,
+      showInFolder: () => {
+        if (state.downloadPath) void ipcBridge.shell.showItemInFolder.invoke(state.downloadPath);
+      },
+      viewInstallerLastFailureLog: () => {},
+      dismiss: (reason: 'later' | 'close') => dispatch({ type: 'dismissRequested', reason }),
       cancelDownload,
-      minimize,
-      restore,
+      minimize: () => dispatch({ type: 'minimizeRequested' }),
+      restore: () => dispatch({ type: 'restoreRequested' }),
     },
   };
 };

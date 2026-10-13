@@ -92,5 +92,17 @@
       "promise4": "Das Open-Source-Repository wird weiter gepflegt, die Kernfunktionen bleiben synchron, der Open-Source-Gedanke bleibt bestehen.",
       "noRush": "Wenn Sie noch warten möchten, funktioniert die aktuelle Version weiterhin wie gewohnt — sie erhält lediglich keine Updates mehr. Sobald Sie sich jedoch erstmals in der neuen Version angemeldet haben, sind Ihre lokalen Daten dorthin umgezogen; nutzen Sie dann bitte die neue Version als täglichen Zugang."
     }
+  },
+  "installer": {
+    "check": "Nach Updates suchen",
+    "open": "Installationsdatei öffnen",
+    "ready": "Installationsdatei geprüft. Öffnen Sie sie nach Abschluss Ihrer Arbeit für das manuelle Update. eLLMsha läuft weiter.",
+    "missingInstaller": "Für Ihr Betriebssystem und Ihre Architektur gibt es keine Installationsdatei.",
+    "missingChecksum": "Die Prüfsumme der Installationsdatei fehlt.",
+    "unsupportedPlatform": "Für diese Plattform gibt es keine Installationsdatei.",
+    "invalidRelease": "Ungültige Release-Daten. Bitte später erneut versuchen.",
+    "verificationFailed": "Prüfung fehlgeschlagen. Bitte erneut herunterladen.",
+    "unverifiedInstaller": "Keine geprüfte Installationsdatei verfügbar. Bitte erneut herunterladen.",
+    "openFailed": "Installationsdatei konnte nicht geöffnet werden. Bitte erneut versuchen."
   }
 }

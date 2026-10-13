@@ -1,649 +1,251 @@
-/**
- * @license
- * Copyright 2026 AionUi (aionui.com)
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  AutoUpdateStatus,
-  InstallerLastFailureMarker,
-  UpdateDownloadProgressEvent,
-  UpdateDownloadRequest,
-} from '@/common/update/updateTypes';
-
+import type { UpdateDownloadProgressEvent } from '@/common/update/updateTypes';
 const mocks = vi.hoisted(() => ({
-  manualProgressHandler: null as ((evt: UpdateDownloadProgressEvent) => void) | null,
-  autoStatusHandler: null as ((evt: AutoUpdateStatus) => void) | null,
-  updateOpenHandler: null as ((evt: { source?: 'menu' | 'about' | 'tray' }) => void) | null,
-  autoUpdateCheckMock: vi.fn(),
-  autoUpdateRestoreDownloadedMock: vi.fn(),
-  autoUpdateDownloadMock: vi.fn(),
-  autoUpdateCancelDownloadMock: vi.fn(),
-  autoUpdateQuitAndInstallMock: vi.fn(),
-  consumeInstallerLastFailureMock: vi.fn(),
-  updateCheckMock: vi.fn(),
-  updateDownloadMock: vi.fn(),
-  updateCancelDownloadMock: vi.fn(),
-  openFeedbackMock: vi.fn(),
-  shellOpenExternalMock: vi.fn(),
-  shellOpenFileMock: vi.fn(),
-  shellShowItemInFolderMock: vi.fn(),
+  check: vi.fn(),
+  download: vi.fn(),
+  cancel: vi.fn(),
+  open: vi.fn(),
+  auto: vi.fn(),
+  shellOpen: vi.fn(),
+  progress: null as ((event: UpdateDownloadProgressEvent) => void) | null,
 }));
-
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
-
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/renderer/components/Markdown', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-
-vi.mock('@/renderer/hooks/context/FeedbackContext', () => ({
-  useFeedback: () => ({ openFeedback: mocks.openFeedbackMock }),
-}));
-
+vi.mock('@/renderer/hooks/context/FeedbackContext', () => ({ useFeedback: () => ({ openFeedback: vi.fn() }) }));
+vi.mock('@/renderer/utils/platform', () => ({ isElectronDesktop: () => true }));
 vi.mock('@/common', () => ({
   ipcBridge: {
-    autoUpdate: {
-      check: { invoke: mocks.autoUpdateCheckMock },
-      restoreDownloaded: { invoke: mocks.autoUpdateRestoreDownloadedMock },
-      download: { invoke: mocks.autoUpdateDownloadMock },
-      cancelDownload: { invoke: mocks.autoUpdateCancelDownloadMock },
-      quitAndInstall: { invoke: mocks.autoUpdateQuitAndInstallMock },
-      status: {
-        on: vi.fn((handler: (evt: AutoUpdateStatus) => void) => {
-          mocks.autoStatusHandler = handler;
-          return vi.fn();
-        }),
+    update: {
+      check: { invoke: mocks.check },
+      download: { invoke: mocks.download },
+      cancelDownload: { invoke: mocks.cancel },
+      openInstaller: { invoke: mocks.open },
+      open: { on: () => () => {} },
+      downloadProgress: {
+        on: (fn: (event: UpdateDownloadProgressEvent) => void) => {
+          mocks.progress = fn;
+          return () => {};
+        },
       },
     },
-    update: {
-      check: { invoke: mocks.updateCheckMock },
-      consumeInstallerLastFailure: { invoke: mocks.consumeInstallerLastFailureMock },
-      download: { invoke: mocks.updateDownloadMock },
-      cancelDownload: { invoke: mocks.updateCancelDownloadMock },
-      downloadProgress: {
-        on: vi.fn((handler: (evt: UpdateDownloadProgressEvent) => void) => {
-          mocks.manualProgressHandler = handler;
-          return vi.fn();
-        }),
-      },
-      open: {
-        on: vi.fn((handler: (evt: { source?: 'menu' | 'about' | 'tray' }) => void) => {
-          mocks.updateOpenHandler = handler;
-          return vi.fn();
-        }),
-      },
+    autoUpdate: {
+      check: { invoke: mocks.auto },
+      download: { invoke: mocks.auto },
+      quitAndInstall: { invoke: mocks.auto },
+      restoreDownloaded: { invoke: mocks.auto },
     },
     shell: {
-      openExternal: { invoke: mocks.shellOpenExternalMock },
-      openFile: { invoke: mocks.shellOpenFileMock },
-      showItemInFolder: { invoke: mocks.shellShowItemInFolderMock },
+      openExternal: { invoke: vi.fn() },
+      openFile: { invoke: mocks.shellOpen },
+      showItemInFolder: { invoke: vi.fn() },
     },
   },
 }));
-
+import { getUpdateReadyState } from '@/renderer/components/settings/updateReadyState';
 import UpdateNotificationCard from '@/renderer/components/settings/UpdateNotificationCard';
-
-describe('UpdateNotificationCard', () => {
-  beforeEach(() => {
-    vi.stubGlobal('__APP_VERSION__', '2.1.15');
-    mocks.manualProgressHandler = null;
-    mocks.autoStatusHandler = null;
-    mocks.updateOpenHandler = null;
-    mocks.autoUpdateCheckMock.mockResolvedValue({ success: true });
-    mocks.autoUpdateRestoreDownloadedMock.mockResolvedValue({ success: true, data: { ready: false } });
-    mocks.autoUpdateDownloadMock.mockResolvedValue({ success: true });
-    mocks.autoUpdateCancelDownloadMock.mockResolvedValue({ success: true });
-    mocks.autoUpdateQuitAndInstallMock.mockResolvedValue(undefined);
-    mocks.consumeInstallerLastFailureMock.mockResolvedValue({ success: true, data: null });
-    mocks.updateCancelDownloadMock.mockResolvedValue({ success: true });
-    mocks.updateCheckMock.mockResolvedValue({
-      success: true,
-      data: {
-        currentVersion: '2.1.13',
-        updateAvailable: true,
-        latest: {
-          tagName: 'v2.1.14',
-          version: '2.1.14',
-          name: 'v2.1.14',
-          body: 'notes',
-          htmlUrl: 'https://github.com/iOfficeAI/AionUi/releases/tag/v2.1.14',
-          prerelease: false,
-          draft: false,
-          assets: [],
-          recommendedAsset: {
-            name: 'AionUi-2.1.14-mac-arm64.dmg',
-            url: 'https://static.aionui.com/releases/2.1.14/AionUi-2.1.14-mac-arm64.dmg',
-            fallbackUrl: 'https://github.com/iOfficeAI/AionUi/releases/download/v2.1.14/AionUi-2.1.14-mac-arm64.dmg',
-            size: 123,
-          },
-        },
-      },
-    });
-    mocks.updateDownloadMock.mockImplementation(async (request: UpdateDownloadRequest) => ({
-      success: true,
-      data: {
-        downloadId: request.downloadId ?? 'manual-download',
-        file_path: '/tmp/AionUi-2.1.14-mac-arm64.dmg',
-      },
-    }));
-  });
-
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-    vi.unstubAllGlobals();
-  });
-
-  it('renders a bottom-right notification card for auto-update availability without a dialog', async () => {
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
+const latest = {
+  tagName: 'v2026.10.13-patch.10',
+  version: '2026.10.13-patch.10',
+  body: 'Owned release notes',
+  htmlUrl: 'https://github.com/ShiftHackZ/ellmsha/releases/tag/v2026.10.13-patch.10',
+  assets: [],
+  recommendedAsset: {
+    name: 'eLLMsha-2026.10.13-patch.10-mac-arm64.dmg',
+    url: 'https://github.com/ShiftHackZ/ellmsha/releases/download/v2026.10.13-patch.10/eLLMsha-2026.10.13-patch.10-mac-arm64.dmg',
+    size: 100,
+  },
+  draft: false,
+  prerelease: false,
+};
+const result = (override = {}) => ({
+  success: true,
+  data: { currentVersion: '2026.10.13-patch.9', updateAvailable: true, latest: { ...latest, ...override } },
+});
+const openCard = async () => {
+  render(<UpdateNotificationCard />);
+  act(() => window.dispatchEvent(new Event('aionui-open-update-modal')));
+  await screen.findByText('update.downloadButton');
+};
+const progress = (status: UpdateDownloadProgressEvent['status'], extra = {}) =>
+  act(() =>
+    mocks.progress?.({
+      downloadId: mocks.download.mock.calls[0][0].downloadId,
+      status,
+      receivedBytes: 50,
+      totalBytes: 100,
+      percent: 50,
+      ...extra,
+    })
+  );
+beforeEach(() => {
+  vi.stubGlobal('__APP_VERSION__', '2026.10.13-patch.9');
+  vi.clearAllMocks();
+  mocks.check.mockResolvedValue(result());
+  mocks.download.mockImplementation(async (p) => ({
+    success: true,
+    data: { downloadId: p.downloadId, file_path: '/owned/installer.dmg' },
+  }));
+  mocks.cancel.mockResolvedValue({ success: true });
+  mocks.open.mockResolvedValue({ success: true });
+});
+afterEach(() => {
+  cleanup();
+  document.body.removeAttribute('arco-theme');
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+describe('full installer notification', () => {
+  it.each(['available', 'up-to-date', 'failed'])('checks metadata quietly at startup: %s', async (outcome) => {
+    vi.useFakeTimers();
+    if (outcome === 'up-to-date')
+      mocks.check.mockResolvedValue({
+        success: true,
+        data: { currentVersion: '2026.10.13-patch.9', updateAvailable: false },
       });
-    });
-
-    const card = await screen.findByTestId('update-notification-card');
-    expect(card).toHaveClass('fixed');
-    expect(card).toHaveClass('right-24px');
-    expect(card).toHaveClass('bottom-24px');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(mocks.updateCheckMock).toHaveBeenCalled();
-    });
-
-    // Release notes moved to a centered modal opened via the Release Log link.
-    expect(screen.queryByText('notes')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('update.releaseLog'));
-    expect(await screen.findByText('notes')).toBeInTheDocument();
-  });
-
-  it('restores a cached completed auto-update on mount', async () => {
-    mocks.autoUpdateRestoreDownloadedMock.mockResolvedValue({
-      success: true,
-      data: {
-        ready: true,
-        version: '2.1.14',
-        filePath: '/cache/pending/AionUi-2.1.14-mac.zip',
-      },
-    });
-
+    if (outcome === 'failed') mocks.check.mockRejectedValue(new Error('owned network failure'));
     render(<UpdateNotificationCard />);
-
-    expect(await screen.findByTestId('update-notification-card')).toBeInTheDocument();
-    // Downloaded state shows the "download complete" label + restart button (no progress bar).
-    expect(screen.getByText('update.downloadCompleteTitle')).toBeInTheDocument();
-    expect(screen.getByText('update.restartNow')).toBeInTheDocument();
-    expect(mocks.updateCheckMock).not.toHaveBeenCalled();
-
+    expect(mocks.check).not.toHaveBeenCalled();
     await act(async () => {
-      mocks.updateOpenHandler?.({ source: 'menu' });
+      await vi.advanceTimersByTimeAsync(3000);
     });
-
-    expect(screen.getByText('update.restartNow')).toBeInTheDocument();
-    expect(mocks.autoUpdateCheckMock).not.toHaveBeenCalled();
-    expect(mocks.updateCheckMock).not.toHaveBeenCalled();
+    expect(mocks.check).toHaveBeenCalledOnce();
+    expect(Boolean(getUpdateReadyState().available)).toBe(outcome === 'available');
+    expect(screen.queryByTestId('update-notification-card')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(mocks.download).not.toHaveBeenCalled();
+    expect(mocks.open).not.toHaveBeenCalled();
+    expect(mocks.auto).not.toHaveBeenCalled();
   });
-
-  it('keeps a restored auto-update ready when opened before effects flush', async () => {
-    let resolveRestore!: (value: { success: boolean; data: { ready: boolean; version: string } }) => void;
-    mocks.autoUpdateRestoreDownloadedMock.mockImplementation(
+  it.each(['light', 'dark'])(
+    'renders the themed release controls in %s without an auto-updater call',
+    async (theme) => {
+      document.body.setAttribute('arco-theme', theme);
+      await openCard();
+      expect(screen.getByRole('button', { name: 'update.downloadButton' })).toHaveClass('!rounded-8px');
+      expect(mocks.auto).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByText('update.releaseLog'));
+      expect(await screen.findByText('Owned release notes')).toBeInTheDocument();
+    }
+  );
+  it('keeps progress on reopen, supports minimize/restore and cancellation', async () => {
+    await openCard();
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledOnce());
+    progress('downloading');
+    fireEvent.click(screen.getByLabelText('update.minimize'));
+    expect(screen.getByTestId('update-notification-mini-progress')).toHaveTextContent('50%');
+    fireEvent.click(screen.getByLabelText('update.restoreUpdateNotification'));
+    act(() => window.dispatchEvent(new Event('aionui-open-update-modal')));
+    expect(mocks.check).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByLabelText('update.cancel'));
+    await waitFor(() => expect(mocks.cancel).toHaveBeenCalledOnce());
+  });
+  it('holds retry until the original download ID and cancellation acknowledgment settle', async () => {
+    let resolveDownload!: (value: unknown) => void;
+    let resolveCancel!: (value: unknown) => void;
+    mocks.download.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          resolveRestore = resolve;
+          resolveDownload = resolve;
         })
     );
-
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.updateOpenHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      resolveRestore({
-        success: true,
-        data: {
-          ready: true,
-          version: '2.1.14',
-        },
-      });
-      await Promise.resolve();
-      mocks.updateOpenHandler?.({ source: 'menu' });
-    });
-
-    expect(await screen.findByText('update.restartNow')).toBeInTheDocument();
-    expect(mocks.autoUpdateCheckMock).not.toHaveBeenCalled();
-    expect(mocks.updateCheckMock).not.toHaveBeenCalled();
-  });
-
-  it('does not flash the initial available state while cached restore is pending', async () => {
-    let resolveRestore!: (value: { success: boolean; data: { ready: boolean; version: string } }) => void;
-    mocks.autoUpdateRestoreDownloadedMock.mockImplementation(
+    mocks.cancel.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          resolveRestore = resolve;
+          resolveCancel = resolve;
         })
     );
-
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
-      });
-    });
-
-    expect(screen.queryByTestId('update-notification-card')).not.toBeInTheDocument();
-    expect(mocks.updateCheckMock).not.toHaveBeenCalled();
-
-    await act(async () => {
-      resolveRestore({
+    await openCard();
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    fireEvent.click(screen.getByLabelText('update.cancel'));
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    await act(async () =>
+      resolveDownload({
         success: true,
-        data: {
-          ready: true,
-          version: '2.1.14',
-        },
-      });
-    });
-
-    expect(await screen.findByText('update.downloadCompleteTitle')).toBeInTheDocument();
-    expect(screen.getByText('update.restartNow')).toBeInTheDocument();
-    expect(screen.queryByText('update.downloadButton')).not.toBeInTheDocument();
-  });
-
-  it('keeps the download progress bar stable when update entry points are opened again', async () => {
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-      expect(mocks.updateOpenHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.downloadButton'));
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'downloading',
-        progress: {
-          bytesPerSecond: 524288,
-          percent: 42,
-          transferred: 1048576,
-          total: 4194304,
-        },
-      });
-    });
-
-    const progressBar = await screen.findByRole('progressbar');
-    expect(progressBar).toHaveAttribute('aria-valuenow', '42');
-    expect(screen.getByText('42%')).toBeInTheDocument();
-    expect(screen.getByText('1.0 MB / 4.0 MB')).toBeInTheDocument();
-    expect(screen.getByText('512.0 KB/s')).toBeInTheDocument();
-
-    await act(async () => {
-      mocks.updateOpenHandler?.({ source: 'menu' });
-    });
-
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
-    expect(screen.getByText('42%')).toBeInTheDocument();
-    expect(mocks.autoUpdateCheckMock).not.toHaveBeenCalled();
-  });
-
-  it('renders the initial available state without a top-right close button or manual install action', async () => {
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
-      });
-    });
-
-    const card = await screen.findByTestId('update-notification-card');
-    expect(card).toHaveTextContent('2.1.13');
-    expect(card).toHaveTextContent('2.1.14');
-    expect(screen.queryByLabelText('common.close')).not.toBeInTheDocument();
-    expect(screen.queryByText('update.manualInstall')).not.toBeInTheDocument();
-    expect(screen.getByText('update.later')).toBeInTheDocument();
-    expect(screen.getByText('update.downloadButton')).toBeInTheDocument();
-  });
-
-  it('shows release-note loading and failure states instead of empty notes', async () => {
-    mocks.updateCheckMock.mockImplementation(() => new Promise(() => undefined));
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.releaseLog'));
-    expect(await screen.findByText('update.releaseNotesLoading')).toBeInTheDocument();
-
-    cleanup();
-    mocks.updateCheckMock.mockRejectedValue(new Error('network failed'));
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.releaseLog'));
-    expect(await screen.findByText('update.releaseNotesFailed')).toBeInTheDocument();
-    expect(screen.getByText('update.viewRelease')).toBeInTheDocument();
-  });
-
-  it('keeps the cancel action available while downloading and cancel restores the initial state', async () => {
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.downloadButton'));
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'downloading',
-        progress: {
-          bytesPerSecond: 1048576,
-          percent: 18,
-          transferred: 1048576,
-          total: 4194304,
-        },
-      });
-    });
-
-    // Downloading hides text buttons while keeping the header actions available.
-    expect(screen.queryByText('update.later')).not.toBeInTheDocument();
-    expect(screen.queryByText('update.cancel')).not.toBeInTheDocument();
-    expect(screen.queryByText('update.minimize')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'update.minimize' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'update.cancel' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'update.cancel' }));
-
-    await waitFor(() => {
-      expect(mocks.autoUpdateCancelDownloadMock).toHaveBeenCalled();
-    });
-    expect(await screen.findByText('update.downloadButton')).toBeInTheDocument();
-    expect(screen.getByText('update.later')).toBeInTheDocument();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-  });
-
-  it('minimizes an active download without cancelling and restores its progress', async () => {
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.downloadButton'));
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'downloading',
-        progress: {
-          bytesPerSecond: 1048576,
-          percent: 18,
-          transferred: 1048576,
-          total: 4194304,
-        },
-      });
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'update.minimize' }));
-
-    const miniProgress = await screen.findByTestId('update-notification-mini-progress');
-    expect(miniProgress).toHaveTextContent('18%');
-    expect(mocks.autoUpdateCancelDownloadMock).not.toHaveBeenCalled();
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'downloading',
-        progress: {
-          bytesPerSecond: 2097152,
-          percent: 42,
-          transferred: 2097152,
-          total: 4194304,
-        },
-      });
-    });
-
-    expect(miniProgress).toHaveTextContent('42%');
-
-    fireEvent.click(miniProgress);
-
-    expect(await screen.findByTestId('update-notification-card')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
-  });
-
-  it('shows restart guidance text and later/restart actions after download completes', async () => {
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.downloadButton'));
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'downloading',
-        progress: {
-          bytesPerSecond: 1048576,
-          percent: 64,
-          transferred: 1048576,
-          total: 4194304,
-        },
-      });
-      mocks.autoStatusHandler?.({
-        status: 'downloaded',
-        version: '2.1.14',
-      });
-    });
-
-    expect(await screen.findByText('update.downloadCompleteTitle')).toBeInTheDocument();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(screen.getByText('update.later')).toBeInTheDocument();
-    expect(screen.getByText('update.restartNow')).toBeInTheDocument();
-  });
-
-  it('shows preparing install loading state after restart is clicked and hides later action', async () => {
-    let resolveInstall!: () => void;
-    mocks.autoUpdateQuitAndInstallMock.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveInstall = resolve;
-        })
+        data: { downloadId: mocks.download.mock.calls[0][0].downloadId, file_path: '/owned/installer.dmg' },
+      })
     );
-
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.autoStatusHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'available',
-        version: '2.1.14',
-        currentVersion: '2.1.13',
-        releaseNotes: 'auto notes',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.downloadButton'));
-
-    await act(async () => {
-      mocks.autoStatusHandler?.({
-        status: 'downloading',
-        progress: {
-          bytesPerSecond: 1048576,
-          percent: 100,
-          transferred: 4194304,
-          total: 4194304,
-        },
-      });
-      mocks.autoStatusHandler?.({
-        status: 'downloaded',
-        version: '2.1.14',
-      });
-    });
-
-    fireEvent.click(await screen.findByText('update.restartNow'));
-
-    expect(await screen.findByText('update.preparingInstall')).toBeInTheDocument();
-    expect(screen.getByText('update.downloadCompleteTitle')).toBeInTheDocument();
-    expect(screen.queryByText('update.later')).not.toBeInTheDocument();
-    expect(mocks.autoUpdateQuitAndInstallMock).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'update.preparingInstall' }));
-    expect(mocks.autoUpdateQuitAndInstallMock).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      resolveInstall();
-    });
+    expect(mocks.cancel).toHaveBeenCalledOnce();
+    progress('cancelled');
+    expect(screen.getByRole('button', { name: 'update.downloadButton' })).toBeDisabled();
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    expect(mocks.download).toHaveBeenCalledOnce();
+    await act(async () => resolveCancel({ success: true }));
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledTimes(2));
   });
-
-  it('does not render a close button in the error state', async () => {
-    mocks.updateCheckMock.mockRejectedValue(new Error('network failed'));
-    render(<UpdateNotificationCard />);
-
-    await waitFor(() => {
-      expect(mocks.updateOpenHandler).toBeTruthy();
-    });
-
-    await act(async () => {
-      mocks.updateOpenHandler?.({ source: 'menu' });
-    });
-
-    expect(await screen.findByText('network failed')).toBeInTheDocument();
-    expect(screen.queryByLabelText('common.close')).not.toBeInTheDocument();
+  it('reports a failed cancellation instead of claiming it succeeded', async () => {
+    mocks.cancel.mockResolvedValue({ success: false, msg: 'downloadFailed' });
+    await openCard();
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByLabelText('update.cancel'));
+    expect(await screen.findByText('update.downloadFailed')).toBeInTheDocument();
   });
-
-  it('shows consumed silent installer failure marker with retry, log, and feedback actions', async () => {
-    const marker: InstallerLastFailureMarker = {
-      schemaVersion: 1,
-      kind: 'app-cannot-be-closed',
-      phase: 'customCheckAppRunning',
-      silent: true,
-      updated: true,
-      retryCount: 3,
-      instDir: 'D:\\AionUi',
-      logPath: 'C:\\Users\\me\\AppData\\Local\\Temp\\aionui-installer-2.1.27-20260702-151830-ab12cd34ef56.log',
-      at: '2026-07-01T00:00:00.000Z',
-    };
-    mocks.consumeInstallerLastFailureMock.mockResolvedValue({ success: true, data: marker });
-
+  it('opens the verified download by ID and never calls shell paths or quit-and-install', async () => {
+    await openCard();
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledOnce());
+    progress('completed', { file_path: '/owned/installer.dmg', percent: 100 });
+    expect(screen.getByText('update.installer.ready')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('update.installer.open'));
+    await waitFor(() =>
+      expect(mocks.open).toHaveBeenCalledWith({ downloadId: mocks.download.mock.calls[0][0].downloadId })
+    );
+    expect(mocks.auto).not.toHaveBeenCalled();
+    expect(mocks.shellOpen).not.toHaveBeenCalled();
+  });
+  it('keeps unavailable installer distinct from up to date', async () => {
+    mocks.check.mockResolvedValue(result({ recommendedAsset: undefined, installUnavailable: 'missingChecksum' }));
+    await openCard();
+    expect(screen.getByText('update.installer.missingChecksum')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'update.downloadButton' })).toBeDisabled();
+    expect(screen.queryByText('update.upToDateTitle')).toBeNull();
+  });
+  it('shows verification failure and retries the release check', async () => {
+    await openCard();
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledOnce());
+    progress('error', { error: 'verificationFailed' });
+    expect(screen.getByText('update.installer.verificationFailed')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('common.retry'));
+    await waitFor(() => expect(mocks.check).toHaveBeenCalledTimes(2));
+  });
+  it('waits for installer-open response and surfaces its error', async () => {
+    let finish!: (result: { success: boolean; msg: string }) => void;
+    mocks.open.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
+    await openCard();
+    fireEvent.click(screen.getByText('update.downloadButton'));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledOnce());
+    progress('completed');
+    fireEvent.click(screen.getByText('update.installer.open'));
+    expect(screen.getByRole('button', { name: 'update.installer.open' })).toBeDisabled();
+    await act(async () => finish({ success: false, msg: 'openFailed' }));
+    expect(screen.getByText('update.installer.openFailed')).toBeInTheDocument();
+  });
+  it('checks once under repeated clicks and reports network failure truthfully', async () => {
+    let finish!: (result: { success: boolean; msg: string }) => void;
+    mocks.check.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     render(<UpdateNotificationCard />);
-
-    expect(await screen.findByText('update.installerLastFailure.title')).toBeInTheDocument();
-    expect(screen.getByText('update.installerLastFailure.description')).toBeInTheDocument();
-    expect(screen.getByText('update.installerLastFailure.retryUpdate')).toBeInTheDocument();
-    expect(screen.getByText('update.installerLastFailure.viewLog')).toBeInTheDocument();
-    expect(screen.getByText('settings.oneClickFeedback')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('update.installerLastFailure.viewLog'));
-    await waitFor(() => {
-      expect(mocks.shellShowItemInFolderMock).toHaveBeenCalledWith(marker.logPath);
+    act(() => {
+      window.dispatchEvent(new Event('aionui-open-update-modal'));
+      window.dispatchEvent(new Event('aionui-open-update-modal'));
     });
-
-    fireEvent.click(screen.getByText('settings.oneClickFeedback'));
-    await waitFor(() => {
-      expect(mocks.openFeedbackMock).toHaveBeenCalledWith({
-        module: 'installer-update',
-        autoScreenshot: true,
-        tags: {
-          kind: 'app-cannot-be-closed',
-          message: 'installer-last-failure',
-        },
-        extra: {
-          installerLastFailure: marker,
-        },
-      });
-    });
-
-    fireEvent.click(screen.getByText('update.installerLastFailure.retryUpdate'));
-    await waitFor(() => {
-      expect(mocks.autoUpdateCheckMock).toHaveBeenCalled();
-    });
+    expect(screen.getByRole('status')).toHaveTextContent('update.checking');
+    expect(mocks.check).toHaveBeenCalledOnce();
+    await act(async () => finish({ success: false, msg: 'checkFailed' }));
+    expect(screen.getByText('update.checkFailed')).toBeInTheDocument();
   });
 });

@@ -8,6 +8,8 @@ export const UPDATE_READY_STATE_EVENT = 'aionui-update-ready-state-changed';
 
 export type UpdateReadyState = {
   ready: boolean;
+  /** Metadata-only release detection; no installer has been downloaded. */
+  available?: boolean;
   version: string;
   filePath?: string;
   preparing?: boolean;

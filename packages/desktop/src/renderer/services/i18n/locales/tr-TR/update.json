@@ -92,5 +92,17 @@
       "promise4": "Açık kaynak deposu aktif olarak güncellenmeye devam eder, çekirdek özellikler eşzamanlı kalır, açık kaynak ruhu sürer.",
       "noRush": "Şimdilik geçmek istemiyorsanız mevcut sürümü normal şekilde kullanmaya devam edebilirsiniz; yalnızca artık güncelleme almayacaktır. Ancak yeni sürümde ilk oturumu açtığınız anda yerel verileriniz oraya taşınmış olur; bundan sonra günlük kullanımınız için yeni sürümü giriş noktası olarak kullanın."
     }
+  },
+  "installer": {
+    "check": "Güncellemeleri denetle",
+    "open": "Yükleyiciyi aç",
+    "ready": "Yükleyici doğrulandı. İşiniz bitince açıp elle güncelleyin. eLLMsha çalışmaya devam eder.",
+    "missingInstaller": "Bu sürümde sisteminiz ve mimariniz için yükleyici yok.",
+    "missingChecksum": "Yükleyicinin sağlama toplamı eksik.",
+    "unsupportedPlatform": "Bu platform için yükleyici yok.",
+    "invalidRelease": "Sürüm bilgileri geçersiz. Daha sonra tekrar deneyin.",
+    "verificationFailed": "Yükleyici doğrulanamadı. Yeniden indirin.",
+    "unverifiedInstaller": "Doğrulanmış yükleyici yok. Yeniden indirin.",
+    "openFailed": "Yükleyici açılamadı. Tekrar deneyin."
   }
 }

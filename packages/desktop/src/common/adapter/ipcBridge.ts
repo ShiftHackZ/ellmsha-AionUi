@@ -636,7 +636,7 @@ export const application = {
 };
 
 // ---------------------------------------------------------------------------
-// Update — stays IPC (Electron-native auto-updater)
+// Update — stays IPC (verified full installer downloads, no application shutdown)
 // ---------------------------------------------------------------------------
 
 export const update = {
@@ -647,6 +647,7 @@ export const update = {
   ),
   download: bridge.buildProvider<IBridgeResponse<UpdateDownloadResult>, UpdateDownloadRequest>('update.download'),
   cancelDownload: bridge.buildProvider<IBridgeResponse, UpdateDownloadCancelRequest>('update.download.cancel'),
+  openInstaller: bridge.buildProvider<IBridgeResponse, { downloadId: string }>('update.installer.open'),
   downloadProgress: bridge.buildEmitter<UpdateDownloadProgressEvent>('update.download.progress'),
 };
 
