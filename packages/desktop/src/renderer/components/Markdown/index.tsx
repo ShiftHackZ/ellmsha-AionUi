@@ -105,7 +105,7 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               <Button
                 type='text'
                 size='mini'
-                className='!h-auto !leading-normal !align-baseline !rd-6px'
+                className='markdown-local-file-link'
                 onClick={() => void onMemoryArtifact(artifactPath)}
               >
                 <code>{text}</code>
@@ -129,7 +129,7 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               <Button
                 type='text'
                 size='mini'
-                className='!h-auto !leading-normal !align-baseline !rd-6px'
+                className='markdown-local-file-link'
                 disabled={!onMemoryArtifact}
                 title={artifactPath}
                 onClick={() => void onMemoryArtifact?.(artifactPath)}

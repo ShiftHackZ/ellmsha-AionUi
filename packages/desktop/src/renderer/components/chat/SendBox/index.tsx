@@ -10,7 +10,11 @@ import BtwOverlay from '@/renderer/components/chat/BtwOverlay';
 import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
 import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
 import { useBtwCommand } from '@/renderer/components/chat/BtwOverlay/useBtwCommand';
-import { getFuzzyMatchIndices, useSlashCommandController } from '@/renderer/hooks/chat/useSlashCommandController';
+import {
+  getFuzzyMatchIndices,
+  getSkillTokenRanges,
+  useSlashCommandController,
+} from '@/renderer/hooks/chat/useSlashCommandController';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { appendPromptToDraft, useConversationSendBoxPrefill } from '@/renderer/hooks/chat/useSendBoxDraft';
@@ -247,7 +251,7 @@ const SendBox: React.FC<{
   const [historyNavigationIndex, setHistoryNavigationIndex] = useState<number | null>(null);
   const historyDraftRef = useRef<string | null>(null);
   const [replyQuote, setReplyQuote] = useState<ReplyQuote | null>(null);
-  const [caretPosition, setCaretPosition] = useState(0);
+  const [caretPosition, setCaretPosition] = useState(input.length);
   const [prefillFocusRequest, setPrefillFocusRequest] = useState<{
     requestId: number;
     expectedValue: string;
@@ -498,6 +502,7 @@ const SendBox: React.FC<{
 
   const slashController = useSlashCommandController({
     input,
+    caretPosition,
     commands: mergedSlashCommands,
     onExecuteBuiltin: (name) => {
       if (name === 'copy') {
@@ -518,10 +523,15 @@ const SendBox: React.FC<{
       } else {
         onSlashBuiltinCommand?.(name);
       }
-      setInput('');
     },
-    onSelectTemplate: (name) => {
-      setInput(`/${name} `);
+    onReplaceInput: (value, caret) => {
+      setInput(value);
+      setCaretPosition(caret);
+      requestAnimationFrame(() => {
+        const textarea = containerRef.current?.querySelector('textarea');
+        textarea?.focus();
+        textarea?.setSelectionRange(caret, caret);
+      });
     },
   });
 
@@ -653,7 +663,7 @@ const SendBox: React.FC<{
     syncHighlightTextMetrics();
   }, [input, isInputFocused, isMobile, isSingleLine, syncHighlightTextMetrics]);
 
-  const handleTextAreaChange = (value: string) => {
+  const handleTextAreaChange = (value: string, event: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (historyNavigationIndex !== null) {
       historyDraftRef.current = null;
       setHistoryNavigationIndex(null);
@@ -661,6 +671,8 @@ const SendBox: React.FC<{
     if (conversationExport.isOpen && value) {
       conversationExport.closeExportFlow();
     }
+    syncCaretPosition(event.target);
+    slashController.setDismissed(false);
     setInput(value);
     requestAnimationFrame(() => {
       syncCaretPosition();
@@ -1040,8 +1052,10 @@ const SendBox: React.FC<{
     }
     mobileUserFocusIntentUntilRef.current = 0;
     handlePasteFocus();
+    syncCaretPosition();
+    slashController.setDismissed(false);
     setIsInputFocused(true);
-  }, [handlePasteFocus, isMobile]);
+  }, [handlePasteFocus, isMobile, slashController.setDismissed, syncCaretPosition]);
   const handleInputBlur = useCallback(() => {
     setIsInputFocused(false);
   }, []);
@@ -1351,7 +1365,19 @@ const SendBox: React.FC<{
     return sendButton;
   };
 
-  const shouldUseHighlightOverlay = !isComposingState && allAtFileQueries.length > 0;
+  const highlightedTokens = useMemo(
+    () =>
+      [
+        ...allAtFileQueries.map(({ start, end, query }) => ({ start, end, query, kind: 'mention' })),
+        ...getSkillTokenRanges(input, loadedSkills)
+          .filter(
+            (token) => !allAtFileQueries.some((mention) => token.start < mention.end && token.end > mention.start)
+          )
+          .map(({ start, end, query }) => ({ start, end, query, kind: 'skill' })),
+      ].sort((left, right) => left.start - right.start),
+    [allAtFileQueries, input, loadedSkills]
+  );
+  const shouldUseHighlightOverlay = !isComposingState && highlightedTokens.length > 0;
 
   const mobilePlusButton = isMobileCompact ? (
     <Button
@@ -1385,7 +1411,7 @@ const SendBox: React.FC<{
     const segments: React.ReactNode[] = [];
     let cursor = 0;
 
-    allAtFileQueries.forEach((match, index) => {
+    highlightedTokens.forEach((match, index) => {
       if (cursor < match.start) {
         segments.push(
           <span className='sendbox-highlight-text' key={`text-${cursor}`}>
@@ -1396,8 +1422,9 @@ const SendBox: React.FC<{
 
       segments.push(
         <span
-          className='sendbox-highlight-mention'
-          key={`mention-${match.start}-${index}`}
+          className={match.kind === 'skill' ? 'sendbox-highlight-skill' : 'sendbox-highlight-mention'}
+          data-skill-token={match.kind === 'skill' ? match.query : undefined}
+          key={`${match.kind}-${match.start}-${index}`}
           style={{ color: AT_FILE_HIGHLIGHT_COLOR }}
         >
           {input.slice(match.start, match.end)}
@@ -1415,7 +1442,7 @@ const SendBox: React.FC<{
     }
 
     return segments;
-  }, [allAtFileQueries, input]);
+  }, [highlightedTokens, input]);
 
   return (
     <div className={className}>

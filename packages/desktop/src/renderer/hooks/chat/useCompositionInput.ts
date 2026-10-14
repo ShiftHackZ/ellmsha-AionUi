@@ -21,7 +21,7 @@ export const useCompositionInput = () => {
 
   const createKeyDownHandler = (onEnterPress: () => void, onKeyDownIntercept?: (e: React.KeyboardEvent) => boolean) => {
     return (e: React.KeyboardEvent) => {
-      if (isComposing.current) return;
+      if (isComposing.current || e.nativeEvent.isComposing || e.keyCode === 229) return;
       if (onKeyDownIntercept?.(e)) return;
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();

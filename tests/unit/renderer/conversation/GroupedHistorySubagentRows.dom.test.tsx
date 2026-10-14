@@ -35,6 +35,8 @@ vi.mock('react-i18next', () => ({
       ({
         'conversation.history.subagentStatus.running': 'Running',
         'conversation.history.subagentStatus.errored': 'Failed',
+        'conversation.history.subagentStatus.waiting_for_user': 'Waiting for input',
+        'conversation.history.subagentStatus.completed': 'Completed',
       })[key] ??
       options?.defaultValue ??
       key,
@@ -120,6 +122,23 @@ vi.mock('@/renderer/pages/conversation/GroupedHistory/hooks/useConversations', (
 import WorkspaceGroupedHistory from '@/renderer/pages/conversation/GroupedHistory';
 
 describe('grouped history subagent indicators', () => {
+  it('clears the child loader while waiting and after completion without moving its indicator slot', () => {
+    const metadata = (conversations.running.extra as { subagent: { status: string } }).subagent;
+    const view = render(<WorkspaceGroupedHistory />);
+    const slot = screen.getByRole('button', { name: 'running-child · Running' }).firstElementChild;
+    try {
+      metadata.status = 'waiting_for_user';
+      view.rerender(<WorkspaceGroupedHistory />);
+      expect(screen.getByRole('button', { name: 'running-child · Waiting for input' }).firstElementChild).toBe(slot);
+      expect(slot?.querySelector('.arco-spin')).toBeNull();
+      metadata.status = 'completed';
+      view.rerender(<WorkspaceGroupedHistory />);
+      expect(screen.getByRole('button', { name: 'running-child · Completed' }).querySelector('.arco-spin')).toBeNull();
+    } finally {
+      metadata.status = 'running';
+    }
+  });
+
   it('keeps roots idle independently and reserves identical gutters for mixed child states', async () => {
     render(<WorkspaceGroupedHistory />);
 

@@ -29,6 +29,7 @@ const warningSpy = vi.fn();
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    conversation: { responseStream: { on: vi.fn(() => () => {}) } },
     workspaceOfficeWatch: {
       start: { invoke: startInvoke },
       stop: { invoke: stopInvoke },

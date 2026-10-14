@@ -80,6 +80,8 @@
     "subagentStatus": {
       "pending_init": "시작 중",
       "running": "실행 중",
+      "waiting_for_user": "입력 대기 중",
+      "waiting_for_approval": "승인 대기 중",
       "completed": "완료",
       "errored": "실패",
       "interrupted": "중단됨",

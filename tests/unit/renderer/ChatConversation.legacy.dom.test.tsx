@@ -1,10 +1,12 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { TChatConversation } from '@/common/config/storage';
 import ChatConversation from '@/renderer/pages/conversation/components/ChatConversation';
+import SubagentAvatars from '@/renderer/pages/conversation/components/SubagentAvatars';
+import avatarStyles from '@/renderer/pages/conversation/components/SubagentAvatars/SubagentAvatars.module.css';
 
 const usePresetAssistantInfoMock = vi.fn();
 const conversationHistoryMock = vi.fn();
@@ -337,6 +339,76 @@ describe('ChatConversation legacy runtime rendering', () => {
 
     const indicator = screen.getByRole('button', { name: /reviewer/i });
     expect(indicator).toHaveTextContent('RE');
-    expect(indicator).toHaveClass('!w-28px');
+    expect(indicator).toHaveClass(avatarStyles.avatar);
+  });
+});
+
+describe('subagent avatar capacity and activity', () => {
+  let resize: ResizeObserverCallback;
+  const children = ['running', 'completed', 'waiting_for_user', 'waiting_for_approval', 'errored'].map((status, i) => ({
+    ...legacyConversation('codex'),
+    id: `child-${i}`,
+    name: `Child ${i}`,
+    extra: { subagent: { parent_conversation_id: 'parent', ref: `child-${i}`, status } },
+  })) as TChatConversation[];
+  const resizeTo = (width: number) =>
+    act(() => resize([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver));
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          resize = callback;
+        }
+        observe() {}
+        disconnect() {}
+      }
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('reserves ellipsis space, lists hidden agents, and refits when resized', async () => {
+    render(
+      <MemoryRouter>
+        <SubagentAvatars conversations={children} />
+      </MemoryRouter>
+    );
+    resizeTo(100);
+    expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.queryByRole('button', { name: /Child 2/ })).not.toBeInTheDocument();
+    fireEvent.focus(screen.getAllByRole('button')[2]);
+    expect(await screen.findByText(/Child 2 ·/)).toBeVisible();
+    resizeTo(172);
+    expect(screen.getAllByRole('button')).toHaveLength(5);
+    expect(screen.getByRole('button', { name: /Child 4/ })).toBeVisible();
+    resizeTo(28);
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+  });
+
+  it('animates only active children and clears the ring on a live completion', () => {
+    const view = render(
+      <MemoryRouter>
+        <SubagentAvatars conversations={children} />
+      </MemoryRouter>
+    );
+    resizeTo(172);
+    expect(screen.getByRole('button', { name: /Child 0/ })).toHaveClass(avatarStyles.running);
+    for (const index of [1, 2, 3, 4]) {
+      expect(screen.getByRole('button', { name: new RegExp(`Child ${index}`) })).not.toHaveClass(avatarStyles.running);
+    }
+    const settled = [
+      {
+        ...children[0],
+        extra: { subagent: { parent_conversation_id: 'parent', ref: 'child-0', status: 'completed' } },
+      },
+      ...children.slice(1),
+    ] as TChatConversation[];
+    view.rerender(
+      <MemoryRouter>
+        <SubagentAvatars conversations={settled} />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('button', { name: /Child 0/ })).not.toHaveClass(avatarStyles.running);
   });
 });

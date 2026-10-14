@@ -97,10 +97,19 @@ const createInitStyle = (
   span.markdown-local-file-link {
     cursor: default;
   }
-  .markdown-local-file-link:hover {
+  .markdown-local-file-link:not(:disabled):hover {
     background: var(--bg-3);
     color: var(--text-primary);
     text-decoration: none;
+  }
+  .markdown-local-file-link:focus-visible,
+  .markdown-local-file-copy:focus-visible {
+    outline: 2px solid var(--text-secondary);
+    outline-offset: 2px;
+  }
+  .markdown-local-file-link:disabled {
+    color: var(--text-secondary);
+    cursor: not-allowed;
   }
   .markdown-local-file-link .truncate {
     min-width: 0;

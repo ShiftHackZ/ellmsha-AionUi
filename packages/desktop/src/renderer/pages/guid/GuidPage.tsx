@@ -152,6 +152,8 @@ const GuidPage: React.FC = () => {
   const guidInput = useGuidInput({
     locationState: location.state as { workspace?: string } | null,
   });
+  const [caretPosition, setCaretPosition] = useState(guidInput.input.length);
+  const [caretRequest, setCaretRequest] = useState<{ value: string; position: number }>();
   // The `/open` builtin + attach picker browse the backend machine's filesystem
   // (native dialog / server-fs) → `local` refs, not uploads.
   const { onSlashBuiltinCommand } = useOpenFileSelector({
@@ -228,13 +230,13 @@ const GuidPage: React.FC = () => {
   );
   const slashController = useSlashCommandController({
     input: guidInput.input,
+    caretPosition,
     commands: guidSlashCommands,
-    onExecuteBuiltin: (name) => {
-      onSlashBuiltinCommand(name);
-      guidInput.setInput('');
-    },
-    onSelectTemplate: (name) => {
-      guidInput.setInput(`/${name} `);
+    onExecuteBuiltin: onSlashBuiltinCommand,
+    onReplaceInput: (value, caret) => {
+      guidInput.setInput(value);
+      setCaretPosition(caret);
+      setCaretRequest({ value, position: caret });
     },
   });
   const slashMenuItems = useMemo<SlashCommandMenuItem[]>(
@@ -294,10 +296,12 @@ const GuidPage: React.FC = () => {
 
   // --- Coordinated handlers (depend on multiple hooks) ---
   const handleInputChange = useCallback(
-    (value: string) => {
+    (value: string, caret: number) => {
+      setCaretPosition(caret);
+      slashController.setDismissed(false);
       guidInput.setInput(value);
     },
-    [guidInput.setInput]
+    [guidInput.setInput, slashController.setDismissed]
   );
 
   const handleInputKeyDown = useCallback(
@@ -698,9 +702,15 @@ const GuidPage: React.FC = () => {
             focusRequestKey={navState?.focusPrefill && navState.prefillPrompt ? location.key : undefined}
             input={guidInput.input}
             onInputChange={handleInputChange}
+            onCaretChange={setCaretPosition}
+            caretRequest={caretRequest}
+            skillNames={selectedSkillNames}
             onKeyDown={handleInputKeyDown}
             onPaste={guidInput.onPaste}
-            onFocus={guidInput.handleTextareaFocus}
+            onFocus={() => {
+              slashController.setDismissed(false);
+              guidInput.handleTextareaFocus();
+            }}
             onBlur={guidInput.handleTextareaBlur}
             placeholder={typewriterPlaceholder || t('conversation.welcome.placeholder')}
             isInputActive={guidInput.isInputFocused}

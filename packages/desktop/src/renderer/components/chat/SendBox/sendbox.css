@@ -384,6 +384,12 @@
   color: rgb(var(--primary-6));
 }
 
+.sendbox-highlight-skill {
+  color: var(--primary);
+  background: var(--color-primary-light-1);
+  border-radius: 3px;
+}
+
 .sendbox-highlight-textarea {
   background: transparent !important;
 }

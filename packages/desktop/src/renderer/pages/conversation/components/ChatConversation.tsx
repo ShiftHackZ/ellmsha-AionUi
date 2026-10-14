@@ -17,7 +17,6 @@ import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistan
 import { iconColors } from '@/renderer/styles/colors';
 import { Button, Dropdown, Menu, Message, Tooltip, Typography } from '@arco-design/web-react';
 import { ArrowLeft, History } from '@icon-park/react';
-import classNames from 'classnames';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +38,7 @@ import { resolveConversationBackend } from '../utils/conversationAssistantIdenti
 import LegacyReadOnlyConversation from '../platforms/legacy/LegacyReadOnlyConversation';
 import { useActiveLease } from '../hooks/useActiveLease';
 import { getSubagentMetadata } from '../GroupedHistory/types';
+import SubagentAvatars from './SubagentAvatars';
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
 const configErrorMessageKey = (error: unknown) => {
@@ -64,34 +64,6 @@ const SubagentBackButton: React.FC<{ parentConversationId: string }> = ({ parent
         icon={<ArrowLeft theme='outline' size='16' />}
         onClick={() => void navigate(`/conversation/${parentConversationId}`)}
       />
-    </Tooltip>
-  );
-};
-
-const SubagentIndicator: React.FC<{
-  conversationId: string;
-  label: string;
-  status: string;
-  statusLabel: string;
-}> = ({ conversationId, label, status, statusLabel }) => {
-  const navigate = useNavigate();
-  return (
-    <Tooltip content={`${label} · ${statusLabel}`}>
-      <Button
-        size='mini'
-        type='secondary'
-        shape='circle'
-        aria-label={`${label} · ${statusLabel}`}
-        className={classNames('!w-28px !h-28px !min-w-28px !p-0 !text-11px !font-600 !border-2px !border-solid', {
-          '!border-[rgb(var(--primary-6))]': status === 'pending_init' || status === 'running',
-          '!border-[rgb(var(--success-6))]': status === 'completed',
-          '!border-[rgb(var(--danger-6))]': status === 'errored',
-          '!border-[var(--color-border-3)]': status === 'interrupted' || status === 'shutdown',
-        })}
-        onClick={() => void navigate(`/conversation/${conversationId}`)}
-      >
-        {label.trim().slice(0, 2).toLocaleUpperCase()}
-      </Button>
     </Tooltip>
   );
 };
@@ -436,24 +408,9 @@ const ChatConversation: React.FC<{
         };
 
   const headerExtraNode = (
-    <div className='flex items-center gap-8px'>
+    <div className='flex items-center gap-8px min-w-0 max-w-full'>
       {subagent && <SubagentBackButton parentConversationId={subagent.parent_conversation_id} />}
-      {!subagent &&
-        childConversations.map((child) => {
-          const metadata = getSubagentMetadata(child)!;
-          const status = metadata.status ?? 'running';
-          const statusLabel = t(`conversation.history.subagentStatus.${status}`, { defaultValue: status });
-          const label = metadata.label ?? child.name;
-          return (
-            <SubagentIndicator
-              key={child.id}
-              conversationId={child.id}
-              label={label}
-              status={status}
-              statusLabel={statusLabel}
-            />
-          );
-        })}
+      {!subagent && childConversations.length > 0 && <SubagentAvatars conversations={childConversations} />}
       {!subagent && conversation && (
         <div className='shrink-0'>
           <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />

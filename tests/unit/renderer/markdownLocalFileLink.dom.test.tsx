@@ -218,13 +218,23 @@ describe('typed memory artifact links', () => {
         onLocalFileLink={onLocalFileLink}
       >{`[Spec](ellmsha-memory://artifact?path=${encodeURIComponent(path)})`}</MarkdownView>
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Spec' }));
+    const link = screen.getByRole('button', { name: 'Spec' });
+    expect(link).toHaveClass('markdown-local-file-link');
+    fireEvent.click(link);
     expect(onMemoryArtifact).toHaveBeenCalledWith(path);
     expect(onLocalFileLink).not.toHaveBeenCalled();
     unmount();
     render(<MarkdownView onMemoryArtifact={onMemoryArtifact}>{`Read \`${path}\` now.`}</MarkdownView>);
-    fireEvent.click(screen.getByRole('button', { name: path }));
+    const inlinePath = screen.getByRole('button', { name: path });
+    expect(inlinePath).toHaveClass('markdown-local-file-link');
+    fireEvent.click(inlinePath);
     expect(onMemoryArtifact).toHaveBeenCalledTimes(2);
+  });
+  it('keeps an unavailable memory link readable and disabled', () => {
+    render(<MarkdownView>{'[Spec](ellmsha-memory://artifact?path=bmad%2Fowned-fixture%2Fspec.md)'}</MarkdownView>);
+    const link = screen.getByRole('button', { name: 'Spec' });
+    expect(link).toHaveClass('markdown-local-file-link');
+    expect(link).toBeDisabled();
   });
   it('does not turn arbitrary relative code or invalid internal URLs into file/external actions', () => {
     const onMemoryArtifact = vi.fn();

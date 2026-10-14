@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -39,6 +39,7 @@ vi.mock('@/renderer/hooks/context/ConversationContext', () => ({
   useConversationContextSafe: () => ({
     conversation_id: 'sendbox-prefill-conversation',
     type: 'acp',
+    loadedSkills: ['review', 'skills:edit'],
   }),
 }));
 
@@ -63,7 +64,7 @@ vi.mock('@/renderer/hooks/file/useConversationExport', () => ({
   useConversationExport: () => ({
     isOpen: false,
     showMenu: false,
-    step: 'menu',
+    step: 'closed',
     filename: '',
     pathPreview: '',
     menuItems: [],
@@ -126,8 +127,8 @@ vi.mock('@/renderer/components/media/UploadProgressBar', () => ({ default: () =>
 import SendBox from '@/renderer/components/chat/SendBox';
 import { requestConversationSendBoxPrefill } from '@/renderer/hooks/chat/useSendBoxDraft';
 
-const SendBoxHarness = () => {
-  const [value, setValue] = useState('Existing draft');
+const SendBoxHarness = ({ initialValue = 'Existing draft' }: { initialValue?: string }) => {
+  const [value, setValue] = useState(initialValue);
   return <SendBox value={value} onChange={setValue} onSend={vi.fn().mockResolvedValue(undefined)} />;
 };
 
@@ -213,5 +214,60 @@ describe('SendBox scheduled-task prefill', () => {
 
     querySelectorSpy.mockRestore();
     outsideTarget.remove();
+  });
+});
+
+describe('SendBox slash editing', () => {
+  it('preserves surrounding text and restores the caret after selecting a skill', async () => {
+    layoutState.isMobile = false;
+    const { container } = render(<SendBoxHarness initialValue='Before /rev after' />);
+    const textarea = screen.getByTestId('sendbox-input') as HTMLTextAreaElement;
+    textarea.setSelectionRange(11, 11);
+    fireEvent.select(textarea);
+    fireEvent.click(await screen.findByRole('option', { name: /\/review/ }));
+    await waitFor(() => expect(textarea.selectionStart).toBe(15));
+    expect(textarea).toHaveValue('Before /review after');
+    expect(container.querySelector('[data-skill-token="review"]')).toHaveTextContent('/review');
+  });
+
+  it('reopens after dismissal when slash starts a new token in the draft', async () => {
+    layoutState.isMobile = false;
+    render(<SendBoxHarness initialValue='/' />);
+    const textarea = screen.getByTestId('sendbox-input') as HTMLTextAreaElement;
+    fireEvent.keyDown(textarea, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    fireEvent.change(textarea, { target: { value: '/ /', selectionStart: 3, selectionEnd: 3 } });
+    expect(await screen.findByRole('option', { name: /\/review/ })).toBeInTheDocument();
+  });
+
+  it('keeps unknown-command feedback visible and leaves IME text untouched', () => {
+    layoutState.isMobile = false;
+    render(<SendBoxHarness initialValue='/unknown' />);
+    const textarea = screen.getByTestId('sendbox-input') as HTMLTextAreaElement;
+    expect(screen.getByText('No commands found')).toBeInTheDocument();
+    fireEvent.compositionStart(textarea);
+    fireEvent.keyDown(textarea, { key: 'Enter', isComposing: true });
+    expect(textarea).toHaveValue('/unknown');
+  });
+
+  it('uses native text rendering during IME composition of a highlighted skill', () => {
+    layoutState.isMobile = false;
+    render(<SendBoxHarness initialValue='/review ' />);
+    const textarea = screen.getByTestId('sendbox-input') as HTMLTextAreaElement;
+    expect(textarea).toHaveClass('sendbox-highlight-textarea');
+    fireEvent.compositionStart(textarea);
+    expect(textarea).not.toHaveClass('sendbox-highlight-textarea');
+    fireEvent.compositionEnd(textarea);
+    expect(textarea).toHaveClass('sendbox-highlight-textarea');
+  });
+
+  it('does not send or accept a slash command on a native IME confirmation key', () => {
+    layoutState.isMobile = false;
+    const onSend = vi.fn().mockResolvedValue(undefined);
+    const onChange = vi.fn();
+    render(<SendBox value='/review' onChange={onChange} onSend={onSend} />);
+    fireEvent.keyDown(screen.getByTestId('sendbox-input'), { key: 'Enter', isComposing: true });
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

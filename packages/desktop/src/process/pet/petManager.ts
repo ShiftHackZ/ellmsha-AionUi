@@ -99,8 +99,7 @@ export function createPetWindow(): void {
   }
 
   if (petWindow && !petWindow.isDestroyed()) {
-    petWindow.show();
-    petWindow.focus();
+    showPetWindow();
     return;
   }
 
@@ -119,6 +118,9 @@ export function createPetWindow(): void {
     skipTaskbar: true,
     hasShadow: false,
     focusable: false,
+    show: false,
+    // focusable:false prevents key focus; a native panel also prevents app activation.
+    ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
     webPreferences: {
       preload: path.join(PRELOAD_DIR, 'petPreload.js'),
       contextIsolation: true,
@@ -150,6 +152,8 @@ export function createPetWindow(): void {
     skipTaskbar: true,
     hasShadow: false,
     focusable: false,
+    show: false,
+    ...(process.platform === 'darwin' ? { type: 'panel', acceptFirstMouse: true } : {}),
     webPreferences: {
       preload: path.join(PRELOAD_DIR, 'petHitPreload.js'),
       contextIsolation: true,
@@ -194,6 +198,7 @@ export function createPetWindow(): void {
   registerIpcHandlers();
   startHitIgnoreWatchdog();
   loadContent();
+  showPetWindow();
 
   // Initialize confirm manager only if the user opted in.
   // When disabled, AI tool-call confirmations remain in the main chat window
@@ -251,8 +256,8 @@ export function destroyPetWindow(): void {
 }
 
 export function showPetWindow(): void {
-  if (petWindow && !petWindow.isDestroyed()) petWindow.show();
-  if (petHitWindow && !petHitWindow.isDestroyed()) petHitWindow.show();
+  if (petWindow && !petWindow.isDestroyed()) petWindow.showInactive();
+  if (petHitWindow && !petHitWindow.isDestroyed()) petHitWindow.showInactive();
 }
 
 export function hidePetWindow(): void {

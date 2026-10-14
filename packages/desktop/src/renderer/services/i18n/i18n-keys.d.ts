@@ -629,6 +629,8 @@ export type I18nKey =
   | 'conversation.history.subagentStatus.pending_init'
   | 'conversation.history.subagentStatus.running'
   | 'conversation.history.subagentStatus.shutdown'
+  | 'conversation.history.subagentStatus.waiting_for_approval'
+  | 'conversation.history.subagentStatus.waiting_for_user'
   | 'conversation.history.today'
   | 'conversation.history.unpin'
   | 'conversation.history.yesterday'

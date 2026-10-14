@@ -80,6 +80,8 @@
     "subagentStatus": {
       "pending_init": "正在啟動",
       "running": "執行中",
+      "waiting_for_user": "等待輸入",
+      "waiting_for_approval": "等待核准",
       "completed": "已完成",
       "errored": "失敗",
       "interrupted": "已中斷",

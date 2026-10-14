@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -203,7 +203,12 @@ vi.mock('@/renderer/pages/guid/components/GuidActionRow', () => ({
 vi.mock('@/renderer/pages/guid/components/GuidInputCard', () => ({
   default: (props: Record<string, unknown>) => {
     capturedGuidInputCardProps.push(props);
-    return <div data-testid='guid-input-card'>{props.actionRow as React.ReactNode}</div>;
+    return (
+      <div data-testid='guid-input-card'>
+        {props.actionRow as React.ReactNode}
+        {props.slashCommandMenu as React.ReactNode}
+      </div>
+    );
   },
 }));
 
@@ -283,6 +288,7 @@ import GuidPage from '@/renderer/pages/guid/GuidPage';
 const guidInputCardProps = {
   input: 'Existing Guid draft\nCreate with /cron in AionUi',
   onInputChange: vi.fn(),
+  onCaretChange: vi.fn(),
   onKeyDown: vi.fn(),
   onPaste: vi.fn(),
   onFocus: vi.fn(),
@@ -576,6 +582,21 @@ describe('GuidPage', () => {
     expect(capturedGuidActionRowProps.at(-1)?.enabledSkills).toEqual(['bmad-prd', 'ponytail']);
   });
 
+  it('completes a skill at the reported caret while preserving the draft', async () => {
+    guidInputMock.input = 'Before /bmad after';
+    listAvailableSkillsMock.mockResolvedValue([
+      { name: 'bmad-prd', description: 'Create a PRD', source: 'custom', is_auto_inject: false },
+    ]);
+    render(<GuidPage />);
+    await waitFor(() => expect(capturedGuidInputCardProps.at(-1)?.skillNames).toContain('bmad-prd'));
+    act(() => {
+      (capturedGuidInputCardProps[capturedGuidInputCardProps.length - 1].onCaretChange as (caret: number) => void)(12);
+    });
+    fireEvent.click(screen.getByRole('option', { name: /\/bmad-prd/ }));
+    expect(guidInputMock.setInput).toHaveBeenCalledWith('Before /bmad-prd after');
+    expect(capturedGuidInputCardProps.at(-1)?.caretRequest).toEqual({ value: 'Before /bmad-prd after', position: 17 });
+  });
+
   it('applies an aionrs assistant default model after provider models load', async () => {
     swrMock.useSWRMock.mockReturnValue({ data: assistantDetailFixture });
     resolveGuidAssistantDefaultsMock.mockReturnValue({
@@ -667,6 +688,35 @@ describe('GuidPage', () => {
 });
 
 describe('GuidInputCard prefill focus', () => {
+  it('reports caret changes and preserves plain-text skill editing during IME', async () => {
+    const { default: GuidInputCard } = await vi.importActual<
+      typeof import('@/renderer/pages/guid/components/GuidInputCard')
+    >('@/renderer/pages/guid/components/GuidInputCard');
+    const onCaretChange = vi.fn();
+    const onKeyDown = vi.fn();
+    const { container } = render(
+      <GuidInputCard
+        {...guidInputCardProps}
+        input='/review tail'
+        skillNames={['review']}
+        onCaretChange={onCaretChange}
+        onKeyDown={onKeyDown}
+        caretRequest={{ value: '/review tail', position: 8 }}
+      />
+    );
+    const textarea = screen.getByTestId('guid-input') as HTMLTextAreaElement;
+    await waitFor(() => expect(textarea.selectionStart).toBe(8));
+    expect(container.querySelector('[data-skill-token="review"]')).toHaveTextContent('/review');
+    fireEvent.compositionStart(textarea);
+    fireEvent.keyDown(textarea, { key: 'Enter', isComposing: true });
+    expect(onKeyDown).not.toHaveBeenCalled();
+    expect(textarea).not.toHaveClass('sendbox-highlight-textarea');
+    fireEvent.compositionEnd(textarea);
+    textarea.setSelectionRange(3, 3);
+    fireEvent.select(textarea);
+    expect(onCaretChange).toHaveBeenLastCalledWith(3);
+  });
+
   it('focuses a draft-preserving prefill on desktop', async () => {
     const { default: GuidInputCard } = await vi.importActual<
       typeof import('@/renderer/pages/guid/components/GuidInputCard')

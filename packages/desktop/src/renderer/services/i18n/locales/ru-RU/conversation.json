@@ -80,6 +80,8 @@
     "subagentStatus": {
       "pending_init": "Запускается",
       "running": "Работает",
+      "waiting_for_user": "Ожидает ответа",
+      "waiting_for_approval": "Ожидает разрешения",
       "completed": "Завершён",
       "errored": "Ошибка",
       "interrupted": "Прерван",

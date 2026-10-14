@@ -18,7 +18,15 @@ export type SubagentMetadata = {
   ref: string;
   parent_ref?: string;
   label?: string;
-  status?: 'pending_init' | 'running' | 'completed' | 'errored' | 'interrupted' | 'shutdown';
+  status?:
+    | 'pending_init'
+    | 'running'
+    | 'waiting_for_user'
+    | 'waiting_for_approval'
+    | 'completed'
+    | 'errored'
+    | 'interrupted'
+    | 'shutdown';
 };
 
 export const getSubagentMetadata = (conversation?: TChatConversation): SubagentMetadata | undefined => {

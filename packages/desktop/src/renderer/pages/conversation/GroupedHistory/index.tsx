@@ -319,6 +319,8 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                           className={classNames('size-8px rounded-full shrink-0', {
                             'bg-[rgb(var(--success-6))]': status === 'completed',
                             'bg-[rgb(var(--danger-6))]': status === 'errored',
+                            'bg-[rgb(var(--warning-6))]':
+                              status === 'waiting_for_user' || status === 'waiting_for_approval',
                             'bg-[var(--color-text-4)]': status === 'interrupted' || status === 'shutdown',
                           })}
                         />

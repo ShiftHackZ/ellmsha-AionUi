@@ -1,22 +1,25 @@
 /**
- * E2E: auto-open Office preview tabs when new files appear in the workspace.
+ * E2E: only current-chat Office outputs may auto-open preview tabs.
  *
  * This exercises the end-to-end watcher flow:
  *   1. open a conversation with a selected workspace
  *   2. backend starts `/api/fs/office-watch/start`
- *   3. test creates a new Office file in that workspace
- *   4. renderer receives `workspaceOfficeWatch.fileAdded`
- *   5. PreviewPanel opens the matching tab automatically
+ *   3. an unrelated workspace file emits `workspaceOfficeWatch.fileAdded` but stays closed
+ *   4. a real assistant creates a valid Office document through its tools
+ *   5. its live reply references the document and the matching tab opens automatically
  *
- * We assert tab creation only. The embedded office preview may still render an
- * install hint when `officecli` is unavailable, but the auto-open behavior must
- * still work.
+ * The assistant is installed/authenticated locally; E2E_OFFICE_BACKEND defaults
+ * to claude. The shared fixture uses disposable userData and each case owns its
+ * temporary workspace. No response-stream or tool-state injections are used.
+ * We validate the generated file with officeparser; an officecli install hint
+ * in the preview does not prevent checking the automatic tab-opening policy.
  */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { parseOfficeAsync } from 'officeparser';
 import { test, expect } from '../../fixtures';
-import { findAssistantIdForBackend, goToGuid } from '../../helpers';
+import { findAssistantIdForBackend, goToGuid, startAutoApprovePermissionMessages, waitForAiReply } from '../../helpers';
 
 async function enableAutoPreviewOfficeFiles(page: import('@playwright/test').Page): Promise<void> {
   await page.evaluate(async () => {
@@ -156,8 +159,26 @@ async function createConversationWithWorkspace(
   await goToGuid(page);
   await enableAutoPreviewOfficeFiles(page);
   await installWorkspaceOfficeWatchDebug(page);
-  const assistantId = await findAssistantIdForBackend(page, 'claude', { requireAvailable: true });
-  test.skip(!assistantId, 'No available Claude assistant for preview auto-open conversation');
+  const backend = process.env.E2E_OFFICE_BACKEND || 'claude';
+  // Fresh profiles leave CLI health unchecked; reused profiles can retain an
+  // old offline result. Recheck either before deciding an installed CLI is absent.
+  await page.evaluate(async (selectedBackend) => {
+    const base = `http://127.0.0.1:${(window as Window).__backendPort}`;
+    const response = await fetch(`${base}/api/assistants`);
+    const { data } = (await response.json()) as {
+      data: Array<{ agent_id: string; agent_status: string; agent?: { acp_backend?: string } }>;
+    };
+    const assistant = data.find((item) => item.agent?.acp_backend === selectedBackend);
+    if (assistant && assistant.agent_status !== 'online') {
+      const check = await fetch(`${base}/api/agents/${encodeURIComponent(assistant.agent_id)}/health-check`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(45_000),
+      });
+      if (!check.ok) throw new Error(`CLI health check failed (${check.status})`);
+    }
+  }, backend);
+  const assistantId = await findAssistantIdForBackend(page, backend, { requireAvailable: true });
+  test.skip(!assistantId, `No available ${backend} assistant for preview auto-open conversation`);
   if (!assistantId) return '';
 
   const conversationId = await page.evaluate(
@@ -203,7 +224,7 @@ async function createConversationWithWorkspace(
     timeout: 15_000,
   });
 
-  await expect(page.locator('.chat-workspace')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('sendbox-input')).toBeVisible({ timeout: 30_000 });
   return conversationId;
 }
 
@@ -229,13 +250,14 @@ test.describe('Preview auto-open for Office files', () => {
   ] as const;
 
   for (const { ext, fileName } of cases) {
-    test(`new .${ext} file auto-opens a preview tab`, async ({ page }) => {
-      test.setTimeout(120_000);
+    test(`.${ext}: unrelated files stay closed and current-chat outputs auto-open`, async ({ page }, testInfo) => {
+      test.setTimeout(300_000);
 
       const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `aionui-e2e-office-auto-${ext}-`));
       const browserLogs: string[] = [];
       fs.writeFileSync(path.join(workspace, 'seed.txt'), 'seed');
       let conversationId: string | null = null;
+      let stopAutoApprove: (() => void) | undefined;
       const consoleListener = (message: import('@playwright/test').ConsoleMessage) => {
         browserLogs.push(`[${message.type()}] ${message.text()}`);
         if (browserLogs.length > 60) {
@@ -256,21 +278,70 @@ test.describe('Preview auto-open for Office files', () => {
         // the initial baseline before we create the new office file.
         await page.waitForTimeout(2_000);
 
-        const targetFile = path.join(workspace, fileName);
-        fs.writeFileSync(targetFile, 'stub');
-
         const previewPanel = page.locator('.preview-panel');
         try {
+          await expect(previewPanel).not.toBeVisible();
+          const unrelatedFileName = `unrelated-workspace-file.${ext}`;
+          fs.writeFileSync(path.join(workspace, unrelatedFileName), 'unrelated fixture');
+          await expect
+            .poll(
+              async () =>
+                (await getWorkspaceOfficeWatchDebug(page, workspace)).officeEvents.some((event) => {
+                  const filePath = (event.data as { file_path?: string } | null)?.file_path;
+                  return filePath ? path.basename(filePath) === unrelatedFileName : false;
+                }),
+              { timeout: 20_000, message: 'The unrelated file must reach the real workspace watcher' }
+            )
+            .toBe(true);
+          // Observe beyond the hook's one-second delay after the confirmed event.
+          await page.waitForTimeout(2_000);
+          await expect(previewPanel).not.toBeVisible();
+
+          const targetFile = path.join(workspace, fileName);
+          const marker = 'Preview ownership fixture';
+          expect(fs.existsSync(targetFile)).toBe(false);
+          stopAutoApprove = startAutoApprovePermissionMessages(page);
+          const textarea = page.getByTestId('sendbox-input');
+          await textarea.fill(
+            [
+              `Create a tiny valid ${ext.toUpperCase()} document at ${JSON.stringify(targetFile)} using your tools.`,
+              `Put the exact text "${marker}" in one paragraph, slide, or cell as appropriate.`,
+              `Work only inside ${JSON.stringify(workspace)}. Do not inspect or modify other files.`,
+              'Use an already installed document tool/library, or Python zipfile to write minimal valid OOXML; do not install dependencies or rename plain text.',
+              'Verify the file exists, then reply with only this Markdown link after the write is complete:',
+              `[${fileName}](<${targetFile}>)`,
+            ].join('\n')
+          );
+          await textarea.press('Enter');
+          await waitForAiReply(page, 180_000);
+          await expect
+            .poll(() => fs.existsSync(targetFile), {
+              timeout: 180_000,
+              message: 'The real assistant must create its document',
+            })
+            .toBe(true);
+          await expect(page.getByTestId('message-text-left').filter({ hasText: fileName }).last()).toBeVisible({
+            timeout: 60_000,
+          });
+          expect(await parseOfficeAsync(targetFile)).toContain(marker);
+
+          // Never click the file or reply link: the current-chat output must open it.
           await expect(previewPanel).toBeVisible({ timeout: 20_000 });
-          await expect(previewPanel.getByText(fileName)).toBeVisible({ timeout: 20_000 });
+          await expect(previewPanel.getByText(fileName, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+          await expect(previewPanel.getByText(unrelatedFileName, { exact: true })).not.toBeVisible();
+          await testInfo.attach(`current-chat-office-preview-${ext}`, {
+            body: await page.screenshot(),
+            contentType: 'image/png',
+          });
         } catch (error) {
           const debug = await getWorkspaceOfficeWatchDebug(page, workspace);
           throw new Error(
-            `Preview did not auto-open for ${fileName}. wsStatus=${debug.wsStatus}; autoPreviewOfficeFiles=${JSON.stringify(debug.configValue)}; workspaceFiles=${JSON.stringify(debug.workspaceFiles)}; officeEvents=${JSON.stringify(debug.officeEvents)}; browserLogs=${JSON.stringify(browserLogs)}; originalError=${String(error)}`,
+            `Office preview ownership failed for ${fileName}. wsStatus=${debug.wsStatus}; autoPreviewOfficeFiles=${JSON.stringify(debug.configValue)}; workspaceFiles=${JSON.stringify(debug.workspaceFiles)}; officeEvents=${JSON.stringify(debug.officeEvents)}; browserLogs=${JSON.stringify(browserLogs)}; originalError=${String(error)}`,
             { cause: error }
           );
         }
       } finally {
+        stopAutoApprove?.();
         page.off('console', consoleListener);
         if (conversationId) {
           await deleteConversation(page, conversationId);

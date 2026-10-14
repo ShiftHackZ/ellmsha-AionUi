@@ -80,6 +80,8 @@
     "subagentStatus": {
       "pending_init": "در حال شروع",
       "running": "در حال اجرا",
+      "waiting_for_user": "در انتظار ورودی",
+      "waiting_for_approval": "در انتظار تأیید",
       "completed": "تکمیل‌شده",
       "errored": "ناموفق",
       "interrupted": "متوقف‌شده",

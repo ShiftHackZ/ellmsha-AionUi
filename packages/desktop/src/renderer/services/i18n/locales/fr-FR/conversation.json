@@ -80,6 +80,8 @@
     "subagentStatus": {
       "pending_init": "Démarrage",
       "running": "En cours",
+      "waiting_for_user": "En attente de réponse",
+      "waiting_for_approval": "En attente d’approbation",
       "completed": "Terminé",
       "errored": "Échec",
       "interrupted": "Interrompu",
