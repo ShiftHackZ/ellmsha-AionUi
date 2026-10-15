@@ -149,7 +149,8 @@
     "agentFirstUseContent": "Bu panelde sayfa açabilir, tıklayabilir ve içerik okuyabilir. Oturum bilgileriniz korunur.",
     "agentFirstUseAction": "Ayarları aç",
     "openExternal": "Varsayılan tarayıcıda aç",
-    "externalAuthHelp": "Gömülü giriş veya güvenlik anahtarı desteklenmiyorsa varsayılan tarayıcınızı kullanın. Oturumu bu panelden ayrıdır."
+    "externalAuthHelp": "Gömülü giriş veya güvenlik anahtarı desteklenmiyorsa varsayılan tarayıcınızı kullanın. Oturumu bu panelden ayrıdır.",
+    "loadFailed": "Bu sayfa yüklenemedi."
   },
   "memoryArtifactUnavailable": "Bu bellek belgesi bu konuşmada kullanılamıyor."
 }

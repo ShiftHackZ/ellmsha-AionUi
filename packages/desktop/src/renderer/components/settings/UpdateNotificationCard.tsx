@@ -48,6 +48,7 @@ const UpdateNotificationCard: React.FC = () => {
 
     return renderNotificationLayer(
       <Button
+        data-native-browser-bottom-inset
         type='text'
         data-testid='update-notification-mini-progress'
         data-mini-status={state.status}
@@ -277,6 +278,7 @@ const UpdateNotificationCard: React.FC = () => {
   return renderNotificationLayer(
     <>
       <section
+        data-native-browser-overlay
         data-testid='update-notification-card'
         className='fixed right-24px bottom-24px z-1000 w-max min-w-300px max-w-[calc(100vw-32px)] bg-1 border border-border-2 rd-8px shadow-[0_2px_16px_rgba(0,0,0,0.12)] overflow-hidden'
       >

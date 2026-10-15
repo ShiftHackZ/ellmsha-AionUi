@@ -26,6 +26,7 @@ import PptViewer from '../viewers/PptViewer';
 import CodeEditor from '../editors/CodeEditor';
 import URLViewer from '../viewers/URLViewer';
 import BrowserTabLayer from '../../browser/BrowserTabLayer';
+import { isElectronDesktop } from '@/renderer/utils/platform';
 import { MAX_BROWSER_TABS } from '../../browser/constants';
 import {
   PreviewTabs,
@@ -289,10 +290,12 @@ const PreviewPanel: React.FC = () => {
     setContextMenu({ show: false, x: 0, y: 0, tabId: null });
   }, [tabs, closeTab]);
 
-  // 如果预览面板未打开，不渲染 / Don't render if preview panel is not open
-  if (!isOpen || !activeTab) return null;
+  // Desktop restoration must mount hidden native tabs before CDP inventory is ready.
+  const displayTab =
+    activeTab ?? (isElectronDesktop() ? tabs.find((tab) => tab.content_type === 'browser') : undefined);
+  if (!displayTab || (!isOpen && !isElectronDesktop())) return null;
 
-  const { content, content_type, metadata } = activeTab;
+  const { content, content_type, metadata } = displayTab;
   const isMarkdown = content_type === 'markdown';
   const isHTML = content_type === 'html';
   const isEditable = metadata?.editable !== false; // 默认可编辑 / Default editable
@@ -443,6 +446,7 @@ const PreviewPanel: React.FC = () => {
 
   // 渲染预览内容 / Render preview content
   const renderContent = () => {
+    if (!isOpen) return null;
     if (metadata?.missingFile) return renderMissingFile();
 
     // 浏览器 tab 由常驻的 BrowserTabLayer 渲染，不能走这里 —— 否则切 tab 会重新加载页面
@@ -705,7 +709,7 @@ const PreviewPanel: React.FC = () => {
       {/* bg-1 是必需的：面板必须自己铺满底色，不能依赖外层容器
           bg-1 is required: the panel paints its own background rather than
           relying on an outer container, so no window backdrop shows through. */}
-      <div className='h-full flex flex-col bg-1'>
+      <div className='h-full flex flex-col bg-1' style={!isOpen ? { visibility: 'hidden' } : undefined}>
         {messageContextHolder}
 
         {/* 确认对话框 / Confirmation modals */}
@@ -746,7 +750,7 @@ const PreviewPanel: React.FC = () => {
             isHTML={isHTML}
             viewMode={viewMode}
             isSplitScreenEnabled={isSplitScreenEnabled}
-            file_name={metadata?.file_name || activeTab.title}
+            file_name={metadata?.file_name || displayTab.title}
             showOpenInSystemButton={showOpenInSystemButton}
             historyTarget={historyTarget}
             snapshotSaving={snapshotSaving}
@@ -784,7 +788,7 @@ const PreviewPanel: React.FC = () => {
 
         {/* 浏览器层：常驻挂载，切 tab 不重新加载页面
             Browser layer: always mounted so tab switches don't reload pages */}
-        <BrowserTabLayer browserTabs={browserTabs} activeTabId={activeTabId} updateTab={updateTab} />
+        <BrowserTabLayer browserTabs={browserTabs} activeTabId={isOpen ? activeTabId : null} updateTab={updateTab} />
 
         {/* Tab 右键菜单 / Tab context menu */}
         {/* eslint-disable-next-line max-len */}

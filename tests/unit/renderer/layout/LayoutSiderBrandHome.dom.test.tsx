@@ -277,6 +277,24 @@ describe('Layout sider brand Home button', () => {
     expect(sider).not.toHaveClass('collapsed');
   });
 
+  it('marks only the visible narrow Electron sidebar backdrop as a native browser overlay', () => {
+    const initialWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 400 });
+    platformMocks.isElectronDesktopMock.mockReturnValue(true);
+    const view = renderLayout();
+    try {
+      expect(document.querySelector('[data-native-browser-overlay]')).toBeNull();
+      act(() => shortcutMocks.params?.toggleSider());
+      const backdrop = document.querySelector('[data-native-browser-overlay]');
+      expect(backdrop).not.toBeNull();
+      fireEvent.click(backdrop!);
+      expect(document.querySelector('[data-native-browser-overlay]')).toBeNull();
+    } finally {
+      view.unmount();
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: initialWidth });
+    }
+  });
+
   it('keeps the common shortcut owner mounted on team routes', () => {
     currentPathname = '/team/team-1';
     featureMocks.teamModeEnabled = true;

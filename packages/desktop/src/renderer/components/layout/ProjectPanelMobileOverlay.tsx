@@ -40,7 +40,14 @@ export const ProjectPanelMobileOverlay: React.FC<ProjectPanelMobileOverlayProps>
   return (
     <>
       {/* Backdrop */}
-      {!collapsed && <div className='fixed inset-0 bg-black/30 z-90' onClick={onCollapse} aria-hidden='true' />}
+      {!collapsed && (
+        <div
+          data-native-browser-overlay
+          className='fixed inset-0 bg-black/30 z-90'
+          onClick={onCollapse}
+          aria-hidden='true'
+        />
+      )}
 
       {/* Fixed panel (kept mounted; slides off-screen when collapsed) */}
       <div

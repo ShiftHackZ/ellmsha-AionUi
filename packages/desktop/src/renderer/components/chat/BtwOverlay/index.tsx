@@ -125,7 +125,7 @@ const BtwOverlay: React.FC<BtwOverlayProps> = ({
 
   return ReactDOM.createPortal(
     <div className={styles.portalRoot}>
-      <div className={styles.backdrop} onClick={onDismiss} />
+      <div data-native-browser-overlay className={styles.backdrop} onClick={onDismiss} />
       <div className={styles.panelWrap}>
         <div className={`rd-16px p-16px ${styles.overlay}`} style={overlayStyle}>
           <div className='flex flex-col gap-12px'>

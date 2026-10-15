@@ -1,12 +1,15 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow, WebContents } from 'electron';
+import type { BrowserPopupCommand } from '@/common/adapter/ipcBridge';
+import { MAX_BROWSER_TABS } from '@/common/config/constants';
 import {
   bindBrowserPopups,
   configureBrowserPopups,
   controlBrowserPopup,
   getBrowserPopup,
   registerBrowserPopupOpener,
+  reconcileBrowserTabs,
 } from '@/process/services/browser/popups';
 const mocks = vi.hoisted(() => ({
   session: {},
@@ -37,6 +40,7 @@ class FakeView {
   webContents = new FakeContents();
   setVisible = vi.fn();
   setBounds = vi.fn();
+  setBackgroundColor = vi.fn();
   constructor(readonly options: unknown) {
     mocks.views.push(this);
   }
@@ -113,7 +117,7 @@ describe('native popup tabs', () => {
     expect(mocks.views[0].setBounds).toHaveBeenLastCalledWith({ x: 700, y: 500, width: 100, height: 100 });
     controlBrowserPopup(host, { action: 'focus', tabId });
     expect(child.focus).toHaveBeenCalledOnce();
-    expect(() => controlBrowserPopup({} as BrowserWindow, { action: 'reload', tabId })).toThrow('No such');
+    expect(() => controlBrowserPopup(setup().host, { action: 'reload', tabId })).toThrow('No such');
   });
   it('closes tab on child window.close and removes native view and registry', () => {
     const { handler, host } = setup();
@@ -162,5 +166,200 @@ describe('native popup tabs', () => {
     foreign.session = {};
     host.webContents.emit('did-attach-webview', {}, foreign);
     expect(foreign.setWindowOpenHandler).not.toHaveBeenCalled();
+  });
+});
+
+describe('ordinary native browser tabs', () => {
+  const ensure = (host: BrowserWindow, tabId = 'ordinary', url = 'https://fixture.test/', mountId = 'mount-one') =>
+    controlBrowserPopup(host, { action: 'ensure', tabId, url, mountId, requireExisting: false });
+
+  it('reattaches the same contents without reloading, keeping its initial URL while navigation is pending', () => {
+    const { host } = setup();
+    const initial = ensure(host)!;
+    const again = ensure(host, 'ordinary', 'https://fixture.test/other', 'mount-two')!;
+    expect(again.webContentsId).toBe(initial.webContentsId);
+    expect(again.url).toBe('https://fixture.test/');
+    expect(mocks.views[0].webContents.loadURL).toHaveBeenCalledExactlyOnceWith('https://fixture.test/');
+  });
+
+  it('uses a shared isolated session and opaque white canvas without modifying the document', () => {
+    const { host } = setup();
+    ensure(host);
+    expect(mocks.views[0].options).toMatchObject({
+      webPreferences: {
+        session: mocks.session,
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        webSecurity: true,
+      },
+    });
+    expect(mocks.views[0].setBackgroundColor).toHaveBeenCalledExactlyOnceWith('#ffffff');
+  });
+
+  it('never recreates or reloads an adopted POST popup on ensure', () => {
+    const { host, handler } = setup();
+    const child = handler({ url: 'https://fixture.test/post' }).createWindow({});
+    const tabId = String(mocks.events.find((event) => event.action === 'adopt')!.tabId);
+    controlBrowserPopup(host, {
+      action: 'ensure',
+      tabId,
+      url: 'https://fixture.test/post',
+      requireExisting: true,
+      mountId: 'popup-mount',
+    });
+    expect(child.loadURL).not.toHaveBeenCalled();
+    expect(() =>
+      controlBrowserPopup(host, {
+        action: 'ensure',
+        tabId: 'missing',
+        url: 'about:blank',
+        requireExisting: true,
+        mountId: 'missing-mount',
+      })
+    ).toThrow('original');
+  });
+
+  it('retries a failed adopted POST using Chromium reload without converting it to a URL load', () => {
+    const { host, handler } = setup();
+    const url = 'https://fixture.test/post';
+    const child = handler({ url, postBody: { data: [{ bytes: Buffer.from('value=original') }] } }).createWindow({});
+    const tabId = String(mocks.events.find((event) => event.action === 'adopt')!.tabId);
+    controlBrowserPopup(host, { action: 'ensure', tabId, url, requireExisting: true, mountId: 'popup-mount' });
+    child.emit('did-fail-load', {}, -105, 'ERR_NAME_NOT_RESOLVED', url, true);
+    child.emit('did-stop-loading');
+    controlBrowserPopup(host, { action: 'reload', tabId, mountId: 'popup-mount' });
+    expect(child.reload).toHaveBeenCalledOnce();
+    expect(child.loadURL).not.toHaveBeenCalled();
+  });
+
+  it('ignores iframe hash navigation while a top-level navigation is pending or failed', () => {
+    const { host } = setup();
+    const url = 'https://fixture.test/';
+    ensure(host);
+    const child = mocks.views[0].webContents;
+    child.emit('did-navigate-in-page', {}, 'https://frame.test/#changed', false);
+    expect(ensure(host)).toMatchObject({ url, loading: true });
+    child.emit('did-fail-load', {}, -105, 'ERR_NAME_NOT_RESOLVED', url, true);
+    child.emit('did-navigate-in-page', {}, 'https://frame.test/#again', false);
+    expect(ensure(host)).toMatchObject({ url, error: 'ERR_NAME_NOT_RESOLVED', loading: false });
+    child.getURL = () => `${url}#main`;
+    child.emit('did-navigate-in-page', {}, `${url}#main`, true);
+    expect(ensure(host)).toMatchObject({ url: `${url}#main`, error: undefined, loading: false });
+  });
+
+  it('rejects invalid URLs, IDs and a foreign owning window', () => {
+    const { host } = setup();
+    expect(() => ensure(host, '../bad')).toThrow('Invalid');
+    expect(() => ensure(host, 'ordinary', 'file:///private/secret')).toThrow('Invalid');
+    for (const field of ['tabId', 'mountId', 'url']) {
+      const command = {
+        action: 'ensure',
+        tabId: 'ordinary',
+        url: 'about:blank',
+        mountId: 'valid',
+        requireExisting: false,
+        [field]: undefined,
+      };
+      expect(() => controlBrowserPopup(host, command as BrowserPopupCommand)).toThrow('Invalid');
+    }
+    ensure(host);
+    expect(() => ensure(setup().host)).toThrow('No such');
+  });
+
+  it('shares capacity across ordinary pages and pending popup adoption', () => {
+    const { host, handler } = setup();
+    for (let i = 0; i < MAX_BROWSER_TABS - 1; i++) ensure(host, `ordinary-${i}`);
+    handler({ url: 'about:blank' }).createWindow({});
+    expect(() => ensure(host, 'excess')).toThrow('maximum');
+    expect(handler({ url: 'about:blank' })).toEqual({ action: 'deny' });
+  });
+
+  it('invalidates stale mount commands and cancels disposal for the newest attachment', () => {
+    vi.useFakeTimers();
+    const { host } = setup();
+    ensure(host);
+    controlBrowserPopup(host, { action: 'dispose', tabId: 'ordinary', mountId: 'mount-one' });
+    ensure(host, 'ordinary', 'https://fixture.test/', 'mount-two');
+    expect(() => controlBrowserPopup(host, { action: 'dispose', tabId: 'ordinary', mountId: 'mount-one' })).toThrow(
+      'Stale'
+    );
+    expect(() => controlBrowserPopup(host, { action: 'dispose', tabId: 'ordinary' })).toThrow('Stale');
+    vi.runAllTimers();
+    expect(getBrowserPopup('ordinary')?.view.webContents.isDestroyed()).toBe(false);
+  });
+
+  it('reclaims obsolete scope capacity without sending close events into the next scope', () => {
+    const { host } = setup();
+    for (let i = 0; i < MAX_BROWSER_TABS; i++) ensure(host, `old-${i}`);
+    reconcileBrowserTabs(host, { ready: false, tabIds: [] });
+    expect(() => ensure(host, 'new-scope')).not.toThrow();
+    expect(mocks.events.filter((event) => event.action === 'close')).toEqual([]);
+  });
+
+  it('retains inventory-owned contents through delayed layout remounts and closes only on removal', () => {
+    vi.useFakeTimers();
+    const { host } = setup();
+    const initial = ensure(host)!;
+    reconcileBrowserTabs(host, { ready: true, tabIds: ['ordinary'] });
+    controlBrowserPopup(host, { action: 'dispose', tabId: 'ordinary', mountId: 'mount-one' });
+    vi.advanceTimersByTime(1000);
+    expect(getBrowserPopup('ordinary')?.active).toBe(false);
+    const remounted = ensure(host, 'ordinary', 'https://fixture.test/', 'mount-two')!;
+    expect(remounted.webContentsId).toBe(initial.webContentsId);
+    expect(mocks.views[0].webContents.loadURL).toHaveBeenCalledOnce();
+    reconcileBrowserTabs(host, { ready: true, tabIds: [] });
+    expect(getBrowserPopup('ordinary')).toBeUndefined();
+  });
+
+  it('releases removed inventory capacity before asynchronous web contents destruction finishes', () => {
+    const { host } = setup();
+    for (let i = 0; i < MAX_BROWSER_TABS; i++) ensure(host, `old-${i}`);
+    const old = mocks.views[0].webContents;
+    old.close.mockImplementation(() => {});
+    reconcileBrowserTabs(host, { ready: false, tabIds: [] });
+    expect(getBrowserPopup('old-0')).toBeUndefined();
+    for (let i = 0; i < MAX_BROWSER_TABS; i++) expect(() => ensure(host, `new-${i}`)).not.toThrow();
+    old.destroyed = true;
+    old.emit('destroyed');
+    expect(getBrowserPopup('new-0')).toBeDefined();
+  });
+
+  it('retains a popup awaiting adoption during ordinary inventory updates', () => {
+    const { host, handler } = setup();
+    ensure(host);
+    reconcileBrowserTabs(host, { ready: true, tabIds: ['ordinary'] });
+    const child = handler({ url: 'about:blank' }).createWindow({});
+    reconcileBrowserTabs(host, { ready: true, tabIds: ['ordinary'] });
+    expect(child.isDestroyed()).toBe(false);
+  });
+
+  it('closes removed inventory tabs and host-owned views', () => {
+    const { host } = setup();
+    ensure(host);
+    reconcileBrowserTabs(host, { ready: true, tabIds: ['ordinary'] });
+    reconcileBrowserTabs(host, { ready: true, tabIds: [] });
+    expect(getBrowserPopup('ordinary')).toBeUndefined();
+    ensure(host, 'next');
+    host.emit('closed');
+    expect(getBrowserPopup('next')).toBeUndefined();
+  });
+
+  it('reports page errors with the requested URL so retry reloads the failed destination', () => {
+    const { host } = setup();
+    ensure(host);
+    const child = mocks.views[0].webContents;
+    child.emit('did-fail-load', {}, -105, 'ERR_NAME_NOT_RESOLVED', 'https://fixture.test/', true);
+    child.emit('did-stop-loading');
+    const state = controlBrowserPopup(host, {
+      action: 'sync',
+      tabId: 'ordinary',
+      mountId: 'mount-one',
+      active: true,
+      bounds: { x: 0, y: 0, width: 400, height: 300 },
+    });
+    expect(state).toMatchObject({ url: 'https://fixture.test/', error: 'ERR_NAME_NOT_RESOLVED', loading: false });
+    controlBrowserPopup(host, { action: 'reload', tabId: 'ordinary', mountId: 'mount-one' });
+    expect(child.loadURL).toHaveBeenCalledTimes(2);
   });
 });

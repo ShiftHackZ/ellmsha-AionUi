@@ -515,6 +515,8 @@ export type BrowserTabRegistration = {
   tabId: string;
   webContentsId: number;
   active: boolean;
+  /** Exact native viewer attachment; stale mounts cannot re-register a replacement. */
+  mountId?: string;
   /** Acknowledge only the matching main-process request after focusing the guest frame. */
   focusRequestId?: string;
 };
@@ -539,11 +541,16 @@ export type BrowserPopupState = {
   loading: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  mountId?: string;
+  favicon?: string;
+  error?: string;
 };
-export type BrowserPopupCommand =
+export type BrowserPopupCommand = (
+  | { action: 'ensure'; tabId: string; url: string; requireExisting: boolean; mountId: string }
   | { action: 'sync'; tabId: string; active: boolean; bounds: { x: number; y: number; width: number; height: number } }
   | { action: 'navigate'; tabId: string; url: string }
-  | { action: 'back' | 'forward' | 'reload' | 'focus' | 'dispose'; tabId: string };
+  | { action: 'back' | 'forward' | 'reload' | 'focus' | 'dispose'; tabId: string }
+) & { mountId?: string };
 
 export type BrowserTabCommandFailure = {
   tabId: string;

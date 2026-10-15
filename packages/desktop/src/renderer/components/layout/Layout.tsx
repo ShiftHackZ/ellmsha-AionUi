@@ -209,7 +209,9 @@ const Layout: React.FC<{
     !workspaceAvailable && !isMobile && isPreviewOpen && previewActiveTab?.content_type === 'browser';
   const previewRegionActive = !isMobile && isPreviewOpen && (Boolean(currentProject) || unscopedBrowserVisible);
   const hiddenBrowserRuntimeActive =
-    !workspaceAvailable && !unscopedBrowserVisible && previewTabs.some((tab) => tab.content_type === 'browser');
+    ((!workspaceAvailable && !unscopedBrowserVisible) ||
+      (isElectronDesktop() && !isMobile && Boolean(currentProject) && !previewRegionActive)) &&
+    previewTabs.some((tab) => tab.content_type === 'browser');
   const { widthPx: previewWidthPx, createDragHandle: createPreviewRegionDragHandle } = useProjectPreviewRegionWidth(
     mainRowWidth,
     explorerCollapsed ? 0 : explorerWidthPx,
@@ -418,7 +420,12 @@ const Layout: React.FC<{
           <Titlebar workspaceAvailable={workspaceAvailable} />
           {/* 移动端左侧边栏蒙板 / Mobile left sider backdrop */}
           {isMobile && !collapsed && (
-            <div className='fixed inset-0 bg-black/30 z-90' onClick={() => setCollapsed(true)} aria-hidden='true' />
+            <div
+              data-native-browser-overlay
+              className='fixed inset-0 bg-black/30 z-90'
+              onClick={() => setCollapsed(true)}
+              aria-hidden='true'
+            />
           )}
 
           <ArcoLayout className={'size-full layout flex-1 min-h-0'}>

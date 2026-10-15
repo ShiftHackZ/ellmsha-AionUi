@@ -149,7 +149,8 @@
     "agentFirstUseContent": "Il peut ouvrir des pages, cliquer et lire du contenu dans ce panneau. Votre connexion est conservée.",
     "agentFirstUseAction": "Ouvrir les paramètres",
     "openExternal": "Ouvrir dans le navigateur par défaut",
-    "externalAuthHelp": "Si la connexion intégrée ou la clé de sécurité est bloquée, utilisez votre navigateur par défaut. Sa session est distincte de ce panneau."
+    "externalAuthHelp": "Si la connexion intégrée ou la clé de sécurité est bloquée, utilisez votre navigateur par défaut. Sa session est distincte de ce panneau.",
+    "loadFailed": "Impossible de charger cette page."
   },
   "memoryArtifactUnavailable": "Ce document de mémoire est indisponible dans cette conversation."
 }

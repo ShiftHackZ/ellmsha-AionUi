@@ -149,7 +149,8 @@
     "agentFirstUseContent": "Puede abrir páginas, hacer clic y leer contenido en este panel. Tu sesión se conserva.",
     "agentFirstUseAction": "Abrir ajustes",
     "openExternal": "Abrir en el navegador predeterminado",
-    "externalAuthHelp": "Si el inicio de sesión integrado o la llave de seguridad no es compatible, usa el navegador predeterminado. Su sesión es independiente de este panel."
+    "externalAuthHelp": "Si el inicio de sesión integrado o la llave de seguridad no es compatible, usa el navegador predeterminado. Su sesión es independiente de este panel.",
+    "loadFailed": "No se pudo cargar esta página."
   },
   "memoryArtifactUnavailable": "Este documento de memoria no está disponible en esta conversación."
 }

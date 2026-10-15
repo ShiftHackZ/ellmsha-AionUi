@@ -1,4 +1,4 @@
-import { getBrowserPopup } from '../../services/browser/popups';
+import { canOpenBrowserUrl, getBrowserPopup } from '../../services/browser/popups';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -206,7 +206,8 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
 
   const registerTab = (registration: BrowserTabRegistration): { ok: true } | { ok: false; reason: string } => {
     const { tabId, webContentsId, active } = registration;
-    if (!TAB_ID_PATTERN.test(tabId)) return { ok: false, reason: 'Browser tab id is invalid.' };
+    if (typeof tabId !== 'string' || !TAB_ID_PATTERN.test(tabId))
+      return { ok: false, reason: 'Browser tab id is invalid.' };
 
     const contents = webContents.fromId(webContentsId);
     if (!contents || contents.isDestroyed()) {
@@ -217,6 +218,10 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     }
     if (contents.session !== session.fromPartition(BROWSER_SESSION_PARTITION)) {
       return { ok: false, reason: 'The webview does not belong to the in-app browser session.' };
+    }
+    const native = getBrowserPopup(tabId, contents.id);
+    if (native && (registration.mountId !== native.mountId || (active && !native.active))) {
+      return { ok: false, reason: 'The native browser attachment is stale or hidden.' };
     }
 
     const aliased = [...targets.values()].find(
@@ -538,6 +543,13 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
         return;
       }
       const dispatch = async (): Promise<unknown> => {
+        if (
+          method === 'Page.navigate' &&
+          getBrowserPopup(target.tabId, target.contents.id) &&
+          (typeof params?.url !== 'string' || !canOpenBrowserUrl(params.url))
+        ) {
+          throw new Error('Unsupported browser URL.');
+        }
         if (method.startsWith('Input.')) {
           // A guest debugger is not an input focus boundary: Electron can send
           // CDP keystrokes to the focused host (e.g. the chat composer). Check

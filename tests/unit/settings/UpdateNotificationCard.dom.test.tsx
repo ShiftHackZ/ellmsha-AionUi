@@ -115,6 +115,7 @@ describe('full installer notification', () => {
     expect(mocks.check).toHaveBeenCalledOnce();
     expect(Boolean(getUpdateReadyState().available)).toBe(outcome === 'available');
     expect(screen.queryByTestId('update-notification-card')).toBeNull();
+    expect(document.querySelector('[data-native-browser-overlay]')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
     expect(mocks.download).not.toHaveBeenCalled();
     expect(mocks.open).not.toHaveBeenCalled();
@@ -125,6 +126,7 @@ describe('full installer notification', () => {
     async (theme) => {
       document.body.setAttribute('arco-theme', theme);
       await openCard();
+      expect(screen.getByTestId('update-notification-card')).toHaveAttribute('data-native-browser-overlay');
       expect(screen.getByRole('button', { name: 'update.downloadButton' })).toHaveClass('!rounded-8px');
       expect(mocks.auto).not.toHaveBeenCalled();
       fireEvent.click(screen.getByText('update.releaseLog'));
@@ -138,11 +140,19 @@ describe('full installer notification', () => {
     progress('downloading');
     fireEvent.click(screen.getByLabelText('update.minimize'));
     expect(screen.getByTestId('update-notification-mini-progress')).toHaveTextContent('50%');
+    expect(screen.getByTestId('update-notification-mini-progress')).toHaveAttribute('data-native-browser-bottom-inset');
+    expect(document.querySelector('[data-native-browser-overlay]')).toBeNull();
     fireEvent.click(screen.getByLabelText('update.restoreUpdateNotification'));
     act(() => window.dispatchEvent(new Event('aionui-open-update-modal')));
     expect(mocks.check).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByLabelText('update.cancel'));
     await waitFor(() => expect(mocks.cancel).toHaveBeenCalledOnce());
+  });
+  it('releases native browser obstruction when the notification is dismissed', async () => {
+    await openCard();
+    expect(document.querySelector('[data-native-browser-overlay]')).not.toBeNull();
+    fireEvent.click(screen.getByText('update.later'));
+    expect(document.querySelector('[data-native-browser-overlay]')).toBeNull();
   });
   it('holds retry until the original download ID and cancellation acknowledgment settle', async () => {
     let resolveDownload!: (value: unknown) => void;

@@ -149,7 +149,8 @@
     "agentFirstUseContent": "它可以在這個面板裡開啟網頁、點擊和讀取內容。你的登入狀態會被保留。",
     "agentFirstUseAction": "前往設定",
     "openExternal": "在預設瀏覽器中開啟",
-    "externalAuthHelp": "若內嵌登入或安全金鑰不受支援，請使用預設瀏覽器。其登入工作階段與此面板分開。"
+    "externalAuthHelp": "若內嵌登入或安全金鑰不受支援，請使用預設瀏覽器。其登入工作階段與此面板分開。",
+    "loadFailed": "無法載入此頁面。"
   },
   "memoryArtifactUnavailable": "此對話中無法存取該記憶文件。"
 }

@@ -16,7 +16,7 @@ import { MAX_BROWSER_TABS } from '@/common/config/constants';
 
 const electronMock = vi.hoisted(() => ({
   browserSession: {},
-  popups: new Map<string, { active: boolean; contents: FakeContents }>(),
+  popups: new Map<string, { active: boolean; contents: FakeContents; mountId?: string }>(),
   contents: new Map<number, FakeContents>(),
   focusedId: undefined as number | undefined,
   reportedFocusedId: undefined as number | undefined,
@@ -105,6 +105,7 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('@process/services/browser/popups', () => ({
+  canOpenBrowserUrl: (url: string) => url === 'about:blank' || /^https?:\/\//.test(url),
   getBrowserPopup: (tabId: string, contentsId?: number) => {
     const popup = electronMock.popups.get(tabId);
     return popup && (contentsId === undefined || popup.contents.id === contentsId) ? popup : undefined;
@@ -202,6 +203,44 @@ afterEach(async () => {
 });
 
 describe('cdpBridge multi-tab routing and lifecycle', () => {
+  it('requires exact native contents and its current attachment, and rejects unsafe native navigation', async () => {
+    const alpha = createContents(277);
+    const foreign = createContents(278);
+    vi.spyOn(alpha, 'getType').mockReturnValue('window');
+    vi.spyOn(foreign, 'getType').mockReturnValue('window');
+    electronMock.popups.set('alpha', { active: false, contents: alpha, mountId: 'current' });
+    const bridge = await startRawCdpBridge({ sendTabCommand: () => undefined });
+    openBridges.push(bridge);
+    bridge.updateTabInventory({ ready: true, tabIds: [] });
+    const registration = { tabId: 'alpha', webContentsId: alpha.id, active: false, mountId: 'current' };
+    expect(bridge.registerTab({ ...registration, mountId: 'stale' }).ok).toBe(false);
+    expect(bridge.registerTab({ ...registration, mountId: undefined }).ok).toBe(false);
+    expect(bridge.registerTab({ ...registration, active: true }).ok).toBe(false);
+    expect(bridge.registerTab({ ...registration, webContentsId: foreign.id }).ok).toBe(false);
+    expect(bridge.registerTab(registration)).toEqual({ ok: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const sessionId = sessionIdForTarget('alpha');
+    const rejected = await request<{ error: { message: string } }>(ws, {
+      id: 277,
+      method: 'Page.navigate',
+      params: { url: 'file:///private/secret' },
+      sessionId,
+    });
+    expect(rejected.error.message).toContain('Unsupported browser URL');
+    expect(alpha.debugger.sendCommand).not.toHaveBeenCalled();
+    const accepted = await request<{ result: unknown }>(ws, {
+      id: 278,
+      method: 'Page.navigate',
+      params: { url: 'https://fixture.test/' },
+      sessionId,
+    });
+    expect(accepted.result).toBeDefined();
+    expect(alpha.debugger.sendCommand).toHaveBeenCalledExactlyOnceWith('Page.navigate', {
+      url: 'https://fixture.test/',
+    });
+  });
+
   it('waits for exact native popup frame focus before input and rejects a closed pending target', async () => {
     const alpha = createContents(279);
     vi.spyOn(alpha, 'getType').mockReturnValue('window');

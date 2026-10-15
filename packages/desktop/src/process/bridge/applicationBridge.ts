@@ -6,7 +6,7 @@
 
 import type { BrowserWindow } from 'electron';
 import { app, session, webContents } from 'electron';
-import { controlBrowserPopup, registerBrowserPopupOpener } from '../services/browser/popups';
+import { controlBrowserPopup, reconcileBrowserTabs, registerBrowserPopupOpener } from '../services/browser/popups';
 import { ipcBridge } from '@/common';
 import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 import { ProcessConfig } from '@process/utils/initStorage';
@@ -249,6 +249,7 @@ export function initApplicationBridge(): void {
 
   ipcBridge.application.reportBrowserTabInventory.provider(async (inventory) => {
     try {
+      if (mainWindowRef && !mainWindowRef.isDestroyed()) reconcileBrowserTabs(mainWindowRef, inventory);
       const handle = getCdpBridgeHandle();
       if (!handle) return { success: false, msg: 'Agent browser control is not enabled.' };
       const result = handle.updateTabInventory(inventory);

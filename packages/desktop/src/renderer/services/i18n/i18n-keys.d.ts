@@ -1129,6 +1129,7 @@ export type I18nKey =
   | 'preview.browser.agentFirstUseContent'
   | 'preview.browser.agentFirstUseTitle'
   | 'preview.browser.externalAuthHelp'
+  | 'preview.browser.loadFailed'
   | 'preview.browser.newTab'
   | 'preview.browser.openExternal'
   | 'preview.browser.tabLimitReached'

@@ -149,7 +149,8 @@
     "agentFirstUseContent": "它可以在这个面板里打开网页、点击和读取内容。你的登录状态会被保留。",
     "agentFirstUseAction": "前往设置",
     "openExternal": "在默认浏览器中打开",
-    "externalAuthHelp": "若内嵌登录或安全密钥不受支持，请使用默认浏览器。其登录会话与此面板分开。"
+    "externalAuthHelp": "若内嵌登录或安全密钥不受支持，请使用默认浏览器。其登录会话与此面板分开。",
+    "loadFailed": "无法加载此页面。"
   },
   "memoryArtifactUnavailable": "此对话中无法访问该记忆文档。"
 }

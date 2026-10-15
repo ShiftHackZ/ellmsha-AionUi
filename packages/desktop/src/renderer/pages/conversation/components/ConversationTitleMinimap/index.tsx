@@ -266,6 +266,7 @@ const ConversationTitleMinimap: React.FC<ConversationTitleMinimapProps> = ({
         typeof document !== 'undefined' &&
         createPortal(
           <div
+            data-native-browser-overlay
             ref={panelRef}
             className='conversation-minimap-layer'
             style={{

@@ -149,7 +149,8 @@
     "agentFirstUseContent": "It can open pages, click and read content in this panel. Your sign-in state is kept between sessions.",
     "agentFirstUseAction": "Open settings",
     "openExternal": "Open in default browser",
-    "externalAuthHelp": "For blocked embedded sign-in or security keys, use your default browser. Its sign-in session is separate from this panel."
+    "externalAuthHelp": "For blocked embedded sign-in or security keys, use your default browser. Its sign-in session is separate from this panel.",
+    "loadFailed": "Could not load this page."
   },
   "memoryArtifactUnavailable": "This memory artifact is unavailable in this conversation."
 }

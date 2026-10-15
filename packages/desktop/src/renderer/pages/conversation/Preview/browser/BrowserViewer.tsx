@@ -14,6 +14,8 @@ import {
 } from './constants';
 
 export interface BrowserViewerProps {
+  /** Desktop live popup adoption must preserve the original native contents. */
+  requireExisting?: boolean;
   /** 该 tab 当前地址 / Current address of this tab */
   url: string;
   /** 所属 preview tab 的 id / Id of the owning preview tab */
