@@ -10,6 +10,7 @@ import i18n from '@process/services/i18n';
 import { PetStateMachine } from './petStateMachine';
 import { PetIdleTicker } from './petIdleTicker';
 import { PetEventBridge } from './petEventBridge';
+import { preventPetPanelActivation } from './petPanel';
 import { setPetNotifyHook } from '../../common/adapter/main';
 import {
   initPetConfirmManager,
@@ -119,7 +120,7 @@ export function createPetWindow(): void {
     hasShadow: false,
     focusable: false,
     show: false,
-    // focusable:false prevents key focus; a native panel also prevents app activation.
+    // focusable:false prevents key focus; panel activation is configured before showing below.
     ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
     webPreferences: {
       preload: path.join(PRELOAD_DIR, 'petPreload.js'),
@@ -168,6 +169,18 @@ export function createPetWindow(): void {
   }
 
   petHitWindow.setIgnoreMouseEvents(true, { forward: true });
+
+  try {
+    preventPetPanelActivation(petWindow);
+    preventPetPanelActivation(petHitWindow);
+  } catch (error) {
+    // Never expose a partially configured pet that can steal focus from another app.
+    petHitWindow.destroy();
+    petWindow.destroy();
+    petHitWindow = null;
+    petWindow = null;
+    throw error;
+  }
 
   // Initialize state machine, idle ticker, and event bridge
   stateMachine = new PetStateMachine();

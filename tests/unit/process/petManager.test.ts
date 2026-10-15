@@ -6,6 +6,7 @@ const native = vi.hoisted(() => ({
   cursor: { x: 1040, y: 640 },
   ozonePlatform: '',
   activate: vi.fn(),
+  preventPanelActivation: vi.fn(),
 }));
 
 const ipcMain = new EventEmitter();
@@ -65,6 +66,7 @@ vi.mock('@/process/pet/petConfirmManager', () => ({
   destroyPetConfirmManager: vi.fn(),
   unhookPetConfirm: vi.fn(),
 }));
+vi.mock('@/process/pet/petPanel', () => ({ preventPetPanelActivation: native.preventPanelActivation }));
 
 const originalPlatform = process.platform;
 let pet: typeof import('@/process/pet/petManager');
@@ -75,6 +77,7 @@ beforeEach(async () => {
   windows.length = 0;
   native.cursor = { x: 1040, y: 640 };
   native.ozonePlatform = '';
+  native.preventPanelActivation.mockReset();
   Object.defineProperty(process, 'platform', { value: 'darwin' });
   pet = await import('@/process/pet/petManager');
 });
@@ -86,6 +89,34 @@ afterEach(() => {
 });
 
 describe('desktop pet focus', () => {
+  it('configures both native panels while neither is visible or listening for drag input', () => {
+    native.preventPanelActivation.mockImplementation(() => {
+      expect(windows.every((window) => window.showInactive.mock.calls.length === 0)).toBe(true);
+      expect(ipcMain.listenerCount('pet:drag-start')).toBe(0);
+    });
+    pet.createPetWindow();
+    expect(native.preventPanelActivation.mock.calls.map(([window]) => window)).toEqual(windows);
+  });
+
+  it.each([1, 2])('removes both hidden panels when native setup fails on panel %s', (failedPanel) => {
+    native.preventPanelActivation.mockImplementation((window) => {
+      if (window === windows[failedPanel - 1]) throw new Error('Native setup failed');
+    });
+    expect(() => pet.createPetWindow()).toThrow('Native setup failed');
+    expect(windows.every((window) => window.isDestroyed() && !window.showInactive.mock.calls.length)).toBe(true);
+    expect(ipcMain.listenerCount('pet:drag-start')).toBe(0);
+  });
+
+  it('can retry creation after failed native setup without retaining a partial pet', () => {
+    native.preventPanelActivation.mockImplementationOnce(() => {
+      throw new Error('Native setup failed');
+    });
+    expect(() => pet.createPetWindow()).toThrow('Native setup failed');
+    pet.createPetWindow();
+    expect(PetWindow.getAllWindows()).toHaveLength(2);
+    expect(PetWindow.getAllWindows().every((window) => window.showInactive.mock.calls.length === 1)).toBe(true);
+  });
+
   it('creates nonactivating macOS panels that accept the first drag from another app', () => {
     pet.createPetWindow();
     expect(windows.map((window) => window.options)).toMatchObject([
