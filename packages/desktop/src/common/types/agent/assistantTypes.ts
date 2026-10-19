@@ -22,7 +22,7 @@ export function assistantRuntimeKey(assistant?: Pick<Assistant, 'agent'> | null)
 }
 
 export function isAionrsAssistant(assistant?: Pick<Assistant, 'agent'> | null): boolean {
-  return assistant?.agent?.type === 'aionrs';
+  return assistant?.agent?.type === 'aionrs' && assistantRuntimeKey(assistant) !== 'auto-router';
 }
 
 export interface Assistant {

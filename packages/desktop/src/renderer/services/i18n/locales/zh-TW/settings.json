@@ -1487,5 +1487,98 @@
   "pluginComponent": {
     "skills": "Skills",
     "mcp_servers": "MCP servers"
+  },
+  "autoRouter": {
+    "title": "Auto Router",
+    "description": "從已設定的供應商帳戶與可用代理程式中選擇。預設設定適用於新聊天；現有聊天的路由維持固定。",
+    "mode": "路由模式",
+    "modes": {
+      "auto": "自動",
+      "semi_auto": "半自動",
+      "manual": "手動"
+    },
+    "modeHelp": {
+      "auto": "依據任務為主代理程式與每個受管理的子代理程式選擇執行目標。",
+      "semi_auto": "使用您選擇的主代理程式，並自動為受管理的子代理程式選擇執行目標。",
+      "manual": "使用您選擇的主代理程式與預設子代理程式執行目標。獨立聊天需要原生供應商目標；Teams 支援混用不同代理程式執行環境。"
+    },
+    "root": "主代理程式供應商與模型",
+    "child": "預設子代理程式供應商與模型",
+    "profile": "最佳化優先順序",
+    "profiles": {
+      "cost": "已知成本最低",
+      "speed": "已知延遲最低",
+      "quality": "品質優先",
+      "balanced": "均衡"
+    },
+    "localOnly": "僅限本機推論",
+    "localHelp": "僅允許選擇明確聲明在回送位址上執行本機推論的模型與分類器。工具與記憶仍遵循既有存取規則；此設定並非網路防火牆。",
+    "allTargets": "使用所有符合條件的已設定目標",
+    "pool": "允許的目標",
+    "poolRequired": "至少保留一個目標，或明確啟用所有符合條件的目標。",
+    "selectTarget": "選擇供應商或代理程式及其模型",
+    "classifier": "任務分類器（選用的原生模型）",
+    "classifierHelp": "此模型會分析任務，並增加一次推論請求。未設定時，會使用明確標示的穩定基準、已知中繼資料與已接受的結果進行選擇。分類器不能捏造價格或選擇任意帳戶。",
+    "childScopeHelp": "可為原生子代理程式與 Team 成員選擇執行目標。外部 CLI 代理程式的內部子代理程式仍由該 CLI 控制。最佳化優先順序獨立於模型的推理強度與權限。",
+    "hints": "目標的選用中繼資料",
+    "hintsHelp": "僅填寫已知值。缺少的值會維持未知。品質與擅長任務是您的偏好，並非基準測試結果或已驗證的準確率。",
+    "unknown": "未知",
+    "metrics": {
+      "input_usd_per_million": "輸入價格（美元／百萬 token）",
+      "output_usd_per_million": "輸出價格（美元／百萬 token）",
+      "expected_latency_ms": "預期延遲（毫秒）",
+      "context_tokens": "上下文容量（token）",
+      "quality_tier": "品質偏好（1–5）",
+      "supports_tools": "工具呼叫",
+      "supports_vision": "影像輸入"
+    },
+    "strengths": "偏好的任務類型",
+    "tasks": {
+      "coding": "程式設計",
+      "review": "審查",
+      "research": "研究",
+      "writing": "寫作",
+      "analysis": "分析",
+      "general": "一般"
+    },
+    "declareLocal": "我確認此端點在本機執行推論",
+    "saved": "路由器預設設定已儲存",
+    "pinned": "此聊天的具體路由已固定。如需選擇其他路由，請建立新聊天。",
+    "managedChildren": "受管理的子代理程式使用此路由原則。",
+    "cliChildren": "CLI 內部的子代理程式由所選代理程式控制。",
+    "otherReason": "路由器已記錄其他選擇依據。",
+    "reviewLabel": "評價此結果",
+    "accept": "接受結果",
+    "reject": "需要修正",
+    "reviewSaved": "您對此結果的評價已記錄",
+    "initialTask": "用於路由的初始任務",
+    "initialTaskPlaceholder": "描述此成員的實際任務",
+    "initialTaskHelp": "用於在啟動前選擇模型。此操作不會傳送訊息或開始任務；建立 Team 後再傳送任務。",
+    "initialTaskRequired": "請描述每位路由成員的初始任務。",
+    "errors": {
+      "empty": "請先新增已啟用的供應商模型，或具有已公布模型清單的可用代理程式。",
+      "rootRequired": "請選擇可用的主代理程式目標。",
+      "childRequired": "請選擇可用的子代理程式目標。",
+      "classifierRequired": "請選擇可用的原生供應商模型進行分類。",
+      "unavailable": "某個所選目標已停用或不再可用。請更新候選目標。",
+      "manualNative": "手動模式的獨立聊天要求主代理程式與子代理程式皆使用原生供應商模型。如需混用代理程式執行環境，請使用 Team。",
+      "localRequired": "請選擇符合條件的本機目標，並確認其本機推論中繼資料。此模式不允許使用雲端分類器。",
+      "loadFailed": "無法載入路由設定。請在傳送前重試。"
+    },
+    "reasons": {
+      "manual_target": "使用者選擇的目標",
+      "cost_unknown": "成本未知",
+      "latency_unknown": "延遲未知",
+      "quality_unknown": "品質未知",
+      "user_priors_not_verified_accuracy": "使用者偏好不等於已驗證的準確率",
+      "explicit_user_acceptance_history": "包含使用者明確接受結果的歷史紀錄",
+      "conservative_stable_baseline": "保守且穩定的基準",
+      "classification_unconfigured": "未設定任務分類器",
+      "structured_classification": "已套用結構化任務分類",
+      "classification_failed_conservative_baseline": "分類失敗；已套用保守基準",
+      "local_inference_only": "模型推論僅限符合條件的本機目標",
+      "memory_locality_unverified_skipped": "無法確認嵌入計算是否在本機執行，已略過路由器記憶查詢",
+      "classification_unconfigured_conservative_keywords": "未設定分類器；使用保守的關鍵字啟發式規則"
+    }
   }
 }

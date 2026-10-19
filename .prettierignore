@@ -1,1 +1,3 @@
 mobile/
+# Pinned third-party sources: local adaptations and hashes are reviewed together.
+resources/ellmsha-skills/community/

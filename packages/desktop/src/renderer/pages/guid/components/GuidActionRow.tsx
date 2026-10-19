@@ -71,6 +71,7 @@ type GuidActionRowProps = {
 
   // Model selector node (rendered by parent for the desktop layout)
   modelSelectorNode: React.ReactNode;
+  routerSelectorNode?: React.ReactNode;
 
   // Flat model data for the mobile action sheet (desktop uses modelSelectorNode).
   isGeminiMode: boolean;
@@ -112,6 +113,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   onFilesPicked,
   onFilesUploaded,
   modelSelectorNode,
+  routerSelectorNode,
   isGeminiMode,
   modelList,
   current_model,
@@ -250,7 +252,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
         available.find((m) => m.id === selectedAcpModel)?.label || currentAcpCachedModelInfo?.current_model_label || '';
       onModelSelect = (key) => setSelectedAcpModel(key);
     }
-    if (modelOptions.length > 0) {
+    if (!routerSelectorNode && modelOptions.length > 0) {
       entries.push({
         key: 'model',
         icon: <Brain theme='outline' size='16' />,
@@ -372,6 +374,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
     return entries;
   }, [
     isMobile,
+    routerSelectorNode,
     isGeminiMode,
     modelList,
     current_model,
@@ -534,6 +537,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   return (
     <div className={styles.actionRow}>
       <div className={styles.actionTools}>
+        {routerSelectorNode}
         <div className={styles.actionEntry}>
           {isMobile ? (
             // Mobile: the "+" opens the bottom action sheet holding every control.

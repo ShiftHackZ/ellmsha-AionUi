@@ -1488,5 +1488,98 @@
   "pluginComponent": {
     "skills": "Skills",
     "mcp_servers": "MCP servers"
+  },
+  "autoRouter": {
+    "title": "Auto Router",
+    "description": "Escolha entre suas contas de provedores configuradas e os agentes disponíveis. Os padrões se aplicam a novos chats; as rotas existentes permanecem fixas.",
+    "mode": "Modo de roteamento",
+    "modes": {
+      "auto": "Automático",
+      "semi_auto": "Semiautomático",
+      "manual": "Manual"
+    },
+    "modeHelp": {
+      "auto": "Escolher o agente principal e cada subagente gerenciado conforme sua tarefa.",
+      "semi_auto": "Usar o agente principal escolhido e rotear os subagentes gerenciados automaticamente.",
+      "manual": "Usar os destinos escolhidos para o agente principal e os subagentes. Chats individuais exigem destinos de provedores nativos; equipes permitem diferentes ambientes de agentes."
+    },
+    "root": "Provedor e modelo do agente principal",
+    "child": "Provedor e modelo padrão dos subagentes",
+    "profile": "Prioridade de otimização",
+    "profiles": {
+      "cost": "Menor custo conhecido",
+      "speed": "Menor latência conhecida",
+      "quality": "Preferência de qualidade",
+      "balanced": "Equilibrado"
+    },
+    "localOnly": "Somente inferência local",
+    "localHelp": "Restringir a seleção do modelo e do classificador à inferência explicitamente declarada como local em endpoints de loopback. Ferramentas e memória mantêm suas regras de acesso atuais; isso não é um firewall de rede.",
+    "allTargets": "Usar todos os destinos configurados elegíveis",
+    "pool": "Destinos permitidos",
+    "poolRequired": "Mantenha pelo menos um destino ou habilite explicitamente todos os destinos elegíveis.",
+    "selectTarget": "Selecionar provedor ou agente e modelo",
+    "classifier": "Classificador de tarefas (modelo nativo opcional)",
+    "classifierHelp": "Este modelo analisa a tarefa e adiciona uma solicitação de inferência. Sem ele, a seleção usa uma regra básica estável e visível, metadados conhecidos e resultados aceitos. O classificador não pode inventar preços nem selecionar contas arbitrárias.",
+    "childScopeHelp": "Subagentes nativos e membros da equipe podem ser roteados. Os subagentes internos de agentes CLI externos continuam sob o controle dessa CLI. A prioridade de otimização é independente do esforço de raciocínio do modelo e das permissões.",
+    "hints": "Metadados opcionais de um destino",
+    "hintsHelp": "Informe apenas valores conhecidos. Valores ausentes permanecem desconhecidos. Qualidade e pontos fortes são suas preferências, não resultados de testes comparativos nem precisão verificada.",
+    "unknown": "Desconhecido",
+    "metrics": {
+      "input_usd_per_million": "Entrada: USD por milhão de tokens",
+      "output_usd_per_million": "Saída: USD por milhão de tokens",
+      "expected_latency_ms": "Latência esperada (ms)",
+      "context_tokens": "Capacidade de contexto (tokens)",
+      "quality_tier": "Preferência de qualidade (1–5)",
+      "supports_tools": "Chamadas de ferramentas",
+      "supports_vision": "Entrada de imagens"
+    },
+    "strengths": "Tipos de tarefas preferidos",
+    "tasks": {
+      "coding": "Programação",
+      "review": "Revisão",
+      "research": "Pesquisa",
+      "writing": "Redação",
+      "analysis": "Análise",
+      "general": "Geral"
+    },
+    "declareLocal": "Confirmo que este endpoint executa a inferência localmente",
+    "saved": "Padrões do roteador salvos",
+    "pinned": "Esta rota específica está fixada para este chat. Inicie um novo chat para escolher outra rota.",
+    "managedChildren": "Os subagentes gerenciados usam esta política de roteamento.",
+    "cliChildren": "Os subagentes internos da CLI são controlados pelo agente selecionado.",
+    "otherReason": "O roteador registrou informações adicionais que fundamentam a seleção.",
+    "reviewLabel": "Avaliar este resultado",
+    "accept": "Aceitar resultado",
+    "reject": "Precisa de correção",
+    "reviewSaved": "Sua avaliação foi registrada para este resultado",
+    "initialTask": "Tarefa inicial para o roteamento",
+    "initialTaskPlaceholder": "Descreva a tarefa real deste membro",
+    "initialTaskHelp": "Usada para selecionar o modelo antes da inicialização. Não envia uma mensagem nem inicia a tarefa; envie a tarefa depois de criar a equipe.",
+    "initialTaskRequired": "Descreva a tarefa inicial de cada membro que será roteado.",
+    "errors": {
+      "empty": "Primeiro, adicione um modelo de provedor habilitado ou um agente disponível com modelos informados.",
+      "rootRequired": "Escolha um destino disponível para o agente principal.",
+      "childRequired": "Escolha um destino disponível para os subagentes.",
+      "classifierRequired": "Escolha um modelo de provedor nativo disponível para a classificação.",
+      "unavailable": "Um destino selecionado está desabilitado ou não está mais disponível. Atualize a seleção.",
+      "manualNative": "Chats individuais no modo manual exigem modelos de provedores nativos para o agente principal e os subagentes. Use uma equipe para combinar diferentes ambientes de agentes.",
+      "localRequired": "Selecione destinos locais elegíveis e confirme seus metadados de inferência local. Um classificador na nuvem não é permitido neste modo.",
+      "loadFailed": "Não foi possível carregar as configurações de roteamento. Tente novamente antes de enviar."
+    },
+    "reasons": {
+      "manual_target": "Destino escolhido pelo usuário",
+      "cost_unknown": "Custo desconhecido",
+      "latency_unknown": "Latência desconhecida",
+      "quality_unknown": "Qualidade desconhecida",
+      "user_priors_not_verified_accuracy": "As preferências do usuário não são precisão verificada",
+      "explicit_user_acceptance_history": "Inclui o histórico de aceitação explícita do usuário",
+      "conservative_stable_baseline": "Regra básica conservadora e estável",
+      "classification_unconfigured": "O classificador de tarefas não está configurado",
+      "structured_classification": "Classificação estruturada de tarefas aplicada",
+      "classification_failed_conservative_baseline": "A classificação falhou; a regra básica conservadora foi aplicada",
+      "local_inference_only": "Inferência do modelo restrita a destinos locais elegíveis",
+      "memory_locality_unverified_skipped": "A consulta de memória do roteador foi ignorada porque a execução local dos embeddings não foi verificada",
+      "classification_unconfigured_conservative_keywords": "Sem classificador; heurísticas conservadoras por palavras-chave"
+    }
   }
 }

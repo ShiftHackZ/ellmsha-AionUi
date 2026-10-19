@@ -164,6 +164,17 @@ describe('teamMapper', () => {
     ).not.toHaveProperty('backend');
   });
 
+  it('preserves the actual routing assignment without adding a runtime override', () => {
+    const body = toBackendAssistant({
+      role: 'teammate',
+      assistant_name: 'Router',
+      assistant_id: 'bare:auto-router',
+      initial_task: 'Review the parser changes',
+    });
+    expect(body).toMatchObject({ initial_task: 'Review the parser changes', assistant_id: 'bare:auto-router' });
+    expect(body).not.toHaveProperty('backend');
+  });
+
   it('rejects new team payloads without assistant identity', () => {
     expect(() =>
       toBackendAssistant({

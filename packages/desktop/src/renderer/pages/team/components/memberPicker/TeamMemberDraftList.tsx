@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@arco-design/web-react';
+import { Button, Input } from '@arco-design/web-react';
 import { CloseSmall, Crown } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { AssistantOptionLabel, type TeamAssistantOption } from '../assistantSelectUtils';
@@ -7,6 +7,7 @@ import { AssistantOptionLabel, type TeamAssistantOption } from '../assistantSele
 export type TeamMemberDraft = {
   selectionId: string;
   assistant: TeamAssistantOption;
+  initialTask?: string;
 };
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
   leaderSelectionId?: string;
   onLeaderChange: (selectionId: string) => void;
   onRemove: (selectionId: string) => void;
+  onTaskChange?: (selectionId: string, task: string) => void;
   /**
    * 可选的标题行操作区，渲染在“已选成员 N”标题右侧、替换默认的 Leader 图例。
    * 窄屏用它承载“添加成员”按钮，避免另起一行重复渲染标题。
@@ -32,12 +34,15 @@ const TeamMemberDraftList: React.FC<Props> = ({
   leaderSelectionId,
   onLeaderChange,
   onRemove,
+  onTaskChange,
   headerAction,
   listBoxClassName,
 }) => {
   const { t } = useTranslation();
 
   const hasMembers = members.length > 0;
+  const routedLeader =
+    members.find((member) => member.selectionId === leaderSelectionId)?.assistant.backend === 'auto-router';
 
   return (
     <div className='flex min-h-0 flex-1 flex-col'>
@@ -87,38 +92,52 @@ const TeamMemberDraftList: React.FC<Props> = ({
             return (
               <div
                 key={member.selectionId}
-                className='flex h-40px shrink-0 items-center gap-8px rounded-8px px-8px hover:bg-fill-2'
+                className='flex shrink-0 flex-col rounded-8px px-8px hover:bg-fill-2'
                 data-testid={`team-create-member-draft-${member.selectionId}`}
               >
-                <AssistantOptionLabel assistant={member.assistant} size='large' />
-                <div className='flex flex-1 items-center justify-end gap-10px'>
-                  <Button
-                    type='text'
-                    className={`!h-26px !w-26px !min-w-26px !rounded-6px !p-0 ${
-                      isLeader
-                        ? '!bg-[rgba(var(--warning-6),0.16)] hover:!bg-[rgba(var(--warning-6),0.24)]'
-                        : '!bg-transparent !text-t-tertiary hover:!bg-fill-2 hover:!text-t-secondary'
-                    }`}
-                    icon={
-                      <Crown
-                        theme={isLeader ? 'filled' : 'outline'}
-                        size='15'
-                        fill={isLeader ? 'var(--warning)' : 'currentColor'}
-                      />
-                    }
-                    onClick={() => onLeaderChange(member.selectionId)}
-                    aria-label={leaderButtonLabel}
-                    aria-pressed={isLeader}
-                    data-leader-state={isLeader ? 'active' : 'inactive'}
-                  />
-                  <Button
-                    type='text'
-                    icon={<CloseSmall theme='outline' size='16' />}
-                    className='!h-24px !w-24px !min-w-24px !p-0 text-t-tertiary'
-                    onClick={() => onRemove(member.selectionId)}
-                    data-testid={`team-create-member-remove-${member.selectionId}`}
-                  />
+                <div className='flex h-40px items-center gap-8px'>
+                  <AssistantOptionLabel assistant={member.assistant} size='large' />
+                  <div className='flex flex-1 items-center justify-end gap-10px'>
+                    <Button
+                      type='text'
+                      className={`!h-26px !w-26px !min-w-26px !rounded-6px !p-0 ${
+                        isLeader
+                          ? '!bg-[rgba(var(--warning-6),0.16)] hover:!bg-[rgba(var(--warning-6),0.24)]'
+                          : '!bg-transparent !text-t-tertiary hover:!bg-fill-2 hover:!text-t-secondary'
+                      }`}
+                      icon={
+                        <Crown
+                          theme={isLeader ? 'filled' : 'outline'}
+                          size='15'
+                          fill={isLeader ? 'var(--warning)' : 'currentColor'}
+                        />
+                      }
+                      onClick={() => onLeaderChange(member.selectionId)}
+                      aria-label={leaderButtonLabel}
+                      aria-pressed={isLeader}
+                      data-leader-state={isLeader ? 'active' : 'inactive'}
+                    />
+                    <Button
+                      type='text'
+                      icon={<CloseSmall theme='outline' size='16' />}
+                      className='!h-24px !w-24px !min-w-24px !p-0 text-t-tertiary'
+                      onClick={() => onRemove(member.selectionId)}
+                      data-testid={`team-create-member-remove-${member.selectionId}`}
+                    />
+                  </div>
                 </div>
+                {(routedLeader || member.assistant.backend === 'auto-router') && (
+                  <div className='pb-8px'>
+                    <Input.TextArea
+                      aria-label={t('settings.autoRouter.initialTask')}
+                      value={member.initialTask ?? ''}
+                      placeholder={t('settings.autoRouter.initialTaskPlaceholder')}
+                      autoSize={{ minRows: 2, maxRows: 4 }}
+                      onChange={(task) => onTaskChange?.(member.selectionId, task)}
+                    />
+                    <p className='m-0 mt-4px text-12px text-t-tertiary'>{t('settings.autoRouter.initialTaskHelp')}</p>
+                  </div>
+                )}
               </div>
             );
           })

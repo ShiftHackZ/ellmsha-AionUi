@@ -168,7 +168,7 @@ const LocalAgents: React.FC = () => {
 
   const openAgentConfig = useCallback(
     (agentId: string) => {
-      navigate(`/settings/agent/${agentId}/repair`);
+      navigate(agentId === 'auto-router' ? '/settings/agent/auto-router' : `/settings/agent/${agentId}/repair`);
     },
     [navigate]
   );

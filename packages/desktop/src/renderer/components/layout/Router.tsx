@@ -6,6 +6,7 @@ import { TEAM_MODE_ENABLED } from '@/common/config/constants';
 const Conversation = React.lazy(() => import('@renderer/pages/conversation'));
 const Guid = React.lazy(() => import('@renderer/pages/guid'));
 const AgentSettings = React.lazy(() => import('@renderer/pages/settings/AgentSettings'));
+const AutoRouterSettings = React.lazy(() => import('@renderer/components/agent/AutoRouter'));
 const AgentRepairPage = React.lazy(() => import('@renderer/pages/settings/AgentSettings/AgentRepairPage'));
 const AssistantSettings = React.lazy(() => import('@renderer/pages/settings/AssistantSettings'));
 const SkillsSettings = React.lazy(() => import('@renderer/pages/settings/SkillsSettings/SkillsHubSettings'));
@@ -79,6 +80,7 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
               so old deep links / back-nav still land on the new page. */}
           <Route path='/settings/assistants' element={<Navigate to='/assistants' replace />} />
           <Route path='/settings/agent' element={withRouteFallback(AgentSettings)} />
+          <Route path='/settings/agent/auto-router' element={withRouteFallback(AutoRouterSettings)} />
           <Route path='/settings/agent/:id/repair' element={withRouteFallback(AgentRepairPage)} />
           {/* Skills and Tools are top-level settings entries. */}
           <Route path='/settings/skills' element={withRouteFallback(SkillsSettings)} />

@@ -18,8 +18,12 @@ import type { NavigateFunction } from 'react-router-dom';
 import { mutate as swrMutate } from 'swr';
 import { getConversationCreateErrorMessage } from '@/renderer/pages/conversation/utils/conversationCreateError';
 import type { AcpModelInfo } from '../types';
+import type { RouterConfig } from '@/common/types/agent/routerTypes';
+import { isImageFile } from '@/renderer/services/FileService';
 
 export type GuidSendDeps = {
+  routerConfig?: RouterConfig;
+  routerConfigError?: unknown;
   // Input state
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
@@ -71,6 +75,8 @@ export type GuidSendResult = {
  */
 export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
   const {
+    routerConfig,
+    routerConfigError,
     input,
     setInput,
     files,
@@ -173,6 +179,41 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
       mcp_ids: assistantOverrideMcpIds,
     };
 
+    if (assistantBackend === 'auto-router') {
+      if (!routerConfig || routerConfigError) throw new Error(t('settings.autoRouter.errors.loadFailed'));
+      const conversation = await ipcBridge.conversation.create.invoke({
+        name: t('conversation.welcome.newConversation'),
+        assistant: {
+          id: assistantConversationId,
+          locale: localeKey,
+          conversation_overrides: { ...assistantOverrides, model: undefined },
+        },
+        routing: {
+          initial_prompt: input,
+          config: routerConfig,
+          has_images: files.some((file) => isImageFile(chatFileRefPath(file))),
+        },
+        extra: {
+          workspace: finalWorkspace,
+          custom_workspace: isCustomWorkspace,
+          default_files: files.map(chatFileRefPath),
+          selected_mcp_server_ids: selectedUserMcpServerIdsToSend,
+          selected_session_mcp_servers: selectedSessionMcpServersToSend,
+        },
+      });
+      if (!conversation?.id || !['aionrs', 'acp', 'antigravity'].includes(conversation.type))
+        throw new Error(t('conversation.createFailed'));
+      const queue = conversation.type === 'aionrs' ? 'aionrs' : 'acp';
+      sessionStorage.setItem(
+        `${queue}_initial_message_${conversation.id}`,
+        JSON.stringify({ input, files: files.length ? files : undefined })
+      );
+      if (isCustomWorkspace) updateWorkspaceTime(finalWorkspace);
+      emitter.emit('chat.history.refresh');
+      await navigate(`/conversation/${conversation.id}`);
+      return;
+    }
+
     if (assistantBackend === 'aionrs') {
       if (!current_model) {
         Message.warning(t('conversation.noModelConfigured'));
@@ -274,6 +315,8 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
       throw error;
     }
   }, [
+    routerConfig,
+    routerConfigError,
     input,
     files,
     dir,
@@ -333,7 +376,11 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
   ]);
 
   // Calculate button disabled state
-  const isButtonDisabled = loading || !input.trim() || !selectedAssistantId;
+  const isButtonDisabled =
+    loading ||
+    !input.trim() ||
+    !selectedAssistantId ||
+    (selectedAssistantBackend === 'auto-router' && (!routerConfig || Boolean(routerConfigError)));
 
   return {
     handleSend,

@@ -1,0 +1,1234 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/mvanhorn/last30days-skill",
+  "revision": "v3.28.0",
+  "commit": "50998cd1ba583f13a63b20e3fb5d906c71c31655",
+  "sourcePath": "skills/last30days",
+  "files": [
+    {
+      "path": "LICENSE",
+      "upstreamPath": "LICENSE",
+      "upstreamBlobSha1": "c7d2838bcc549a5cda7b7a3556a422e0074e56a5",
+      "mode": "100644",
+      "sha256": "31803213a789825dc419de43542381e1d570b4408cf2bcf2e8a9947a6d3fd2ab",
+      "modified": false
+    },
+    {
+      "path": ".skillignore",
+      "upstreamPath": "skills/last30days/.skillignore",
+      "upstreamBlobSha1": "f8e5b1b6768c179ade50cccaec19cc3d22c6e515",
+      "mode": "100644",
+      "sha256": "133b60f94a87f03f65212674a15eb4be36791956600f9cf9057cb2d3d66946b1",
+      "modified": false
+    },
+    {
+      "path": "SKILL.md",
+      "upstreamPath": "skills/last30days/SKILL.md",
+      "upstreamBlobSha1": "ba4c5ebdd9005dc16a698e588d0ad5be5401204a",
+      "mode": "100644",
+      "sha256": "e3dcf4e99fa160c9c850421bb04cbff61532c7c3dba8b9127cea1c19fd3936db",
+      "modified": true
+    },
+    {
+      "path": "agents/openai.yaml",
+      "upstreamPath": "skills/last30days/agents/openai.yaml",
+      "upstreamBlobSha1": "d29b82ef74acd5e41b3364be5d82be2259c41b85",
+      "mode": "100644",
+      "sha256": "f46e7f09d3118dee7324ac165391ccb7ffe55323d1d75304e34062017913939c",
+      "modified": false
+    },
+    {
+      "path": "references/agent-mode.md",
+      "upstreamPath": "skills/last30days/references/agent-mode.md",
+      "upstreamBlobSha1": "d619b025b0071f07f6dc5665baab2f96c6ec0af3",
+      "mode": "100644",
+      "sha256": "72fd3e5772c9113a936084bbdf13e503c52231f46bfbababef90adc4e1e8118b",
+      "modified": false
+    },
+    {
+      "path": "references/category-peers.md",
+      "upstreamPath": "skills/last30days/references/category-peers.md",
+      "upstreamBlobSha1": "bafdfc936ab28ae6b388d6d76da54460f6a40f21",
+      "mode": "100644",
+      "sha256": "a973e60f03ed242e769767b24c85c6a1fe412bc853796ada75f25eab68152bd0",
+      "modified": false
+    },
+    {
+      "path": "references/comparison.md",
+      "upstreamPath": "skills/last30days/references/comparison.md",
+      "upstreamBlobSha1": "7c7e55d53f40eced5217aac0bfbaa63ab8e589fa",
+      "mode": "100644",
+      "sha256": "f58f21bd2ccbbcfb93812890606aa60255123ce88918c1c171e6b2397bbfe72c",
+      "modified": false
+    },
+    {
+      "path": "references/competitors.md",
+      "upstreamPath": "skills/last30days/references/competitors.md",
+      "upstreamBlobSha1": "cd8529a8d8ea5d18f32a3ac8a0acd0faa5897d68",
+      "mode": "100644",
+      "sha256": "29feb61c25558e8403cdf5fa255fc20e588ef8d8e4c5a6f138f58c9b4bfef61c",
+      "modified": false
+    },
+    {
+      "path": "references/discovery.md",
+      "upstreamPath": "skills/last30days/references/discovery.md",
+      "upstreamBlobSha1": "5237d7ed2fce85dcdf1f58c91acfbbd6f0a24b26",
+      "mode": "100644",
+      "sha256": "241ad76580f141b6ea166e399bddf49af01f8806609e2a3ed183a688520ff56e",
+      "modified": false
+    },
+    {
+      "path": "references/followups.md",
+      "upstreamPath": "skills/last30days/references/followups.md",
+      "upstreamBlobSha1": "dba19a8d952cd92ac006db6f90cfbd88ebbfd411",
+      "mode": "100644",
+      "sha256": "e3fac96a65ad776780c839cb2a38867545a1be53a3c5cd66dcc306f0382f88c6",
+      "modified": false
+    },
+    {
+      "path": "references/grok-bot-x.md",
+      "upstreamPath": "skills/last30days/references/grok-bot-x.md",
+      "upstreamBlobSha1": "f8bd12b4714035be7aff4d4a8129d38d843effa2",
+      "mode": "100644",
+      "sha256": "7d64183c1643f87b0f85ffdfea647e881fb98bf09bf8d8b0e8482bb006a3705b",
+      "modified": false
+    },
+    {
+      "path": "references/hiring-signals.md",
+      "upstreamPath": "skills/last30days/references/hiring-signals.md",
+      "upstreamBlobSha1": "20624cc0a588518096cb6e6fdd877fed7aafd95d",
+      "mode": "100644",
+      "sha256": "07e033c4c1eca04110d4ee5d813b8d46215e8e51d459e43fe78875da1a98a046",
+      "modified": false
+    },
+    {
+      "path": "references/library-queue.md",
+      "upstreamPath": "skills/last30days/references/library-queue.md",
+      "upstreamBlobSha1": "938b7c3c73160787b22ec5ddf46c310b29c733d2",
+      "mode": "100644",
+      "sha256": "afa78974a77896fa6ba3fd8457f116b5ee73252b4f2cf86107edb5bd5afe6b79",
+      "modified": false
+    },
+    {
+      "path": "references/recommendations.md",
+      "upstreamPath": "skills/last30days/references/recommendations.md",
+      "upstreamBlobSha1": "d242b5f4ae76a4078e16786a29aa858bf0347850",
+      "mode": "100644",
+      "sha256": "e7df955868a25dfa0e47286523d2260e5d0f658065c6912b0585e032b8de653b",
+      "modified": false
+    },
+    {
+      "path": "references/research-runbook.md",
+      "upstreamPath": "skills/last30days/references/research-runbook.md",
+      "upstreamBlobSha1": "697ca5fbd707d9213159ab14351ef7b7da5da422",
+      "mode": "100644",
+      "sha256": "4bb379288080fd8635508acf637bef3e9c8ab7f7844ec69fae9a910d0a4846f6",
+      "modified": false
+    },
+    {
+      "path": "references/runtime.md",
+      "upstreamPath": "skills/last30days/references/runtime.md",
+      "upstreamBlobSha1": "5a6087b99840508755d973c75d7a1e85fd382b91",
+      "mode": "100644",
+      "sha256": "2d49348cd6b94fc5c718d3e34ff3719f666dd86d84259a9d2eaccf487fa55817",
+      "modified": true
+    },
+    {
+      "path": "references/save-html-brief.md",
+      "upstreamPath": "skills/last30days/references/save-html-brief.md",
+      "upstreamBlobSha1": "53dfa3ee137a59dab9ecba5144973639123e3626",
+      "mode": "100644",
+      "sha256": "76a0a5b2a12d901634f2d2322df6f47c7e17e7748c40e205eef52060b3c4ae14",
+      "modified": false
+    },
+    {
+      "path": "references/setup-wizard.md",
+      "upstreamPath": "skills/last30days/references/setup-wizard.md",
+      "upstreamBlobSha1": "8f065ce814a9e4ff61c29439b49f5586d49a1bce",
+      "mode": "100644",
+      "sha256": "66976967174f3d2281840577e79471f49b534d5694c59b95f74d2109f10e656b",
+      "modified": false
+    },
+    {
+      "path": "references/synthesis.md",
+      "upstreamPath": "skills/last30days/references/synthesis.md",
+      "upstreamBlobSha1": "90f9d19d6f435dd996558cc9f611f08a220da7ca",
+      "mode": "100644",
+      "sha256": "25af94219b9b760a8294acb3caa569c608696b2fb74a88aea136d893decb3e5f",
+      "modified": false
+    },
+    {
+      "path": "scripts/box_chrome_login.py",
+      "upstreamPath": "skills/last30days/scripts/box_chrome_login.py",
+      "upstreamBlobSha1": "525e81ef02dcc45341476c1c0e5d7148fbe166fb",
+      "mode": "100644",
+      "sha256": "62fce18be22d69909c9df420eb300314d45256d50f02cdc322da252515ee1311",
+      "modified": false
+    },
+    {
+      "path": "scripts/briefing.py",
+      "upstreamPath": "skills/last30days/scripts/briefing.py",
+      "upstreamBlobSha1": "0a64cf0e843d2f7915c48bd731ad3205d74b6e8e",
+      "mode": "100644",
+      "sha256": "8219f60e9bc5ac84757996053318087a24d2bce7fc2623231be8bb10d446f50a",
+      "modified": false
+    },
+    {
+      "path": "scripts/last30days.py",
+      "upstreamPath": "skills/last30days/scripts/last30days.py",
+      "upstreamBlobSha1": "fedaeab97d177ab03232fba3f4022666bf2e0a63",
+      "mode": "100644",
+      "sha256": "3e4d2a0734d2e0f307b76292f84b249af06104c8a81da0763801cad84c11f552",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/__init__.py",
+      "upstreamPath": "skills/last30days/scripts/lib/__init__.py",
+      "upstreamBlobSha1": "2297618b3121c77cf64269fd5f741059124e03ad",
+      "mode": "100644",
+      "sha256": "3fb925405f898201188f9b5eea04e214ea8c8a64643397fd727f08ffeea234d9",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/agentcookie.py",
+      "upstreamPath": "skills/last30days/scripts/lib/agentcookie.py",
+      "upstreamBlobSha1": "b9cccc803588978967ac355f0de8b4749e31b2ba",
+      "mode": "100644",
+      "sha256": "73ad5b6ff8711dc7688aa80120b3a52ad0bccfd9ddb3f5fdfb850b91687d08d5",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/amazon.py",
+      "upstreamPath": "skills/last30days/scripts/lib/amazon.py",
+      "upstreamBlobSha1": "289ea2ba7050a6d692aee2ae166d0ace8fe782a3",
+      "mode": "100644",
+      "sha256": "78358b3dbe0d5202bf40bb01c2b9bc8462bd927993abf988876b7f1f6d82d1e6",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/arxiv.py",
+      "upstreamPath": "skills/last30days/scripts/lib/arxiv.py",
+      "upstreamBlobSha1": "082547b8bed59eb09ea299d066fc8655cdcdcbf8",
+      "mode": "100644",
+      "sha256": "d28c5fd43d31fda85a31c0f412f2c8edfc3edd003a978a63c8a2b94cd4d13794",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/backends.py",
+      "upstreamPath": "skills/last30days/scripts/lib/backends.py",
+      "upstreamBlobSha1": "4a8e553daebdb0048e215fca7edead7066548e13",
+      "mode": "100644",
+      "sha256": "90cac97f3b208be6adf582576bbab472ad6a30b762cd53473f467be8bdacabd6",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/bird_x.py",
+      "upstreamPath": "skills/last30days/scripts/lib/bird_x.py",
+      "upstreamBlobSha1": "4b8f9cdf77bbe7fa22f212848d4a4bc34bcefa9d",
+      "mode": "100644",
+      "sha256": "04dfd9bf9844df4a22b0785cfdf746bc9fff64c409c46aaab7ea4f00f1eeaeb6",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/bluesky.py",
+      "upstreamPath": "skills/last30days/scripts/lib/bluesky.py",
+      "upstreamBlobSha1": "6d07412dcd07a2d8e5b5e86420ca4787d1dd4d0e",
+      "mode": "100644",
+      "sha256": "5501b9bf1ebc08c9571945a6a49b9e0d3f7f260dc2c3d0841a54acad20628a49",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/bounded_get.py",
+      "upstreamPath": "skills/last30days/scripts/lib/bounded_get.py",
+      "upstreamBlobSha1": "e1194014a8a6feafee03f13139f62c7fa9d5e551",
+      "mode": "100644",
+      "sha256": "f994ec7f44120eb15f7d9c5dc090ef4c2f486d59cae9316c387c884071071627",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/brightdata.py",
+      "upstreamPath": "skills/last30days/scripts/lib/brightdata.py",
+      "upstreamBlobSha1": "97a1f968c08cfff9c360cc8c7ab88408eada7e34",
+      "mode": "100644",
+      "sha256": "6b173258865bc3e60070f15569961db0eef6ce60df13cd01837fa08ea0edeac5",
+      "modified": true
+    },
+    {
+      "path": "scripts/lib/categories.py",
+      "upstreamPath": "skills/last30days/scripts/lib/categories.py",
+      "upstreamBlobSha1": "046b9c2c8e4aa444c0049520a3e2465ec653e21e",
+      "mode": "100644",
+      "sha256": "849e8e57375962bbc705c05dcfcc538db839ac6454133e1aa7252bcd4cb090e0",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/chrome_cdp.py",
+      "upstreamPath": "skills/last30days/scripts/lib/chrome_cdp.py",
+      "upstreamBlobSha1": "b0d5a4f1af1d3d6f0951051330f98ecc743eb6ed",
+      "mode": "100644",
+      "sha256": "329bb6e3e54d997f8c62a16bba5a85e8d7b8651fab2005707bed7cc8ec572af6",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/chrome_cookies.py",
+      "upstreamPath": "skills/last30days/scripts/lib/chrome_cookies.py",
+      "upstreamBlobSha1": "9289d804d0cbb8e57f6ba73365fa2a46d260adf6",
+      "mode": "100644",
+      "sha256": "7bc0aca8611d754da2cd1ab7382400664500a18f43abdca45a4b8d4cf7549dfb",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/cjk.py",
+      "upstreamPath": "skills/last30days/scripts/lib/cjk.py",
+      "upstreamBlobSha1": "429baa2b64223cadb43a571d881d7357f07ea0a3",
+      "mode": "100644",
+      "sha256": "92279dd6d6643b1d4e95793f23e082579c18392114ee19b27a3cdb48cb67d890",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/cluster.py",
+      "upstreamPath": "skills/last30days/scripts/lib/cluster.py",
+      "upstreamBlobSha1": "ac7627afd38194c543955ae15e2631a525851898",
+      "mode": "100644",
+      "sha256": "c141ad3974cd8fce9d895f32c905b14156695c8dba1d021c4b7b4fc99b677174",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/competitors.py",
+      "upstreamPath": "skills/last30days/scripts/lib/competitors.py",
+      "upstreamBlobSha1": "f246d1deacd5cd2a9fde4aa18abca357b0ab689f",
+      "mode": "100644",
+      "sha256": "8c77edd2af77944ae7d578679a1f11f0eadbc74e0d4485db70473335587b25bc",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/cookie_extract.py",
+      "upstreamPath": "skills/last30days/scripts/lib/cookie_extract.py",
+      "upstreamBlobSha1": "d12b1e1ba32a1131660f2ddf143e2329cc3c38f9",
+      "mode": "100644",
+      "sha256": "fcbe79b5ac6865072a2701334950a8582e5be8402f881535b642090bbe999658",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/cookie_paths.py",
+      "upstreamPath": "skills/last30days/scripts/lib/cookie_paths.py",
+      "upstreamBlobSha1": "884747d4dca5d131c85a4b432b2b7307ef55c7dd",
+      "mode": "100644",
+      "sha256": "dd2d36cf9335b22a4db36294995a07e4cfb36b6c4ab2a7088e739bb8d4a47857",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/corpus.py",
+      "upstreamPath": "skills/last30days/scripts/lib/corpus.py",
+      "upstreamBlobSha1": "9b4a1c4e9b0345d41b1d75d5718ddce837f910a8",
+      "mode": "100644",
+      "sha256": "f19f17f246bebf8663ed61289cb1b6143eb7cbac7254a630c93bd17d3345c053",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/dates.py",
+      "upstreamPath": "skills/last30days/scripts/lib/dates.py",
+      "upstreamBlobSha1": "33980e4ebd8dd9882dd83eb68770d21690471baf",
+      "mode": "100644",
+      "sha256": "d1c71ec823bf122396523b04875cdd59e169658d158b5dface574233433574c8",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/dedupe.py",
+      "upstreamPath": "skills/last30days/scripts/lib/dedupe.py",
+      "upstreamBlobSha1": "4375a2af8b852762e61b0b49b505d919b663f81a",
+      "mode": "100644",
+      "sha256": "f089918c3a118a0099ea572cb33725bfa15584d1b0e37cb1081c2440085c7d36",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/devto.py",
+      "upstreamPath": "skills/last30days/scripts/lib/devto.py",
+      "upstreamBlobSha1": "61c568fa3dc175bcf2d2147ef9e3bc7c422263d5",
+      "mode": "100644",
+      "sha256": "32c4b5d49600c036a6a57d4a1737183564cdb8e9ec5bf543916c46c8d98b3a8c",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/digg.py",
+      "upstreamPath": "skills/last30days/scripts/lib/digg.py",
+      "upstreamBlobSha1": "1595331d9eea5b7f1f19c89ace2caf78ac31dbc5",
+      "mode": "100644",
+      "sha256": "3e20ec3b572f1ccd54ae4cbc11649315b30f094c3773314a6e4a5c3617d7f133",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/discovery_handoff.py",
+      "upstreamPath": "skills/last30days/scripts/lib/discovery_handoff.py",
+      "upstreamBlobSha1": "6df4d218e24867ff11bf5232d2afafb7fdfe3c53",
+      "mode": "100644",
+      "sha256": "cf3a8ce245bdfaac98d03a6238f1845cf754e2d38a36c27e6d67a0579872e34a",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/doctor.py",
+      "upstreamPath": "skills/last30days/scripts/lib/doctor.py",
+      "upstreamBlobSha1": "0ea81d094d16f0de9267336e2713df970ee6f042",
+      "mode": "100644",
+      "sha256": "a00c33bc79dffa60bef521ed4e9d98e8f8cf8351e24120bae337fd67d403e05e",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/dripstack.py",
+      "upstreamPath": "skills/last30days/scripts/lib/dripstack.py",
+      "upstreamBlobSha1": "c5df7c7e87429993d07163498d2f41fd9e357bd7",
+      "mode": "100644",
+      "sha256": "1a9fb0c84fc811c7b2419f007b63edda19732a3ac1d7519175d0f8f3de9c4d16",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/entity_extract.py",
+      "upstreamPath": "skills/last30days/scripts/lib/entity_extract.py",
+      "upstreamBlobSha1": "0934b38ec2ab2a870942a4b881a57a405dcca141",
+      "mode": "100644",
+      "sha256": "68835df5ec6646668e503a50f976bdc26ee098df3303f5e28a97d2d9f5a8e720",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/env.py",
+      "upstreamPath": "skills/last30days/scripts/lib/env.py",
+      "upstreamBlobSha1": "6464a679d3c45439c4e3935f297bdd98470926de",
+      "mode": "100644",
+      "sha256": "dff40f87116087b4d5fd29ba4a8397208ac62cb4960cce4df200bcf94d295be6",
+      "modified": true
+    },
+    {
+      "path": "scripts/lib/fanout.py",
+      "upstreamPath": "skills/last30days/scripts/lib/fanout.py",
+      "upstreamBlobSha1": "18c2fb78743b184b925c145454233935d9949a76",
+      "mode": "100644",
+      "sha256": "f5ecc513fdc7b6db21f086174716793476ede51b8e4bea86e7709465f2d9cdce",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/feed.py",
+      "upstreamPath": "skills/last30days/scripts/lib/feed.py",
+      "upstreamBlobSha1": "c34c93ab0e0df58d79d7a81df81c606be4092f89",
+      "mode": "100644",
+      "sha256": "9bf0a9d2862851121dc7d3642cec6fc6d64627ede5f47d363a935c239858718e",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/fetch_memo.py",
+      "upstreamPath": "skills/last30days/scripts/lib/fetch_memo.py",
+      "upstreamBlobSha1": "c65bd6d83897f7dc40f9ca06dda5c73e69e2a763",
+      "mode": "100644",
+      "sha256": "aeb136e654736b7154307ae79a3bbacb8372d73b07c36df22cf19c4adb9ad723",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/freshness.py",
+      "upstreamPath": "skills/last30days/scripts/lib/freshness.py",
+      "upstreamBlobSha1": "06d66170e9a3fd04bdf2fa02e60816891bff6eb5",
+      "mode": "100644",
+      "sha256": "f8c981d4005841ef93721380bb576b29099e031174ace49a8592c6543ae39fd5",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/fusion.py",
+      "upstreamPath": "skills/last30days/scripts/lib/fusion.py",
+      "upstreamBlobSha1": "13b55b54c45dba7dfc11825703980713cc7d69b7",
+      "mode": "100644",
+      "sha256": "d3d004003d13ab0e85a4c16fa9f1abbd758077ce70ca7e4f3bc0e0e5d0a30690",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/github.py",
+      "upstreamPath": "skills/last30days/scripts/lib/github.py",
+      "upstreamBlobSha1": "769d7edbc02fc381274b2f420059491b32f53fc7",
+      "mode": "100644",
+      "sha256": "f8b151a3c9761be53de1897402d377c5556686a6c7e112357fb9ca3f31d0062d",
+      "modified": true
+    },
+    {
+      "path": "scripts/lib/grok_x.py",
+      "upstreamPath": "skills/last30days/scripts/lib/grok_x.py",
+      "upstreamBlobSha1": "8199c56a3a99f195866440519819bd88c02b9883",
+      "mode": "100644",
+      "sha256": "44d77bfc1dd5464c91a47aec7d0454ba93db3887bf732809688e207cde0cf5fc",
+      "modified": true
+    },
+    {
+      "path": "scripts/lib/grounding.py",
+      "upstreamPath": "skills/last30days/scripts/lib/grounding.py",
+      "upstreamBlobSha1": "681fd7afd1c6b587ae9761aeee4a28ade3fcca41",
+      "mode": "100644",
+      "sha256": "cf19740f5510865013706c01e5d98de131cccb8a86a3b942acb84a2cdd55c4b5",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/hackernews.py",
+      "upstreamPath": "skills/last30days/scripts/lib/hackernews.py",
+      "upstreamBlobSha1": "a2f130deea685c7ecb894aacf67c3ac5b6cc03c8",
+      "mode": "100644",
+      "sha256": "ab515fa5930422074cc220c786b43465c49fb41e256adec7cbe38930f33873a6",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/health.py",
+      "upstreamPath": "skills/last30days/scripts/lib/health.py",
+      "upstreamBlobSha1": "f44abdc33ed78abf68f6f7a976387386c9ac35ef",
+      "mode": "100644",
+      "sha256": "caf67d6d09989bb9bd11f9325470aec19bc704a82f21ae6336d7e64de498a8b7",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/hiring_signals.py",
+      "upstreamPath": "skills/last30days/scripts/lib/hiring_signals.py",
+      "upstreamBlobSha1": "e4e7de91643f9e74cded1d57b8bc73d3907fdeac",
+      "mode": "100644",
+      "sha256": "dbd253a46337284514cfe8a525e083ced59dc85e202f4d518be97c27eaec0082",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/hosted.py",
+      "upstreamPath": "skills/last30days/scripts/lib/hosted.py",
+      "upstreamBlobSha1": "819c476793c162979be37a8500c6de1dbea53acd",
+      "mode": "100644",
+      "sha256": "715494725adb7097b8a063a15689835c0808a714d9c23c5ecee168c66d5f1713",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/html_publish.py",
+      "upstreamPath": "skills/last30days/scripts/lib/html_publish.py",
+      "upstreamBlobSha1": "57ca110167813eb6a894402d00c08d0124cfda51",
+      "mode": "100644",
+      "sha256": "cccf0115c6250d68372667c3fb3163c5469dff7cfafce6cf36713aaddbbe5d27",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/html_render.py",
+      "upstreamPath": "skills/last30days/scripts/lib/html_render.py",
+      "upstreamBlobSha1": "ea5990320db4ec306e0ab03035c3c0f30bd4c99d",
+      "mode": "100644",
+      "sha256": "d6a6078178bbcfb238f783e1e1edf5f6f4e9e371f2f52ce7db00d04bc265d18a",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/http.py",
+      "upstreamPath": "skills/last30days/scripts/lib/http.py",
+      "upstreamBlobSha1": "e0a94a10eec41e75a37ab772fe5ded7e2bbbece8",
+      "mode": "100644",
+      "sha256": "f47082fb930c1154a286fe6fba26938c85a88b9af53cf7187f062ba47ee0192e",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/instagram.py",
+      "upstreamPath": "skills/last30days/scripts/lib/instagram.py",
+      "upstreamBlobSha1": "354ea02a56d67fd0eb6d498c1c0cd2a7ef0dc5a6",
+      "mode": "100644",
+      "sha256": "f19694be42e8e3a9ad2d7d2aff3f892ad00d115950205202f00a3ecf2efd716b",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/jobs.py",
+      "upstreamPath": "skills/last30days/scripts/lib/jobs.py",
+      "upstreamBlobSha1": "58419f9055a4c8e0e5c11e577a2dc59325fab5a0",
+      "mode": "100644",
+      "sha256": "53ea415dcb2431770d64b4023610dcdea637dc846d59cfa4f7e1372d60b7abfd",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/library.py",
+      "upstreamPath": "skills/last30days/scripts/lib/library.py",
+      "upstreamBlobSha1": "b25b293664d778899ff4ea9726a1b05833229dc9",
+      "mode": "100644",
+      "sha256": "164b353536fc19dc2b7b6bb8528db31f4bb3fd87fe0007c679a1a357e40d31d0",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/library_index.py",
+      "upstreamPath": "skills/last30days/scripts/lib/library_index.py",
+      "upstreamBlobSha1": "31b6f0d85aa48818cc826e7ddf819a88cff2329e",
+      "mode": "100644",
+      "sha256": "aec704ed09fdbb2b7225756f2f7b6ed2d3a91bb7cf7f6c4859038716405ee222",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/linkedin.py",
+      "upstreamPath": "skills/last30days/scripts/lib/linkedin.py",
+      "upstreamBlobSha1": "8f12def53530e0c5801f5d306e0a5050d1b9b69d",
+      "mode": "100644",
+      "sha256": "5885297c6a6bc9341b1d9dacf37b88f33a2e5aad87d84bb2d7216a646060c880",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/log.py",
+      "upstreamPath": "skills/last30days/scripts/lib/log.py",
+      "upstreamBlobSha1": "94d2f1137077e4d95eeeff94f79dd0c6e41a7a44",
+      "mode": "100644",
+      "sha256": "93ca3211f50076840ab221a318219d05f6ab638c6ecbe3f8ff0dfa9b203e85b9",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/meta_ads.py",
+      "upstreamPath": "skills/last30days/scripts/lib/meta_ads.py",
+      "upstreamBlobSha1": "d2a76da9210fc1947f7d46a20f4a22d8901f5b63",
+      "mode": "100644",
+      "sha256": "767389c18109131511411b537bb9e7cf59352dc5758a64e7a97ff91c9f2d7979",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/normalize.py",
+      "upstreamPath": "skills/last30days/scripts/lib/normalize.py",
+      "upstreamBlobSha1": "cae7cde1e70d0e8de91f38344fc8623bac145e3a",
+      "mode": "100644",
+      "sha256": "e2d29fb842f16a83032e5834d014f0cd77889c260d1f88c760e06e5bf62aa535",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/parallel_mcp.py",
+      "upstreamPath": "skills/last30days/scripts/lib/parallel_mcp.py",
+      "upstreamBlobSha1": "fb3b12e0404c263ad013ca4189bc9007b77e343a",
+      "mode": "100644",
+      "sha256": "d15d484a6fb4f6a70edbdb7e0264684c39c9529ea9bd7f137b3572679c274b48",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/permission_preflight.py",
+      "upstreamPath": "skills/last30days/scripts/lib/permission_preflight.py",
+      "upstreamBlobSha1": "201cb799c79f646dcfb804532011714a03e8b8de",
+      "mode": "100644",
+      "sha256": "57f2ca8e1e8c4992692ef92d2f0056d75609cc89422b2d970fdda7e0834bf7f5",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/perplexity.py",
+      "upstreamPath": "skills/last30days/scripts/lib/perplexity.py",
+      "upstreamBlobSha1": "ee46103f95ccffd7e68227234af0c167bb38e19c",
+      "mode": "100644",
+      "sha256": "ae658bd4948a173ca2965e6a3b1bc419383be4d036105e9eac1d2ce892440941",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/pinterest.py",
+      "upstreamPath": "skills/last30days/scripts/lib/pinterest.py",
+      "upstreamBlobSha1": "08002a653057f47d5dd0f90588bab23810217ccb",
+      "mode": "100644",
+      "sha256": "75c5098b298dadbeeb82d78ea988200ea8354834b02f0c57ea4e6a58da886b13",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/pipeline.py",
+      "upstreamPath": "skills/last30days/scripts/lib/pipeline.py",
+      "upstreamBlobSha1": "584c3f122976ebea3c02d1c052f94176c9cfdd32",
+      "mode": "100644",
+      "sha256": "ef7f383becc2622fde960f8b1cf9bd4253687f2cd98a17d7a76b9998dda4eb37",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/planner.py",
+      "upstreamPath": "skills/last30days/scripts/lib/planner.py",
+      "upstreamBlobSha1": "de03832fc03465e3419ea601b71d094af7fa454c",
+      "mode": "100644",
+      "sha256": "f7b6dd10d01a2927e81056d7466bc81361a67c2b2c3822a14b4599bf360d2501",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/polymarket.py",
+      "upstreamPath": "skills/last30days/scripts/lib/polymarket.py",
+      "upstreamBlobSha1": "340f661900570cc0c86768de05937ffda5cbe946",
+      "mode": "100644",
+      "sha256": "8c906b1f63beef7217a2f55bc13a7be12fc07fd471b4a23ce24a7143b31acc61",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/preflight.py",
+      "upstreamPath": "skills/last30days/scripts/lib/preflight.py",
+      "upstreamBlobSha1": "ea9eedd6ca5e02cc4c5323e01344c8f4ca639cfd",
+      "mode": "100644",
+      "sha256": "0fafa53bc63a44ad4525d99d6bb37080b0693e2d45265ce36af09b4a0e9b2c9b",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/prescriptions.py",
+      "upstreamPath": "skills/last30days/scripts/lib/prescriptions.py",
+      "upstreamBlobSha1": "a5cfaf189b67d6f26fbc07c7c0ef6d8b4a52b884",
+      "mode": "100644",
+      "sha256": "0e2e80fc3ee1f532eff3369785eeea48e20fb918a02996b1e8853b7bbe1b2c46",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/private_files.py",
+      "upstreamPath": "skills/last30days/scripts/lib/private_files.py",
+      "upstreamBlobSha1": "9e1beaecd43dcab6e75187b4aa8e9ecdfad4f1ff",
+      "mode": "100644",
+      "sha256": "747913b70a70bc8c53906ce2b3a87445f0e3bb5f82d0e2a15c53239a81dc8f7f",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/providers.py",
+      "upstreamPath": "skills/last30days/scripts/lib/providers.py",
+      "upstreamBlobSha1": "d2fac086b565bfb730c0fe571853f1b1cbda6a76",
+      "mode": "100644",
+      "sha256": "ce704db437410ecb1d376a2eecb7ea52e0d0c12a99da4c0d05eeb64f274ae1b2",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/quality_nudge.py",
+      "upstreamPath": "skills/last30days/scripts/lib/quality_nudge.py",
+      "upstreamBlobSha1": "2796337e424293f3e6e1c1a837e13af210968566",
+      "mode": "100644",
+      "sha256": "c1f6d865c3da8ce7c61221d5a1a661b708fd64f83ab20ec905a82d4f2c0001c1",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/query.py",
+      "upstreamPath": "skills/last30days/scripts/lib/query.py",
+      "upstreamBlobSha1": "f3a4f97b9f5664a3cc1cfaa7ae2b6326f2e3dd47",
+      "mode": "100644",
+      "sha256": "b156005c2510b8ebbef9ac9eab3ef626b60aecef9c98a172a3465eae603cffc9",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit.py",
+      "upstreamBlobSha1": "1f9cf7cc464373e92291fc40abfcea96e80f3f27",
+      "mode": "100644",
+      "sha256": "c3bca6539f6ec45dcd1ac8b001894e09f87fdfcc9c5a7ec36bc9b2cdb130a8dd",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit_arctic.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit_arctic.py",
+      "upstreamBlobSha1": "84837e3024d61d77f2cef3af40fa99dc3996c26f",
+      "mode": "100644",
+      "sha256": "bffa53db08a3750516ba5811d02186caf8d15c612d3abeddbc5e221cc948ae5b",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit_enrich.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit_enrich.py",
+      "upstreamBlobSha1": "dd844a95a94483eff15a6457cddf07382eeb4a66",
+      "mode": "100644",
+      "sha256": "652a9c5abecf22f3c26ff6d6b732a43703113a559ce31acab7af012eb25d4e7a",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit_keyless.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit_keyless.py",
+      "upstreamBlobSha1": "7f0a5f9df274a3dc1311854f174bc3cd3aaebcd5",
+      "mode": "100644",
+      "sha256": "95fc7cb6286c744fbcdf06bcb3d57d36b998c479123523f8a1455a4e0c8d952e",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit_listing.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit_listing.py",
+      "upstreamBlobSha1": "35751b7f13a1112e203627c3fddf6302aadf699c",
+      "mode": "100644",
+      "sha256": "c3f1de3ba1254e68906d4983e68dcf6e90346a3177a75897446c78ead5579342",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit_public.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit_public.py",
+      "upstreamBlobSha1": "48751c2c29eecd56be6fedcd5489c668367c1957",
+      "mode": "100644",
+      "sha256": "d33e1067a8b00deeab95fe9fc9ac477b76152a3b8ee5fe10ee439e29f203f25a",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit_search.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit_search.py",
+      "upstreamBlobSha1": "fb08aade103e9aec2fdb44afa6e308335feba631",
+      "mode": "100644",
+      "sha256": "bce58e389f9c1a7bb8bf4163c7ef0d78017b7659be3f8a14419157172660c839",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/reddit_shreddit.py",
+      "upstreamPath": "skills/last30days/scripts/lib/reddit_shreddit.py",
+      "upstreamBlobSha1": "32822fc005d0e4aaa3361f477686af1c684cb080",
+      "mode": "100644",
+      "sha256": "a1be39f16f954944a6b88348966a6981244f62e8bad1b74b605651e4b927986c",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/registers.py",
+      "upstreamPath": "skills/last30days/scripts/lib/registers.py",
+      "upstreamBlobSha1": "79b71abb922cb77fa841f0415f92bdb626f4dd79",
+      "mode": "100644",
+      "sha256": "b0c3873dda0e08939c1189e4521c13d9ca7e176a69bf3f35195f2b288db44ea6",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/relevance.py",
+      "upstreamPath": "skills/last30days/scripts/lib/relevance.py",
+      "upstreamBlobSha1": "2d8d4acf04c519445b1c7044f2a2e34ab7d4fa40",
+      "mode": "100644",
+      "sha256": "4a5305be75dcd8c912e101e26c5d650e541f0b2e2bcba6cfe84036aaa59b6057",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/render.py",
+      "upstreamPath": "skills/last30days/scripts/lib/render.py",
+      "upstreamBlobSha1": "ee502b3b9b30127cd519399137705977b0bbbac0",
+      "mode": "100644",
+      "sha256": "8bdb119e92f2da0c28f168ad6ce3b485bfe4ed802d8244d15900e0d3cb7de7ce",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/rerank.py",
+      "upstreamPath": "skills/last30days/scripts/lib/rerank.py",
+      "upstreamBlobSha1": "4fd954a110a422781f19b855098d70c79828e63a",
+      "mode": "100644",
+      "sha256": "6242b9528fa440cafaf0b469e26062f6b66e91705f60ee9b1b92f6302d00e595",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/resolve.py",
+      "upstreamPath": "skills/last30days/scripts/lib/resolve.py",
+      "upstreamBlobSha1": "c9ed3974be6ffad812065ce6c457cea8b4618827",
+      "mode": "100644",
+      "sha256": "9485733b155f6859da00099232cfd07fd463feb57fac64ac339cd0d6d6789782",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/safari_cookies.py",
+      "upstreamPath": "skills/last30days/scripts/lib/safari_cookies.py",
+      "upstreamBlobSha1": "3389db2aef0c58acb98140bbf1e822a84ffbce76",
+      "mode": "100644",
+      "sha256": "6920ee3c6dac1af26f79099ce2278c1e62525c8700cde30d7e965e254f91c682",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/schema.py",
+      "upstreamPath": "skills/last30days/scripts/lib/schema.py",
+      "upstreamBlobSha1": "281122d3e9599448183265c5c5762b7b4c4ad535",
+      "mode": "100644",
+      "sha256": "88727daca846986beff1d9656b57c56a5267784091104e28917ec75312772136",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/setup_wizard.py",
+      "upstreamPath": "skills/last30days/scripts/lib/setup_wizard.py",
+      "upstreamBlobSha1": "f125d773f8956887918945f1517efa26aa29ca5d",
+      "mode": "100644",
+      "sha256": "24c3a3c29b9af92717294b1b04b49e05751b784e3bb7f5eb5be6adebc6af844a",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/signals.py",
+      "upstreamPath": "skills/last30days/scripts/lib/signals.py",
+      "upstreamBlobSha1": "e75a16add6d915199edf9271e7226ade64bd01d7",
+      "mode": "100644",
+      "sha256": "3e23133f865eb2fe7d4c74f7aaa2c0d5caa13948107690f741d5211e590f5f9b",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/skill_meta.py",
+      "upstreamPath": "skills/last30days/scripts/lib/skill_meta.py",
+      "upstreamBlobSha1": "22239562f85b45969ff4415c475fa6a2c3cd40b8",
+      "mode": "100644",
+      "sha256": "41502f6cccff432fe598af5e56c8fe1672f25155f39c07c4b08358a96cd83acd",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/snippet.py",
+      "upstreamPath": "skills/last30days/scripts/lib/snippet.py",
+      "upstreamBlobSha1": "74edbd760028ba6b863a9e22b3ab6eec800fcae4",
+      "mode": "100644",
+      "sha256": "6bd2143a4264fe11d5be1b805742336ab82397ae0293c13e8b5b3084bfa2612d",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/stocktwits.py",
+      "upstreamPath": "skills/last30days/scripts/lib/stocktwits.py",
+      "upstreamBlobSha1": "05738990621ecc12772839c83a450c93015ebc36",
+      "mode": "100644",
+      "sha256": "b6051824d6703dbd32bb1bcdfb263b9164d15a145955f1a2a3227bd5e433c309",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/subproc.py",
+      "upstreamPath": "skills/last30days/scripts/lib/subproc.py",
+      "upstreamBlobSha1": "0480de7489f623f1f83b7b2e95c64b00c9d3100f",
+      "mode": "100644",
+      "sha256": "9c5c08ffcfdb48b57ea7df61e32424fcf78e4afb7d797a72f3ad2d94e7ff5c7c",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/techmeme.py",
+      "upstreamPath": "skills/last30days/scripts/lib/techmeme.py",
+      "upstreamBlobSha1": "720a46e6ba3fcfb4eae7b89d8c90e4bed51f852d",
+      "mode": "100644",
+      "sha256": "5b22a1a6e6a78e47748d851ad474815b6c7c5e555346cb5630250bae786f8d44",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/telegram.py",
+      "upstreamPath": "skills/last30days/scripts/lib/telegram.py",
+      "upstreamBlobSha1": "327840f902d8c2a484a66b348d4c0145af9f216e",
+      "mode": "100644",
+      "sha256": "5f18e48993e6eae63e0b1dc2acb33ffc7ad6039f886f15ebcebaed3adeb61725",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/threads.py",
+      "upstreamPath": "skills/last30days/scripts/lib/threads.py",
+      "upstreamBlobSha1": "628b171f5d216cae0f0bf08b84b6e0efca167239",
+      "mode": "100644",
+      "sha256": "8e14334c4bf316288c44c716aa275c2b79b4da8bbaffeabb656c5063804d7e49",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/tiktok.py",
+      "upstreamPath": "skills/last30days/scripts/lib/tiktok.py",
+      "upstreamBlobSha1": "7db252cfa4f2384925fcf6c0756355a1e2cf5a71",
+      "mode": "100644",
+      "sha256": "b5a6b0348b5bc6da0c9e7d57f80e17a34b53cff9743c25f09ce2316aaa2415f3",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/topic_shape.py",
+      "upstreamPath": "skills/last30days/scripts/lib/topic_shape.py",
+      "upstreamBlobSha1": "1b66b652d40a530a70b1051f336da07459dbddd9",
+      "mode": "100644",
+      "sha256": "c5ed0dc374818a9925e6f76bf650438ee670191f429d0fb05647455ac79029f9",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/transcribe.py",
+      "upstreamPath": "skills/last30days/scripts/lib/transcribe.py",
+      "upstreamBlobSha1": "3a6346d3f19612254d781f34e57cb65232494be7",
+      "mode": "100644",
+      "sha256": "5044e14d662b70342333d1c122f2b5b0b6e0b387fc44fb49ddd98ab98417529a",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/trustpilot.py",
+      "upstreamPath": "skills/last30days/scripts/lib/trustpilot.py",
+      "upstreamBlobSha1": "f61ecea2b953039b8ac90aa19068fc2427135294",
+      "mode": "100644",
+      "sha256": "430402f81102477a961099e663f9d5cf292b9d4f60b6f5dd9fab3dd7b9836948",
+      "modified": true
+    },
+    {
+      "path": "scripts/lib/truthsocial.py",
+      "upstreamPath": "skills/last30days/scripts/lib/truthsocial.py",
+      "upstreamBlobSha1": "c871117b442f734c6e4d98b231835ce40bcad2be",
+      "mode": "100644",
+      "sha256": "ad6cc7327a2bc1417c8f23545ad6f34e1cae584f8e904f599ab86f12dd01538a",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/ui.py",
+      "upstreamPath": "skills/last30days/scripts/lib/ui.py",
+      "upstreamBlobSha1": "1be6499e8aeb1b73ae3c91ebcbbcd4c1008bc40b",
+      "mode": "100644",
+      "sha256": "2a699dfe9af94fd1862882b542489690a91cbb568c9970e4f84b592c3ab47b6d",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/usage.py",
+      "upstreamPath": "skills/last30days/scripts/lib/usage.py",
+      "upstreamBlobSha1": "5b69a51a128a361983e1065c77836bcb7fdd892e",
+      "mode": "100644",
+      "sha256": "e921e6e0d1b833b2e2d9e848678f0b08f4c8643bf2c9aaa61ea1e8a713a5218f",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/LICENSE",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/LICENSE",
+      "upstreamBlobSha1": "f7b526698bb7ed2d26d96c49f2f32234c88f69bc",
+      "mode": "100644",
+      "sha256": "62316704df7426e5a79d2827ff8aca36e9abb3a73b8e68557030749ebefec667",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/bird-search.mjs",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/bird-search.mjs",
+      "upstreamBlobSha1": "03cdde746ba5cf2e3820715bbbd6e840335f8745",
+      "mode": "100644",
+      "sha256": "584482e894c38bbde7a915013f741974fa8ea722ac34c56704dccf184f7c3d56",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/cookies.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/cookies.js",
+      "upstreamBlobSha1": "eb0d85bd036280bee3a1e587c5a3477e64c52df5",
+      "mode": "100644",
+      "sha256": "66044440cef3d3b3e3136091b6e224051e8ff97fb1d156f40ccf2d4f3cf203ae",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/features.json",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/features.json",
+      "upstreamBlobSha1": "c43e03c536014ddc77bcd4bf8c9f9a9f85afe3b8",
+      "mode": "100644",
+      "sha256": "36361f4cae0040255f84709459ebb1f0131566a567269ed7b99d073cad930f66",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/paginate-cursor.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/paginate-cursor.js",
+      "upstreamBlobSha1": "6c061feb488a9d9f6b49374b19414719865f8625",
+      "mode": "100644",
+      "sha256": "5f20227de1d68250ad59b7ad593db4bfb1d0f1a21694963eab3ed413c2d0d5c0",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/query-ids.json",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/query-ids.json",
+      "upstreamBlobSha1": "6033f3101762ffbbfae1d4bc3c87fcd675fca44b",
+      "mode": "100644",
+      "sha256": "eba47a9d26f87d0b4eb8a4f554833ed8d11b3d8728e363deeae702d09f87fc02",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/runtime-features.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/runtime-features.js",
+      "upstreamBlobSha1": "6910e9dfb04865d1ad8785f719688bc4f13f6aab",
+      "mode": "100644",
+      "sha256": "f41614d62b6c91dfc85fc4af389e6f49435324bf26460b715a991486609579d8",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/runtime-query-ids.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/runtime-query-ids.js",
+      "upstreamBlobSha1": "c09fe6207fe03a208ca9534e96089b7511b6b9a0",
+      "mode": "100644",
+      "sha256": "0f5c61dbaad3de7fb44a14c57ed005228e51f9fc361472eff59bff4cb2a1199e",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/twitter-client-base.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/twitter-client-base.js",
+      "upstreamBlobSha1": "8b7e969019507719a8066d839052b817506fc847",
+      "mode": "100644",
+      "sha256": "ea972b7894458e78edd1927d102a052ae45726a7c967b376ac7f5544f5b65499",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/twitter-client-constants.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/twitter-client-constants.js",
+      "upstreamBlobSha1": "a9fcde3519ec04b627ed3cfcf17c17bde07b36da",
+      "mode": "100644",
+      "sha256": "27bd1416ff1f5d4f4516d784a8fb9ee08a87413f07b375752821a32e5b0cd6e3",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/twitter-client-features.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/twitter-client-features.js",
+      "upstreamBlobSha1": "608386112459c6cceef2f7c875a42c6b54121cd2",
+      "mode": "100644",
+      "sha256": "4b4f2048069f751a821777cb2084f3b9126d99a958494fef71f0699d8145c4dd",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/twitter-client-search.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/twitter-client-search.js",
+      "upstreamBlobSha1": "64d1fdb93d34a654b3d091d46ea2cec2e10cf1a5",
+      "mode": "100644",
+      "sha256": "3dfbe18ea54215d9a6393ff0884d9977dd9ddf0884a06486bdaee8a4e30d4616",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/twitter-client-types.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/twitter-client-types.js",
+      "upstreamBlobSha1": "3277c71aa2bf9ba86a96499e23df74b23617942f",
+      "mode": "100644",
+      "sha256": "6450f74c664db958d703e09288184ef1ca5f622782f9e11a5a9bfa3d3c78c534",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/lib/twitter-client-utils.js",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/lib/twitter-client-utils.js",
+      "upstreamBlobSha1": "b6e869db265948727807485a561bf982dcb38063",
+      "mode": "100644",
+      "sha256": "b230db5583760ccd0b5b5fb1592f449a7d0bc92f6184808e8ffb6f8968df20e9",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/vendor/bird-search/package.json",
+      "upstreamPath": "skills/last30days/scripts/lib/vendor/bird-search/package.json",
+      "upstreamBlobSha1": "9446bb3572f10e052d68fde32f6ce876a61fdcf3",
+      "mode": "100644",
+      "sha256": "96b65305969a179ee7a7735f1b475599d6035f32fda1fd030ea57ee09380cdb5",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/web_fetch_keyless.py",
+      "upstreamPath": "skills/last30days/scripts/lib/web_fetch_keyless.py",
+      "upstreamBlobSha1": "a93e190f2f2f5fa9a532dfffc2c11305c0e582b7",
+      "mode": "100644",
+      "sha256": "3cc82640488812026009d5993b0aef6e04b54d1a9ade0773bd7c2310f9833d00",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/web_search_keyless.py",
+      "upstreamPath": "skills/last30days/scripts/lib/web_search_keyless.py",
+      "upstreamBlobSha1": "443e2d90b620fbcc6fb5e84fcb131f34183797fe",
+      "mode": "100644",
+      "sha256": "8615605df33c0561f66c1bc7dad2a1b125683f5226b961bb76167a8586915da6",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/windows_job.py",
+      "upstreamPath": "skills/last30days/scripts/lib/windows_job.py",
+      "upstreamBlobSha1": "68d58b8007b5ab3942dd7bda72fe48612ac25fc6",
+      "mode": "100644",
+      "sha256": "3a7077172e393baa4bf35663ad9d6055746aa0d3677968083d6fa989fbe67d58",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/x_api.py",
+      "upstreamPath": "skills/last30days/scripts/lib/x_api.py",
+      "upstreamBlobSha1": "c8dcb666df67619b9c54612528327e9206333abb",
+      "mode": "100644",
+      "sha256": "5564e7335275dedc7faf6b2b3e387ad0eb681fe85b466ec55f675fb710443e56",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/x_envelope.py",
+      "upstreamPath": "skills/last30days/scripts/lib/x_envelope.py",
+      "upstreamBlobSha1": "c5a064bfa29fe69d244c10c5705ac852634d90af",
+      "mode": "100644",
+      "sha256": "e3ef4459257118ae492353126f7f534da29b536489cae17cadb7a44d7ab4c788",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/x_judge.py",
+      "upstreamPath": "skills/last30days/scripts/lib/x_judge.py",
+      "upstreamBlobSha1": "d8f1ab792bc8bd7d75e0e3fb396c2fa0bb46e617",
+      "mode": "100644",
+      "sha256": "4972ac7d573fbec0e399e99d4cee9cc2602b9719867e0f932a23d7c0f15c5f7b",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/xai_x.py",
+      "upstreamPath": "skills/last30days/scripts/lib/xai_x.py",
+      "upstreamBlobSha1": "daf5bbf3d5fea48b0afde378cdc1b930efe659de",
+      "mode": "100644",
+      "sha256": "e541925a7e721d1c4b0e304f3fbe88ed132732e96783897fc45acb0dbb79d6c7",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/xiaohongshu_api.py",
+      "upstreamPath": "skills/last30days/scripts/lib/xiaohongshu_api.py",
+      "upstreamBlobSha1": "12cee072fd2380c01e4b9abc025f6869a965703d",
+      "mode": "100644",
+      "sha256": "c7a29dfa03f871993dc13a8ad528beed8a648102404b658242ca57878077ef60",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/xquik.py",
+      "upstreamPath": "skills/last30days/scripts/lib/xquik.py",
+      "upstreamBlobSha1": "973dcf851c026308cc95059ca0420c69dd4f82c5",
+      "mode": "100644",
+      "sha256": "fb6b14833e002bdc164484ea424a5f1a68ca07495c7e46bec77ddc91fb1ee896",
+      "modified": false
+    },
+    {
+      "path": "scripts/lib/xurl_x.py",
+      "upstreamPath": "skills/last30days/scripts/lib/xurl_x.py",
+      "upstreamBlobSha1": "987a793962be58db9278da2c689c0ad158369101",
+      "mode": "100644",
+      "sha256": "4a0dc29c816c447a8167533e01126f4506aca715a5c67dfaff23a6ccd654cc58",
+      "modified": true
+    },
+    {
+      "path": "scripts/lib/youtube_yt.py",
+      "upstreamPath": "skills/last30days/scripts/lib/youtube_yt.py",
+      "upstreamBlobSha1": "7c6ad66451e5bdbcc5329a4cae394cbf2a8a9500",
+      "mode": "100644",
+      "sha256": "4e0846a8d8fe48d3cea4329964e9b67ac41a781ed760d1c55007e4a0e60ad5c8",
+      "modified": false
+    },
+    {
+      "path": "scripts/setup-keychain.sh",
+      "upstreamPath": "skills/last30days/scripts/setup-keychain.sh",
+      "upstreamBlobSha1": "696d2233449017d7e82a5826fa3a4fcf8e3cddc2",
+      "mode": "100755",
+      "sha256": "32c73cd7a7fc7e56bb88de825fabcda726831dbf8e5dfe33f897ed074daa4097",
+      "modified": false
+    },
+    {
+      "path": "scripts/setup-pass.sh",
+      "upstreamPath": "skills/last30days/scripts/setup-pass.sh",
+      "upstreamBlobSha1": "0e995dafd5725074b2fbf2ababf7aad9ce5d3996",
+      "mode": "100755",
+      "sha256": "6ff38defab4abf2abee8150b0602c5a20f0b5837bc5283655e89b5935773c354",
+      "modified": false
+    },
+    {
+      "path": "scripts/store.py",
+      "upstreamPath": "skills/last30days/scripts/store.py",
+      "upstreamBlobSha1": "70ffeac6fb40188f3e78ca7bf8236ac4da78f9e1",
+      "mode": "100644",
+      "sha256": "545de1b10e5c43734719fe892eed2885dc2909691400b7469b74db4a87470065",
+      "modified": false
+    },
+    {
+      "path": "scripts/watchlist.py",
+      "upstreamPath": "skills/last30days/scripts/watchlist.py",
+      "upstreamBlobSha1": "0a2c993f50004046cc0050f798fdec919a23d28f",
+      "mode": "100644",
+      "sha256": "0f6f88160d7936600edaadac31a42396d8ac561848b807641fb9050225f59dc1",
+      "modified": false
+    },
+    {
+      "path": "scripts/x_lane_parity.py",
+      "upstreamPath": "skills/last30days/scripts/x_lane_parity.py",
+      "upstreamBlobSha1": "036bb6372f8c685c55308bef306dd3559f94ad95",
+      "mode": "100644",
+      "sha256": "84c67104874856ebe0faa063345d4c3f042fd4ba17e8b76b15f18680ce2d1767",
+      "modified": false
+    }
+  ],
+  "excluded": [
+    "skills/last30days/assets/aging-portrait.jpeg",
+    "skills/last30days/assets/claude-code-rap.mp3",
+    "skills/last30days/assets/dog-as-human.png",
+    "skills/last30days/assets/dog-original.jpeg",
+    "skills/last30days/assets/swimmom-mockup.jpeg",
+    "skills/last30days/scripts/build-skill.sh",
+    "skills/last30days/scripts/compare.sh",
+    "skills/last30days/scripts/evaluate_search_quality.py",
+    "skills/last30days/scripts/test-v1-vs-v2.sh",
+    "skills/last30days/scripts/test_device_auth.py",
+    "skills/last30days/scripts/verify_v3.py"
+  ],
+  "license": "MIT",
+  "retrievedAt": "2026-10-16T12:14:00.511202+00:00",
+  "runtime": {
+    "required": [
+      "Python >=3.12 (standard-library core)"
+    ],
+    "optional": [
+      "Node for vendored X client",
+      "yt-dlp for YouTube",
+      "Per-source CLIs, API keys, or explicitly authorized browser session"
+    ],
+    "network": [
+      "Research fetches source websites/APIs",
+      "Paid sources require user-supplied credentials; cookie access requires authorization"
+    ]
+  },
+  "adaptations": [
+    "Added eLLMsha integration rules for loaded paths, available tools, canonical memory, runtime setup, and credential consent.",
+    "Preserved upstream dependency layout (including directories with more than 10 children) to retain relative imports, references, and future update comparability.",
+    "Normalized bundled helper examples to the loaded SKILL_DIR; upstream repository-only commands remain explicitly identified.",
+    "Excluded only demo media/development or test artifacts listed under excluded; retained runtime dependency closure.",
+    "Runtime preflight uses only an existing Python 3.12+ interpreter; removed automatic uv provisioning and Claude-cache redirection. Normal research does not trigger onboarding.",
+    "Bundled env defaults to no ambient config file, disabled Keychain/pass stores, disabled browser/agentcookie discovery, and no default home-library artifact save. Explicit process credentials and requested artifact directories remain supported; ordinary caches are unchanged.",
+    "Keychain/pass require process-only LAST30DAYS_SKIP_KEYCHAIN=0 or LAST30DAYS_SKIP_PASS=0. Named CLI session access uses LAST30DAYS_ALLOW_CLI_AUTH for xurl, grok, gh, and brightdata. Browser reads require explicit BROWSER_CONSENT plus browser/sidecar selection; Trustpilot browser warmup is disabled unless explicitly authorized.",
+    "Guard behavior verified offline with fake credential providers, isolated home-path functions, no external process/network audit hook, full CLI help/save-dir/mock-research entry points, and an interpreter preflight provisioning trap. Tests live in application scripts/skills/last30days-guards.test.py, outside this imported bundle."
+  ],
+  "modifiedFiles": [
+    "SKILL.md",
+    "references/runtime.md",
+    "scripts/lib/brightdata.py",
+    "scripts/lib/env.py",
+    "scripts/lib/github.py",
+    "scripts/lib/grok_x.py",
+    "scripts/lib/trustpilot.py",
+    "scripts/lib/xurl_x.py"
+  ]
+}

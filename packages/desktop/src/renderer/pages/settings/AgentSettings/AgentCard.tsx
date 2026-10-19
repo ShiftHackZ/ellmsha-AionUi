@@ -165,16 +165,18 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
 
       <div className='ml-12px flex flex-shrink-0 items-center gap-8px' onClick={stop}>
         <BoundAssistantStack assistants={boundAssistants} />
-        <Button
-          data-testid={`agent-row-test-${agent.id}`}
-          size='small'
-          type='outline'
-          loading={isTesting}
-          onClick={onTestConnection}
-          className='!h-30px !rounded-8px !border-border-2 !bg-base !px-10px !text-12px !font-500 !text-t-primary hover:!border-border-1 hover:!bg-fill-1'
-        >
-          {t('settings.agentManagement.testConnection')}
-        </Button>
+        {agent.id !== 'auto-router' && (
+          <Button
+            data-testid={`agent-row-test-${agent.id}`}
+            size='small'
+            type='outline'
+            loading={isTesting}
+            onClick={onTestConnection}
+            className='!h-30px !rounded-8px !border-border-2 !bg-base !px-10px !text-12px !font-500 !text-t-primary hover:!border-border-1 hover:!bg-fill-1'
+          >
+            {t('settings.agentManagement.testConnection')}
+          </Button>
+        )}
         {/* Both agent kinds get an explicit Edit button that opens the same
             configuration page the whole row links to (status, path/env
             overrides, bound assistants). */}

@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/D4Vinci/Scrapling",
+  "revision": "v0.4.15",
+  "commit": "333fa22b7a5821194ce66b59b11f4b16a6484f02",
+  "sourcePath": "agent-skill/Scrapling-Skill",
+  "files": [
+    {
+      "path": "LICENSE.txt",
+      "upstreamPath": "agent-skill/Scrapling-Skill/LICENSE.txt",
+      "upstreamBlobSha1": "41615aad07eb42df7f09997f207950098e853a68",
+      "mode": "100644",
+      "sha256": "5c782ef0346e4fbfe0dc76fd435f181a0f1e4a1a7a6b13c169c6e74314ff5964",
+      "modified": false
+    },
+    {
+      "path": "SKILL.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/SKILL.md",
+      "upstreamBlobSha1": "d3545fdc5503fbce3d4a9779378541e7ed6c0e5e",
+      "mode": "100644",
+      "sha256": "f9be63786c71f99519c9c8621bfaea123d05a3f060060613ebb480dd68c17493",
+      "modified": true
+    },
+    {
+      "path": "examples/01_fetcher_session.py",
+      "upstreamPath": "agent-skill/Scrapling-Skill/examples/01_fetcher_session.py",
+      "upstreamBlobSha1": "d1b3ece1095fcb1e00a2e54b45daa2ec581e10cc",
+      "mode": "100644",
+      "sha256": "05fdb45c20a304f0fc8c979eabe7eb78b467951219be7b0a6a45d44c05b3ff68",
+      "modified": false
+    },
+    {
+      "path": "examples/02_dynamic_session.py",
+      "upstreamPath": "agent-skill/Scrapling-Skill/examples/02_dynamic_session.py",
+      "upstreamBlobSha1": "64229fe1649091f8398c5ca7823e8bb88cb970cb",
+      "mode": "100644",
+      "sha256": "9006f94a2648ef7a3c0c7365d636f8a962dc490d192550b9148b40e3c816a5c2",
+      "modified": false
+    },
+    {
+      "path": "examples/03_stealthy_session.py",
+      "upstreamPath": "agent-skill/Scrapling-Skill/examples/03_stealthy_session.py",
+      "upstreamBlobSha1": "c3c68eb306b95e54fab243d1827f868fab93f1b0",
+      "mode": "100644",
+      "sha256": "a461dd666b82ce478e4bfdb966724d1c1b8807a3a10ce6b918d449c4d553bd4d",
+      "modified": false
+    },
+    {
+      "path": "examples/04_spider.py",
+      "upstreamPath": "agent-skill/Scrapling-Skill/examples/04_spider.py",
+      "upstreamBlobSha1": "c4640075c90c951b4eba9e9189bbd210f4eff789",
+      "mode": "100644",
+      "sha256": "2a899a24ebc827bec0b395f60d276813a99d27575255d28ede30e2cce38beac7",
+      "modified": false
+    },
+    {
+      "path": "examples/README.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/examples/README.md",
+      "upstreamBlobSha1": "9439d439002d2f801aaebfdd761eff7da285ca40",
+      "mode": "100644",
+      "sha256": "5ee5f38843aa04a7fee1dd9e5d978350931b6633d3b6484a6e96aa4beb5c3f7c",
+      "modified": false
+    },
+    {
+      "path": "references/building-rag-systems.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/building-rag-systems.md",
+      "upstreamBlobSha1": "92653b9db3a9fad791783b2b443fc1647a831dfc",
+      "mode": "100644",
+      "sha256": "832a63cd58377ad6fb187ea61d720d2100c703186b46fd81066716a8aa9540c7",
+      "modified": false
+    },
+    {
+      "path": "references/fetching/choosing.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/fetching/choosing.md",
+      "upstreamBlobSha1": "d3fdf98943b73d3766f7ce7d184920472c8daed8",
+      "mode": "100644",
+      "sha256": "dcf4c49011ec866399e478c7c9810e7be9f43b37495a6818713d1ef1bf9b3d87",
+      "modified": true
+    },
+    {
+      "path": "references/fetching/dynamic.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/fetching/dynamic.md",
+      "upstreamBlobSha1": "53385f151aef469241f63b53a4845cde32ed1c4d",
+      "mode": "100644",
+      "sha256": "7ffcbadbd38ffde42ce9d55dd8fdbccab7b6d1cfb8159398b9d3427f7dd0ac2e",
+      "modified": false
+    },
+    {
+      "path": "references/fetching/static.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/fetching/static.md",
+      "upstreamBlobSha1": "9d5b0577cfd6391f442c4579b802bb6c17cbb461",
+      "mode": "100644",
+      "sha256": "fc177af5a0201bb300b8edca343b5b66498c2152e63607a308e65c4a2189b095",
+      "modified": true
+    },
+    {
+      "path": "references/fetching/stealthy.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/fetching/stealthy.md",
+      "upstreamBlobSha1": "9dfe14b2a53adaf5c7bf236adad802483c1592cc",
+      "mode": "100644",
+      "sha256": "a26ce9accd072a121878e756f5bb31c9095e1e82cb6d761bd684403e9ee328e8",
+      "modified": false
+    },
+    {
+      "path": "references/integrations/scrapy.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/integrations/scrapy.md",
+      "upstreamBlobSha1": "da12a4a3b841add13814d8ad61044fb219065cb4",
+      "mode": "100644",
+      "sha256": "dafeb66ee73ffa4b88d28382f647d37124a91698a03c90fd4121cb229cc79f46",
+      "modified": false
+    },
+    {
+      "path": "references/mcp-server.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/mcp-server.md",
+      "upstreamBlobSha1": "fced8cbead95aeaf18a65e9d36a020e3c62d4e6b",
+      "mode": "100644",
+      "sha256": "e1469bf7fd099aeb2a48a568b358166868a6650f483dcc686d400d1845d27c39",
+      "modified": false
+    },
+    {
+      "path": "references/migrating_from_beautifulsoup.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/migrating_from_beautifulsoup.md",
+      "upstreamBlobSha1": "367c028097ec2c3e1f92b880dcae5226ec3078ca",
+      "mode": "100644",
+      "sha256": "4d06027059185c16d4f8e2e130cd14f1e1b8612efa327d5bf3d0fee2f23199ac",
+      "modified": false
+    },
+    {
+      "path": "references/parsing/adaptive.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/parsing/adaptive.md",
+      "upstreamBlobSha1": "25e2b79c077e61a44935835164e6166b8ad3e342",
+      "mode": "100644",
+      "sha256": "5f25a54c590700f8c821010733ae079b4edea2a2e8a48074f35c0ed4561c202c",
+      "modified": false
+    },
+    {
+      "path": "references/parsing/main_classes.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/parsing/main_classes.md",
+      "upstreamBlobSha1": "0d54498176348c5ff84bfea20f64cf12302203be",
+      "mode": "100644",
+      "sha256": "2e977b335bf270f1cc7760de6393e09ee9346a8e880c1e9a891a2a58541c3600",
+      "modified": false
+    },
+    {
+      "path": "references/parsing/selection.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/parsing/selection.md",
+      "upstreamBlobSha1": "d82a8026cfba2f4dc192bb0e09070783d3f027b7",
+      "mode": "100644",
+      "sha256": "4975a4b43e1180826d8145efb129826c3206e1b3a91511ef60622841143184aa",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/advanced.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/advanced.md",
+      "upstreamBlobSha1": "0d21e72ae0d8fa3303494dbb0d91bda5a7a0b965",
+      "mode": "100644",
+      "sha256": "1c44c1d2e4c952e6e4784e80e62634684594f885877c1cb38e7c23f40a020242",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/architecture.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/architecture.md",
+      "upstreamBlobSha1": "68ea7b822d13fc14f1b371679047c3c85ef422ce",
+      "mode": "100644",
+      "sha256": "de66f57537c134e68f03860e3385e168d33cd2abde19f910aaa1a2d9fea022e7",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/generic-templates.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/generic-templates.md",
+      "upstreamBlobSha1": "50187b2e1c95d5218b8d09f01cbce64c2a97ab96",
+      "mode": "100644",
+      "sha256": "78d978ee13cc1e021c8302a06a1ed4281a10faf957e44bc0ed00bc3ecacb542c",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/getting-started.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/getting-started.md",
+      "upstreamBlobSha1": "f18073e3b8435c849f58c662574d2ade221e1c4c",
+      "mode": "100644",
+      "sha256": "85456e4d43b4980916421c312276519665eb61521dd822b70fe6b0bed46da820",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/platform-templates.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/platform-templates.md",
+      "upstreamBlobSha1": "8f67f6798d2e58011e7536c60cc229a3fb712250",
+      "mode": "100644",
+      "sha256": "9692f6b9d246f9c0da3d6f712368099f0ac9217058a262ccfbd7c806a389a55b",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/proxy-blocking.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/proxy-blocking.md",
+      "upstreamBlobSha1": "d9aa7d48287ebe97957b9ec8639732973f8642ed",
+      "mode": "100644",
+      "sha256": "bd21204aeafc1b11ef935ed984bd445deaa92657151b29829787fced84261b5a",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/requests-responses.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/requests-responses.md",
+      "upstreamBlobSha1": "c93a7e2357766df5cb7ce0e6495b9a3a568b9389",
+      "mode": "100644",
+      "sha256": "938882dad9c6e90aea213f71a43024c676743399c7cf503eb6e436fe8b0369d0",
+      "modified": false
+    },
+    {
+      "path": "references/spiders/sessions.md",
+      "upstreamPath": "agent-skill/Scrapling-Skill/references/spiders/sessions.md",
+      "upstreamBlobSha1": "8d2c3447e410122c823c7bfe9a3938d4d77eaca0",
+      "mode": "100644",
+      "sha256": "e5d9736725dc01e72ce55b38bf6f9ce2672d7876d17c23151ee01145bbb489b4",
+      "modified": false
+    }
+  ],
+  "excluded": [],
+  "license": "BSD-3-Clause",
+  "retrievedAt": "2026-10-16T12:14:00.516838+00:00",
+  "runtime": {
+    "required": [
+      "Python >=3.10",
+      "Separately installed Scrapling runtime compatible with 0.4.15"
+    ],
+    "optional": [
+      "Fetchers extra and browser assets for dynamic/stealth scraping",
+      "ai extra for MCP",
+      "Docker as an explicitly configured alternative"
+    ],
+    "network": [
+      "Scraping targets",
+      "Runtime/browser downloads only during authorized setup"
+    ]
+  },
+  "adaptations": [
+    "Added eLLMsha integration rules for loaded paths, available tools, canonical memory, runtime setup, and credential consent.",
+    "Preserved upstream dependency layout (including directories with more than 10 children) to retain relative imports, references, and future update comparability.",
+    "Normalized bundled helper examples to the loaded SKILL_DIR; upstream repository-only commands remain explicitly identified.",
+    "Repaired five upstream relative links from fetching documentation to references/parsing/main_classes.md."
+  ],
+  "modifiedFiles": [
+    "SKILL.md",
+    "references/fetching/static.md",
+    "references/fetching/choosing.md"
+  ]
+}

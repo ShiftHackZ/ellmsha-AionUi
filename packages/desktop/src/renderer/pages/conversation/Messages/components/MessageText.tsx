@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { RouterReview } from '@/renderer/components/agent/AutoRouter/RouterDecisionBadge';
 import type { IMessageText } from '@/common/chat/chatLib';
 import { AIONUI_FILES_MARKER } from '@/common/config/constants';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
@@ -330,6 +331,7 @@ const MessageText: React.FC<{
             </div>
           )}
         </div>
+        {showCopyRow && message.position === 'left' && <RouterReview message={message} />}
         {/* Hover-revealed copy + timestamp row. Mobile has no hover affordance,
             so we drop the row entirely — system-level long-press still copies.
             For AI replies split across several text messages, only the last text

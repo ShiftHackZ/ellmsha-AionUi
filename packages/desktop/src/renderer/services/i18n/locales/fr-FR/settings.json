@@ -1485,5 +1485,98 @@
   "pluginComponent": {
     "skills": "Skills",
     "mcp_servers": "MCP servers"
+  },
+  "autoRouter": {
+    "title": "Auto Router",
+    "description": "Choisissez parmi vos comptes fournisseurs configurés et les agents disponibles. Les valeurs par défaut s’appliquent aux nouveaux chats ; les routages existants restent fixes.",
+    "mode": "Mode de routage",
+    "modes": {
+      "auto": "Automatique",
+      "semi_auto": "Semi-automatique",
+      "manual": "Manuel"
+    },
+    "modeHelp": {
+      "auto": "Choisir l’agent principal et chaque sous-agent géré en fonction de leur tâche.",
+      "semi_auto": "Utiliser l’agent principal choisi et router automatiquement les sous-agents gérés.",
+      "manual": "Utiliser les cibles choisies pour l’agent principal et les sous-agents. Les chats individuels nécessitent des cibles de fournisseurs natifs ; les équipes prennent en charge différents environnements d’agents."
+    },
+    "root": "Fournisseur et modèle de l’agent principal",
+    "child": "Fournisseur et modèle par défaut des sous-agents",
+    "profile": "Priorité d’optimisation",
+    "profiles": {
+      "cost": "Coût connu le plus faible",
+      "speed": "Latence connue la plus faible",
+      "quality": "Préférence de qualité",
+      "balanced": "Équilibré"
+    },
+    "localOnly": "Inférence locale uniquement",
+    "localHelp": "Limiter le choix du modèle et du classificateur à une inférence explicitement déclarée locale sur des points d’accès de bouclage. Les outils et la mémoire conservent leurs règles d’accès actuelles ; ce réglage n’est pas un pare-feu réseau.",
+    "allTargets": "Utiliser toutes les cibles configurées admissibles",
+    "pool": "Cibles autorisées",
+    "poolRequired": "Conservez au moins une cible ou activez explicitement toutes les cibles admissibles.",
+    "selectTarget": "Sélectionner un fournisseur ou un agent et un modèle",
+    "classifier": "Classificateur de tâches (modèle natif facultatif)",
+    "classifierHelp": "Ce modèle analyse la tâche et ajoute une requête d’inférence. Sans lui, la sélection repose sur une règle de base stable et explicitée, des métadonnées connues et des résultats acceptés. Le classificateur ne peut pas inventer de prix ni sélectionner des comptes arbitraires.",
+    "childScopeHelp": "Les sous-agents natifs et les membres d’équipe peuvent être routés. Les sous-agents internes des agents CLI externes restent contrôlés par cette CLI. La priorité d’optimisation est indépendante de l’effort de raisonnement du modèle et des permissions.",
+    "hints": "Métadonnées facultatives d’une cible",
+    "hintsHelp": "Saisissez uniquement des valeurs connues. Les valeurs manquantes restent inconnues. La qualité et les points forts représentent vos préférences, pas des résultats de tests comparatifs ni une précision vérifiée.",
+    "unknown": "Inconnu",
+    "metrics": {
+      "input_usd_per_million": "Entrée : USD par million de tokens",
+      "output_usd_per_million": "Sortie : USD par million de tokens",
+      "expected_latency_ms": "Latence attendue (ms)",
+      "context_tokens": "Capacité du contexte (tokens)",
+      "quality_tier": "Préférence de qualité (1–5)",
+      "supports_tools": "Appels d’outils",
+      "supports_vision": "Entrée d’images"
+    },
+    "strengths": "Types de tâches préférés",
+    "tasks": {
+      "coding": "Programmation",
+      "review": "Relecture",
+      "research": "Recherche",
+      "writing": "Rédaction",
+      "analysis": "Analyse",
+      "general": "Général"
+    },
+    "declareLocal": "Je confirme que ce point d’accès exécute l’inférence localement",
+    "saved": "Valeurs par défaut du routeur enregistrées",
+    "pinned": "Ce routage précis est fixé pour ce chat. Démarrez un nouveau chat pour en choisir un autre.",
+    "managedChildren": "Les sous-agents gérés utilisent cette politique de routage.",
+    "cliChildren": "Les sous-agents internes de la CLI sont contrôlés par l’agent sélectionné.",
+    "otherReason": "Le routeur a enregistré des éléments supplémentaires justifiant la sélection.",
+    "reviewLabel": "Évaluer ce résultat",
+    "accept": "Accepter le résultat",
+    "reject": "Correction nécessaire",
+    "reviewSaved": "Votre évaluation a été enregistrée pour ce résultat",
+    "initialTask": "Tâche initiale pour le routage",
+    "initialTaskPlaceholder": "Décrivez la tâche réelle de ce membre",
+    "initialTaskHelp": "Sert à choisir le modèle avant le démarrage. Aucun message n’est envoyé et la tâche ne démarre pas ; envoyez la tâche après avoir créé l’équipe.",
+    "initialTaskRequired": "Décrivez la tâche initiale de chaque membre à router.",
+    "errors": {
+      "empty": "Ajoutez d’abord un modèle de fournisseur activé ou un agent disponible ayant déclaré ses modèles.",
+      "rootRequired": "Choisissez une cible disponible pour l’agent principal.",
+      "childRequired": "Choisissez une cible disponible pour les sous-agents.",
+      "classifierRequired": "Choisissez un modèle de fournisseur natif disponible pour la classification.",
+      "unavailable": "Une cible sélectionnée est désactivée ou n’est plus disponible. Mettez la sélection à jour.",
+      "manualNative": "Les chats individuels en mode manuel nécessitent des modèles de fournisseurs natifs pour l’agent principal et les sous-agents. Utilisez une équipe pour combiner différents environnements d’agents.",
+      "localRequired": "Sélectionnez des cibles locales admissibles et confirmez leurs métadonnées d’inférence locale. Un classificateur cloud n’est pas autorisé dans ce mode.",
+      "loadFailed": "Impossible de charger les paramètres de routage. Réessayez avant d’envoyer."
+    },
+    "reasons": {
+      "manual_target": "Cible choisie par l’utilisateur",
+      "cost_unknown": "Coût inconnu",
+      "latency_unknown": "Latence inconnue",
+      "quality_unknown": "Qualité inconnue",
+      "user_priors_not_verified_accuracy": "Les préférences de l’utilisateur ne constituent pas une précision vérifiée",
+      "explicit_user_acceptance_history": "Tient compte de l’historique d’acceptation explicite de l’utilisateur",
+      "conservative_stable_baseline": "Règle de base prudente et stable",
+      "classification_unconfigured": "Le classificateur de tâches n’est pas configuré",
+      "structured_classification": "Classification structurée des tâches appliquée",
+      "classification_failed_conservative_baseline": "Échec de la classification ; règle de base prudente appliquée",
+      "local_inference_only": "Inférence du modèle limitée aux cibles locales admissibles",
+      "memory_locality_unverified_skipped": "Consultation de la mémoire par le routeur ignorée, car l’exécution locale des embeddings n’est pas vérifiée",
+      "classification_unconfigured_conservative_keywords": "Aucun classificateur ; heuristiques prudentes par mots-clés"
+    }
   }
 }

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "directory": "humanizer",
+      "name": "humanizer",
+      "repository": "https://github.com/blader/humanizer",
+      "revision": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8",
+      "release": "v3.1.0",
+      "license": "MIT"
+    },
+    {
+      "directory": "hallmark",
+      "name": "hallmark",
+      "repository": "https://github.com/Nutlope/hallmark",
+      "revision": "13ac0ec7e148655948100b6396439e481361d690",
+      "release": null,
+      "license": "MIT"
+    },
+    {
+      "directory": "reverse-engineer-anything",
+      "name": "reverse-engineer-anything",
+      "repository": "https://github.com/morluto/rea",
+      "revision": "3b79af28e80785afce9f5998d8f03289402a1847",
+      "release": "rea-agents-6.5.0",
+      "license": "MIT"
+    },
+    {
+      "directory": "impeccable",
+      "name": "impeccable",
+      "repository": "https://github.com/pbakaus/impeccable",
+      "revision": "8a0e198da34ebc5b936a9d5975fb7a3b1cf353b7",
+      "release": "cli-v4.6.0",
+      "license": "Apache-2.0"
+    },
+    {
+      "directory": "ui-ux-pro-max",
+      "name": "ui-ux-pro-max",
+      "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "revision": "a38d04c3d5c298c851dbe5e6ee1965ee3de42cb5",
+      "release": "v2.15.0",
+      "license": "MIT"
+    },
+    {
+      "directory": "last30days",
+      "name": "last30days",
+      "repository": "https://github.com/mvanhorn/last30days-skill",
+      "revision": "50998cd1ba583f13a63b20e3fb5d906c71c31655",
+      "release": "v3.28.0",
+      "license": "MIT"
+    },
+    {
+      "directory": "scrapling-official",
+      "name": "scrapling-official",
+      "repository": "https://github.com/D4Vinci/Scrapling",
+      "revision": "333fa22b7a5821194ce66b59b11f4b16a6484f02",
+      "release": "v0.4.15",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "directory": "diagram-design",
+      "name": "diagram-design",
+      "repository": "https://github.com/cathrynlavery/diagram-design",
+      "revision": "b46c9701f035844a20b13ab0551315977188933b",
+      "release": null,
+      "license": "MIT"
+    }
+  ],
+  "skipped": [
+    {
+      "card": "Onyx / Taste",
+      "reason": "User explicitly requested skipping the mislabeled screenshot card."
+    }
+  ]
+}

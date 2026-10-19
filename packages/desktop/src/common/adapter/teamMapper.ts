@@ -20,7 +20,10 @@ import type {
  * runtime backend / conversation type are derived server-side from the
  * assistant, so callers only supply assistant identity, role, and model.
  */
-export type TeamAssistantInput = Pick<TeamAssistant, 'role' | 'assistant_name' | 'assistant_id' | 'model'>;
+export type TeamAssistantInput = Pick<TeamAssistant, 'role' | 'assistant_name' | 'assistant_id' | 'model'> & {
+  /** Actual assignment used to choose a routed member before warmup. */
+  initial_task?: string;
+};
 
 export type ICreateTeamParams = {
   user_id: string;
@@ -134,5 +137,6 @@ export function toBackendAssistant(a: TeamAssistantInput): Record<string, unknow
     role: a.role === 'leader' ? 'lead' : a.role,
     model: a.model || 'default',
     assistant_id: a.assistant_id,
+    ...(a.initial_task ? { initial_task: a.initial_task } : {}),
   };
 }

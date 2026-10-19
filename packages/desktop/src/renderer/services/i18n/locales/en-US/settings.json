@@ -1509,5 +1509,98 @@
   "pluginComponent": {
     "skills": "Skills",
     "mcp_servers": "MCP servers"
+  },
+  "autoRouter": {
+    "title": "Auto Router",
+    "description": "Choose from your configured provider accounts and available agents. Defaults apply to new chats; existing routes stay pinned.",
+    "mode": "Routing mode",
+    "modes": {
+      "auto": "Automatic",
+      "semi_auto": "Semi-automatic",
+      "manual": "Manual"
+    },
+    "modeHelp": {
+      "auto": "Choose the root and each managed child for their assignment.",
+      "semi_auto": "Use your chosen root and route managed children automatically.",
+      "manual": "Use your chosen root and default child targets. Solo chats require native provider targets; mixed agent runtimes are supported in Teams."
+    },
+    "root": "Root provider and model",
+    "child": "Default child provider and model",
+    "profile": "Optimization priority",
+    "profiles": {
+      "cost": "Lowest known cost",
+      "speed": "Lowest known latency",
+      "quality": "Quality preference",
+      "balanced": "Balanced"
+    },
+    "localOnly": "Local inference only",
+    "localHelp": "Restrict model and classifier selection to explicitly declared local inference on loopback endpoints. Tools and memory keep their existing access rules; this is not a network firewall.",
+    "allTargets": "Use all eligible configured targets",
+    "pool": "Allowed targets",
+    "poolRequired": "Keep at least one target, or explicitly enable all eligible targets.",
+    "selectTarget": "Select provider or agent and model",
+    "classifier": "Task classifier (optional native model)",
+    "classifierHelp": "This model analyzes the assignment and adds an inference request. Without it, selection uses a disclosed stable baseline, known metadata and accepted outcomes. The classifier cannot invent prices or select arbitrary accounts.",
+    "childScopeHelp": "Native sub-agents and Team members can be routed. Internal children of external CLI agents remain controlled by that CLI. Optimization priority is separate from model reasoning effort and permissions.",
+    "hints": "Optional metadata for a target",
+    "hintsHelp": "Enter known values only. Missing values remain unknown. Quality and strengths are your preferences, not benchmark results or verified accuracy.",
+    "unknown": "Unknown",
+    "metrics": {
+      "input_usd_per_million": "Input USD / million tokens",
+      "output_usd_per_million": "Output USD / million tokens",
+      "expected_latency_ms": "Expected latency (ms)",
+      "context_tokens": "Context capacity (tokens)",
+      "quality_tier": "Quality preference (1–5)",
+      "supports_tools": "Tool calling",
+      "supports_vision": "Image input"
+    },
+    "strengths": "Preferred task types",
+    "tasks": {
+      "coding": "Coding",
+      "review": "Review",
+      "research": "Research",
+      "writing": "Writing",
+      "analysis": "Analysis",
+      "general": "General"
+    },
+    "declareLocal": "I confirm this endpoint performs inference locally",
+    "saved": "Router defaults saved",
+    "pinned": "This concrete route is pinned for this chat. Start a new chat to choose another route.",
+    "managedChildren": "Managed children use this routing policy.",
+    "cliChildren": "CLI-internal children are controlled by the selected agent.",
+    "otherReason": "Additional selection evidence recorded by the router.",
+    "reviewLabel": "Review this result",
+    "accept": "Accept result",
+    "reject": "Needs correction",
+    "reviewSaved": "Your review was recorded for this result",
+    "initialTask": "Initial assignment for routing",
+    "initialTaskPlaceholder": "Describe this member’s actual assignment",
+    "initialTaskHelp": "Used to select the model before startup. It does not send a message or start the assignment; send the task after creating the Team.",
+    "initialTaskRequired": "Describe the initial assignment for each routed member.",
+    "errors": {
+      "empty": "Add an enabled provider model or an available agent with advertised models first.",
+      "rootRequired": "Choose an available root target.",
+      "childRequired": "Choose an available child target.",
+      "classifierRequired": "Choose an available native provider model for classification.",
+      "unavailable": "A selected target is disabled or no longer available. Update the pool.",
+      "manualNative": "Manual solo chats require native provider models for both root and children. Use a Team for mixed agent runtimes.",
+      "localRequired": "Select eligible local targets and confirm their local inference metadata. A cloud classifier is not allowed in this mode.",
+      "loadFailed": "Could not load routing settings. Try again before sending."
+    },
+    "reasons": {
+      "manual_target": "User-selected target",
+      "cost_unknown": "Cost is unknown",
+      "latency_unknown": "Latency is unknown",
+      "quality_unknown": "Quality is unknown",
+      "user_priors_not_verified_accuracy": "User preferences are not verified accuracy",
+      "explicit_user_acceptance_history": "Includes explicit user acceptance history",
+      "conservative_stable_baseline": "Conservative stable baseline",
+      "classification_unconfigured": "Task classifier is not configured",
+      "structured_classification": "Structured task classification applied",
+      "classification_failed_conservative_baseline": "Classification failed; conservative baseline applied",
+      "local_inference_only": "Model inference restricted to eligible local targets",
+      "memory_locality_unverified_skipped": "Router memory lookup skipped because embedding locality is unverified",
+      "classification_unconfigured_conservative_keywords": "No classifier; conservative keyword heuristics"
+    }
   }
 }

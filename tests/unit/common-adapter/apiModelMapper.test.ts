@@ -17,9 +17,18 @@ import {
   buildCreateConversationBody,
   type ApiProviderWithModel,
 } from '@/common/adapter/apiModelMapper';
+import { DEFAULT_ROUTER_CONFIG } from '@/common/types/agent/routerTypes';
 import type { TProviderWithModel } from '@/common/config/storage';
 
 describe('apiModelMapper', () => {
+  it('passes routing intent at creation without forging persisted decisions', () => {
+    const routing = { initial_prompt: 'Review this code', config: DEFAULT_ROUTER_CONFIG, has_images: false };
+    const body = buildCreateConversationBody({ name: 'New chat', assistant: { id: 'bare:auto-router' }, routing });
+    expect(body.routing).toEqual(routing);
+    expect(body).not.toHaveProperty('model');
+    expect(body.extra ?? {}).not.toHaveProperty('routing');
+  });
+
   describe('toApiModel', () => {
     it('maps required fields from frontend to backend format', () => {
       const input: TProviderWithModel = {

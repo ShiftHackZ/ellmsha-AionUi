@@ -144,6 +144,21 @@ vi.mock('@arco-design/web-react', () => {
 });
 
 describe('AionrsModelSelector runtime options', () => {
+  it('keeps a routed model pinned while exposing independent reasoning effort', () => {
+    const select = vi.fn();
+    render(
+      <AionrsModelSelector
+        selection={makeSelection({ locked: true, handleSelectModel: select })}
+        thoughtLevel={thoughtLevel}
+        onSetThoughtLevel={vi.fn()}
+      />
+    );
+    expect(screen.queryByText('Model')).not.toBeInTheDocument();
+    expect(screen.queryByText('gpt-5.2-mini')).not.toBeInTheDocument();
+    expect(screen.getByText('Thinking Level')).toBeInTheDocument();
+    expect(select).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

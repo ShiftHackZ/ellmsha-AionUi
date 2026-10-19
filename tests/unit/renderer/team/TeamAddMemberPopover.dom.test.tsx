@@ -13,6 +13,32 @@ const switchTabMock = vi.fn();
 const resolveDefaultTeamAgentModelMock = vi.fn();
 const messageErrorMock = vi.fn();
 
+const routingConversationMock = vi.fn(() => ({ data: { extra: {} }, isLoading: false, error: undefined }));
+vi.mock('@/renderer/components/agent/AutoRouter/useRouter', () => ({
+  useRouterConversation: () => routingConversationMock(),
+}));
+vi.mock('@/renderer/components/base/AionModal', () => ({
+  default: ({
+    visible,
+    children,
+    onOk,
+    okButtonProps,
+  }: {
+    visible: boolean;
+    children: React.ReactNode;
+    onOk: () => void;
+    okButtonProps?: { disabled?: boolean };
+  }) =>
+    visible ? (
+      <div>
+        {children}
+        <button type='button' disabled={okButtonProps?.disabled} onClick={onOk}>
+          Confirm routing assignment
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue || key,
@@ -89,12 +115,45 @@ import TeamAddMemberPopover from '@/renderer/pages/team/components/memberPicker/
 
 describe('TeamAddMemberPopover', () => {
   beforeEach(() => {
+    routingConversationMock.mockReturnValue({ data: { extra: {} }, isLoading: false, error: undefined });
     addAssistantMock.mockReset();
     switchTabMock.mockReset();
     messageErrorMock.mockReset();
     resolveDefaultTeamAgentModelMock.mockReset();
     resolveDefaultTeamAgentModelMock.mockResolvedValue('claude-sonnet-4');
     addAssistantMock.mockResolvedValue({ slot_id: 'slot-new' });
+  });
+
+  it('requires a real assignment for children of a routed leader before adding or resolving models', async () => {
+    routingConversationMock.mockReturnValue({
+      data: {
+        extra: { routing: { config: {}, decision: { target: { kind: 'provider', provider_id: 'p', model: 'm' } } } },
+      },
+      isLoading: false,
+      error: undefined,
+    });
+    render(
+      <TeamAddMemberPopover>
+        <button type='button'>add</button>
+      </TeamAddMemberPopover>
+    );
+    fireEvent.click(screen.getAllByTestId('team-add-member-option-writer')[0]);
+    expect(addAssistantMock).not.toHaveBeenCalled();
+    expect(screen.getByText('Confirm routing assignment')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('settings.autoRouter.initialTask'), {
+      target: { value: 'Check the API ownership boundary' },
+    });
+    fireEvent.click(screen.getByText('Confirm routing assignment'));
+    await waitFor(() =>
+      expect(addAssistantMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          initial_task: 'Check the API ownership boundary',
+          assistant_id: 'writer',
+          model: undefined,
+        })
+      )
+    );
+    expect(resolveDefaultTeamAgentModelMock).not.toHaveBeenCalled();
   });
 
   it('does not mark duplicate assistants already in team or disable selectable unchecked rows', () => {

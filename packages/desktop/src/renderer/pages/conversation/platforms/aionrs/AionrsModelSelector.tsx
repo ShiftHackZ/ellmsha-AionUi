@@ -44,6 +44,7 @@ const AionrsModelSelector: React.FC<{
   const defaultModelLabel = t('common.defaultModel');
 
   const current_model = selection?.current_model;
+  if (selection?.locked && !thoughtLevel) return null;
 
   const renderLogo = () => <Brain theme='outline' size='14' fill={iconColors.secondary} className='shrink-0' />;
 
@@ -77,7 +78,9 @@ const AionrsModelSelector: React.FC<{
     defaultModelLabel,
     fallbackLabel: t('conversation.welcome.selectModel'),
   });
-  const combinedLabel = composeRuntimeSelectorLabel({ modelLabel: label, thoughtLevel });
+  const combinedLabel = selection.locked
+    ? getCurrentThoughtLevelLabel(thoughtLevel)
+    : composeRuntimeSelectorLabel({ modelLabel: label, thoughtLevel });
   const handleThoughtLevelSelect = (value: string) => {
     if (!thoughtLevel || value === thoughtLevel.currentValue || !onSetThoughtLevel) return;
     void onSetThoughtLevel(thoughtLevel.id, value);
@@ -120,15 +123,17 @@ const AionrsModelSelector: React.FC<{
         <Menu>
           {thoughtLevel ? (
             <>
-              <Menu.SubMenu
-                key='model'
-                triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
-                title={
-                  <RuntimeSelectorSubMenuTitle label={t('common.model', { defaultValue: 'Model' })} value={label} />
-                }
-              >
-                {modelListNode}
-              </Menu.SubMenu>
+              {!selection.locked && (
+                <Menu.SubMenu
+                  key='model'
+                  triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                  title={
+                    <RuntimeSelectorSubMenuTitle label={t('common.model', { defaultValue: 'Model' })} value={label} />
+                  }
+                >
+                  {modelListNode}
+                </Menu.SubMenu>
+              )}
               <Menu.SubMenu
                 key='thought-level'
                 triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}

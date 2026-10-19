@@ -496,19 +496,20 @@ const AionrsSendBox: React.FC<{
       modeOptions.find((opt) => opt.active)?.label ?? t('agentMode.default', { defaultValue: 'Default' });
     const currentModelLabel = modelSelection.current_model?.use_model || t('conversation.welcome.selectModel');
 
-    const entries: MobileActionSheetEntry[] = [
-      {
-        key: 'model',
-        icon: <Brain theme='outline' size='16' />,
-        label: t('common.model', { defaultValue: 'Model' }),
-        meta: currentModelLabel,
-        submenu: {
-          title: t('common.model', { defaultValue: 'Model' }),
-          options: modelOptions,
-          onSelect: handleSheetModelSelect,
-          emptyText: t('conversation.welcome.selectModel'),
-        },
+    const modelEntry: MobileActionSheetEntry = {
+      key: 'model',
+      icon: <Brain theme='outline' size='16' />,
+      label: t('common.model', { defaultValue: 'Model' }),
+      meta: currentModelLabel,
+      submenu: {
+        title: t('common.model', { defaultValue: 'Model' }),
+        options: modelOptions,
+        onSelect: handleSheetModelSelect,
+        emptyText: t('conversation.welcome.selectModel'),
       },
+    };
+    const entries: MobileActionSheetEntry[] = [
+      ...(modelSelection.locked ? [] : [modelEntry]),
       {
         key: 'permission',
         icon: <Shield theme='outline' size='16' />,

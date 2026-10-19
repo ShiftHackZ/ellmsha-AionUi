@@ -18,6 +18,9 @@ import { getFuzzyMatchIndices, useSlashCommandController } from '@/renderer/hook
 import { openExternalUrl } from '@/renderer/utils/platform';
 import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
 import AssistantSelectionArea from './components/AssistantSelectionArea';
+import { RouterPolicyButton } from '@/renderer/components/agent/AutoRouter';
+import { useRouterConfig } from '@/renderer/components/agent/AutoRouter/useRouter';
+import type { RouterConfig } from '@/common/types/agent/routerTypes';
 import GuidActionRow from './components/GuidActionRow';
 import GuidInputCard from './components/GuidInputCard';
 import GuidModelSelector from './components/GuidModelSelector';
@@ -253,7 +256,13 @@ const GuidPage: React.FC = () => {
     [slashController.filteredCommands, slashController.query]
   );
 
+  const routerDefaults = useRouterConfig();
+  const [routerOverride, setRouterOverride] = useState<RouterConfig>();
+  const routerConfig = routerOverride ?? routerDefaults.data;
+  const isAutoRouter = agentSelection.selectedAssistantBackend === 'auto-router';
   const send = useGuidSend({
+    routerConfig,
+    routerConfigError: routerDefaults.error,
     // Input state
     input: guidInput.input,
     setInput: guidInput.setInput,
@@ -604,7 +613,7 @@ const GuidPage: React.FC = () => {
 
   // Build the mention dropdown node
   // Build the model selector node
-  const modelSelectorNode = (
+  const modelSelectorNode = isAutoRouter ? null : (
     <GuidModelSelector
       isGeminiMode={isGeminiMode}
       modelList={modelSelection.modelList}
@@ -633,6 +642,16 @@ const GuidPage: React.FC = () => {
       onFilesUploaded={guidInput.handleFilesUploaded}
       onFilesPicked={guidInput.handleFilesPicked}
       modelSelectorNode={modelSelectorNode}
+      routerSelectorNode={
+        isAutoRouter ? (
+          <RouterPolicyButton
+            value={routerConfig}
+            onChange={setRouterOverride}
+            loading={routerDefaults.isLoading}
+            error={routerDefaults.error}
+          />
+        ) : undefined
+      }
       isGeminiMode={isGeminiMode}
       modelList={modelSelection.modelList}
       current_model={modelSelection.current_model}

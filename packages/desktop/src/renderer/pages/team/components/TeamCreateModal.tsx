@@ -79,6 +79,15 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
     }
   };
 
+  const routedLeader =
+    selectedMembers.find((member) => member.selectionId === leaderSelectionId)?.assistant.backend === 'auto-router';
+  const needsRouting = (member: TeamMemberDraft) => routedLeader || member.assistant.backend === 'auto-router';
+  const missingAssignment = selectedMembers.some((member) => needsRouting(member) && !member.initialTask?.trim());
+  const handleTaskChange = (selectionId: string, initialTask: string) =>
+    setSelectedMembers((members) =>
+      members.map((member) => (member.selectionId === selectionId ? { ...member, initialTask } : member))
+    );
+
   const handleCreate = async () => {
     if (!name.trim()) {
       Message.warning(t('team.create.nameRequired', { defaultValue: 'Please enter a team name' }));
@@ -93,11 +102,16 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       Message.warning(t('team.create.selectOneLeader', { defaultValue: 'Select one Team Leader' }));
       return;
     }
+    if (missingAssignment) {
+      Message.warning(t('settings.autoRouter.initialTaskRequired'));
+      return;
+    }
     const user_id = user?.id ?? 'system_default_user';
     setLoading(true);
     try {
       const resolvedModels = await Promise.all(
         selectedMembers.map(async (member) => {
+          if (needsRouting(member)) return [member.selectionId, undefined] as const;
           try {
             const model = await resolveDefaultTeamAgentModel({
               assistant_id: member.assistant.id,
@@ -117,6 +131,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
         assistant_name: member.assistant.name,
         assistant_id: member.assistant.id,
         model: modelBySelectionId.get(member.selectionId),
+        ...(needsRouting(member) ? { initial_task: member.initialTask!.trim() } : {}),
       }));
 
       const team = await ipcBridge.team.create.invoke({
@@ -225,6 +240,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
           leaderSelectionId={leaderSelectionId}
           onLeaderChange={setLeaderSelectionId}
           onRemove={handleRemoveDraft}
+          onTaskChange={handleTaskChange}
         />
         <div className='mt-14px shrink-0 border-t border-border-2 pt-14px'>{teamFields}</div>
       </section>
@@ -268,6 +284,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
           leaderSelectionId={leaderSelectionId}
           onLeaderChange={setLeaderSelectionId}
           onRemove={handleRemoveDraft}
+          onTaskChange={handleTaskChange}
           headerAction={addMemberDropdown}
           listBoxClassName='!max-h-[38vh]'
         />
@@ -312,7 +329,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
               type='primary'
               onClick={handleCreate}
               loading={loading}
-              disabled={!name.trim() || selectedMembers.length === 0 || !hasOneLeader}
+              disabled={!name.trim() || selectedMembers.length === 0 || !hasOneLeader || missingAssignment}
               className='!h-38px min-w-100px !rounded-8px !px-18px !text-13px'
             >
               {t('team.create.confirm', { defaultValue: 'Confirm Create' })}

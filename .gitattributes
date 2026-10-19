@@ -23,3 +23,6 @@
 *.woff binary
 *.woff2 binary
 *.ttf binary
+
+# Preserve pinned upstream bytes used by the community-skill integrity manifest.
+resources/ellmsha-skills/community/** -text

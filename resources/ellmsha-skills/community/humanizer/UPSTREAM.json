@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/blader/humanizer",
+  "revision": "v3.1.0",
+  "commit": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8",
+  "sourcePath": "SKILL.md",
+  "license": "MIT",
+  "retrievedAt": "2026-10-16T12:06:02.128242+00:00",
+  "runtime": {
+    "required": [],
+    "optional": [],
+    "network": []
+  },
+  "adaptations": [
+    "Added an eLLMsha integration section after skill frontmatter; preserved upstream workflow and license.",
+    "Preserved the upstream vendor directory layout to keep reference paths stable."
+  ],
+  "excluded": [
+    "Repository setup/install scripts, agent-global registrations, hooks, CI and demonstration applications."
+  ],
+  "files": [
+    {
+      "path": "SKILL.md",
+      "upstreamPath": "SKILL.md",
+      "upstreamSha256": "0612f1dfb1672b0ea9b97e139bf1f06cabe98d8b27424fe8ff01e1fb4cc99cad",
+      "sha256": "cc85d800acfc51bf1900cbf1ecedf94f3ad10b02af2eba92185bb0a9860858e8"
+    },
+    {
+      "path": "LICENSE",
+      "upstreamPath": "LICENSE",
+      "upstreamSha256": "4ac4810254ab36d45419141aeb8e69bf50652cfafe5b2dab947d06d44e5cbf96",
+      "sha256": "4ac4810254ab36d45419141aeb8e69bf50652cfafe5b2dab947d06d44e5cbf96"
+    }
+  ]
+}

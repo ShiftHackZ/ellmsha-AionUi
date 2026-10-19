@@ -1486,5 +1486,98 @@
   "pluginComponent": {
     "skills": "Skills",
     "mcp_servers": "MCP servers"
+  },
+  "autoRouter": {
+    "title": "Auto Router",
+    "description": "从已配置的供应商账户和可用代理中选择。默认设置适用于新聊天；现有聊天的路由保持固定。",
+    "mode": "路由模式",
+    "modes": {
+      "auto": "自动",
+      "semi_auto": "半自动",
+      "manual": "手动"
+    },
+    "modeHelp": {
+      "auto": "根据任务为主代理和每个受管理的子代理选择执行目标。",
+      "semi_auto": "使用您选择的主代理，并自动为受管理的子代理选择执行目标。",
+      "manual": "使用您选择的主代理和默认子代理执行目标。独立聊天需要原生供应商目标；Teams 支持混用不同代理运行时。"
+    },
+    "root": "主代理供应商和模型",
+    "child": "默认子代理供应商和模型",
+    "profile": "优化优先级",
+    "profiles": {
+      "cost": "已知成本最低",
+      "speed": "已知延迟最低",
+      "quality": "质量优先",
+      "balanced": "均衡"
+    },
+    "localOnly": "仅本地推理",
+    "localHelp": "仅允许选择明确声明在回环地址上执行本地推理的模型和分类器。工具和记忆仍遵循现有访问规则；此设置不是网络防火墙。",
+    "allTargets": "使用所有符合条件的已配置目标",
+    "pool": "允许的目标",
+    "poolRequired": "至少保留一个目标，或明确启用所有符合条件的目标。",
+    "selectTarget": "选择供应商或代理及其模型",
+    "classifier": "任务分类器（可选的原生模型）",
+    "classifierHelp": "此模型分析任务，并增加一次推理请求。未配置时，将使用明确标示的稳定基线、已知元数据和已接受的结果进行选择。分类器不能编造价格或选择任意账户。",
+    "childScopeHelp": "可为原生子代理和 Team 成员选择执行目标。外部 CLI 代理的内部子代理仍由该 CLI 控制。优化优先级独立于模型的推理强度和权限。",
+    "hints": "目标的可选元数据",
+    "hintsHelp": "仅填写已知值。缺失值保持未知。质量和擅长任务是您的偏好，不是基准测试结果或已验证的准确率。",
+    "unknown": "未知",
+    "metrics": {
+      "input_usd_per_million": "输入价格（美元/百万 token）",
+      "output_usd_per_million": "输出价格（美元/百万 token）",
+      "expected_latency_ms": "预期延迟（毫秒）",
+      "context_tokens": "上下文容量（token）",
+      "quality_tier": "质量偏好（1–5）",
+      "supports_tools": "工具调用",
+      "supports_vision": "图像输入"
+    },
+    "strengths": "偏好的任务类型",
+    "tasks": {
+      "coding": "编程",
+      "review": "审查",
+      "research": "研究",
+      "writing": "写作",
+      "analysis": "分析",
+      "general": "通用"
+    },
+    "declareLocal": "我确认此端点在本地执行推理",
+    "saved": "路由器默认设置已保存",
+    "pinned": "此聊天的具体路由已固定。如需选择其他路由，请新建聊天。",
+    "managedChildren": "受管理的子代理使用此路由策略。",
+    "cliChildren": "CLI 内部的子代理由所选代理控制。",
+    "otherReason": "路由器已记录其他选择依据。",
+    "reviewLabel": "评价此结果",
+    "accept": "接受结果",
+    "reject": "需要修正",
+    "reviewSaved": "您对此结果的评价已记录",
+    "initialTask": "用于路由的初始任务",
+    "initialTaskPlaceholder": "描述此成员的实际任务",
+    "initialTaskHelp": "用于在启动前选择模型。此操作不会发送消息或开始任务；创建 Team 后再发送任务。",
+    "initialTaskRequired": "请描述每位路由成员的初始任务。",
+    "errors": {
+      "empty": "请先添加已启用的供应商模型，或具有已公布模型列表的可用代理。",
+      "rootRequired": "请选择可用的主代理目标。",
+      "childRequired": "请选择可用的子代理目标。",
+      "classifierRequired": "请选择可用的原生供应商模型用于分类。",
+      "unavailable": "某个所选目标已停用或不再可用。请更新候选目标。",
+      "manualNative": "手动模式的独立聊天要求主代理和子代理均使用原生供应商模型。如需混用代理运行时，请使用 Team。",
+      "localRequired": "请选择符合条件的本地目标，并确认其本地推理元数据。此模式不允许使用云端分类器。",
+      "loadFailed": "无法加载路由设置。请在发送前重试。"
+    },
+    "reasons": {
+      "manual_target": "用户选择的目标",
+      "cost_unknown": "成本未知",
+      "latency_unknown": "延迟未知",
+      "quality_unknown": "质量未知",
+      "user_priors_not_verified_accuracy": "用户偏好不等于已验证的准确率",
+      "explicit_user_acceptance_history": "包含用户明确接受结果的历史",
+      "conservative_stable_baseline": "保守且稳定的基线",
+      "classification_unconfigured": "未配置任务分类器",
+      "structured_classification": "已应用结构化任务分类",
+      "classification_failed_conservative_baseline": "分类失败；已应用保守基线",
+      "local_inference_only": "模型推理仅限符合条件的本地目标",
+      "memory_locality_unverified_skipped": "无法确认嵌入计算是否在本地执行，已跳过路由器记忆查询",
+      "classification_unconfigured_conservative_keywords": "未配置分类器；使用保守的关键词启发式规则"
+    }
   }
 }

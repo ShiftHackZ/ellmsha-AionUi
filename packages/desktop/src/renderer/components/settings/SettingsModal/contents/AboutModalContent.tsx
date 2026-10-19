@@ -56,7 +56,7 @@ const AboutModalContent: React.FC = () => {
                   <Tag bordered>{t('settings.upstreamVersion', { version: component.upstream })}</Tag>
                 )}
               </Tooltip>
-              <Tag bordered>{t('settings.componentPatch', { patch: component.patch })}</Tag>
+              {component.patch > 0 && <Tag bordered>{t('settings.componentPatch', { patch: component.patch })}</Tag>}
             </div>
           </div>
         ))}

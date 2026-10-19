@@ -1,0 +1,2338 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/cathrynlavery/diagram-design",
+  "revision": "b46c9701f035844a20b13ab0551315977188933b",
+  "commit": "b46c9701f035844a20b13ab0551315977188933b",
+  "sourcePath": "skills/diagram-design",
+  "files": [
+    {
+      "path": "LICENSE",
+      "upstreamPath": "LICENSE",
+      "upstreamBlobSha1": "5270ecfc40942fc2da652a7a2f3e687fc6851ba3",
+      "mode": "100644",
+      "sha256": "bb7e12e91fecef43024111123ff784cec6c485585561d8b552557c0173b3ed29",
+      "modified": false
+    },
+    {
+      "path": "SKILL.md",
+      "upstreamPath": "skills/diagram-design/SKILL.md",
+      "upstreamBlobSha1": "e1277f1a02c6b3547fbdee90e1f218eef9cec7e9",
+      "mode": "100644",
+      "sha256": "58b17e4092455d06abf9d8625337628c5b6e02661bd0e929bf3b9315b422f9aa",
+      "modified": true
+    },
+    {
+      "path": "assets/example-architecture-containment-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-containment-dark.html",
+      "upstreamBlobSha1": "cd5743840768844aa4a11b1a5baab9424111075c",
+      "mode": "100644",
+      "sha256": "853399a330a541d63d5ca05834bb9f1545364fff61546754190899a49e54d28a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture-containment-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-containment-full.html",
+      "upstreamBlobSha1": "0b9fdf3ce45fbb72ce4e0abb73bab43f3228faba",
+      "mode": "100644",
+      "sha256": "4b96ed9774d236c3b4968a10be0f7b5c8805095b0206d249bd8e53b4e893debe",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture-containment.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-containment.html",
+      "upstreamBlobSha1": "ab1dff6c52010ac888afc0d9237d6fb23d19ef82",
+      "mode": "100644",
+      "sha256": "10013c62e6449880627c2271edacfdc094f006a16e365a55f117e844097fe2de",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-dark.html",
+      "upstreamBlobSha1": "435e2ec89742c71c7200027ceb2fe2d451f81649",
+      "mode": "100644",
+      "sha256": "b471f857f2d8745705925ee49659d8506de291c3a7b3761a3fb47a0394b9c8df",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture-delta-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-delta-dark.html",
+      "upstreamBlobSha1": "0b1da51999f70de1564fc62f19a69a6d6131597e",
+      "mode": "100644",
+      "sha256": "d3f0984c7ff145656bb400ff294e9595d7f5f1209d156edbb5e5676e8ee199b9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture-delta-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-delta-full.html",
+      "upstreamBlobSha1": "c357942287806c29452b05899d517d57cae756cf",
+      "mode": "100644",
+      "sha256": "cd23ff4b3dcc2a734a13ab31807ce46c1e26dd82c3a91bac7b161f0d3abaeea0",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture-delta.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-delta.html",
+      "upstreamBlobSha1": "c9dfc5fc042e9647a50f5a77a6bd4d7e18b3668a",
+      "mode": "100644",
+      "sha256": "0a88e1e44fcac97be87accccb429c4930380938f59534468090e82c45ceabfc6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture-full.html",
+      "upstreamBlobSha1": "e33a359c4ff7fd5e6a274f1c6e5bd763115e22a3",
+      "mode": "100644",
+      "sha256": "6c3951cbb3cdb94b1825efbfabbf5dda996c20106f00fa1d06511d58792b0248",
+      "modified": false
+    },
+    {
+      "path": "assets/example-architecture.html",
+      "upstreamPath": "skills/diagram-design/assets/example-architecture.html",
+      "upstreamBlobSha1": "dee30d264a3fc2f9be21542237f1be4f2ac93911",
+      "mode": "100644",
+      "sha256": "a9e8b59854d31e70288abba522509494f82a319bc684c3694e08e67dfc990bc5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-campus-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-campus-animated.html",
+      "upstreamBlobSha1": "706b31be945186ecc6a388651cfa376dcf2326f7",
+      "mode": "100644",
+      "sha256": "72420915d79afb6daaa6f6215ac08754b4d2dc02b8c844cb5e25b52771002350",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-campus-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-campus-dark.html",
+      "upstreamBlobSha1": "69e1a2a6764540fb097cc756badd9918674240b6",
+      "mode": "100644",
+      "sha256": "7d13e33fcfa93e177179c357c0ad884fbb73d826ba79123420ad513ea174ba7c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-campus-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-campus-full.html",
+      "upstreamBlobSha1": "da17392f07abd5bee6238a2749f6ea9412a4b668",
+      "mode": "100644",
+      "sha256": "e1d28913537b8e206af137c8e6fbc212cb47203de3f69baa4fac2cee96beea19",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-campus.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-campus.html",
+      "upstreamBlobSha1": "7559a84bcf4ebeee21d0b550ed77e951e681f641",
+      "mode": "100644",
+      "sha256": "5d03a724dd85ec929dd17643294dbec7a6fd6165ee010fd0fef44dc72bdf1e31",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-coffee-shop-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-coffee-shop-animated.html",
+      "upstreamBlobSha1": "d89d3b5d876f8c0cb8780fdd1666023414c3d030",
+      "mode": "100644",
+      "sha256": "7c948dc5daf9c9568c6ce1b22fae4c2b0c0c330794785f767655ebaf7da6e70e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-coffee-shop-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-coffee-shop-dark.html",
+      "upstreamBlobSha1": "f207674b33438222ea3b5193369007912737c708",
+      "mode": "100644",
+      "sha256": "0d5836e9b4ca2f85c4a1fd976ef0b7f89a29a29fb169dcb59b483a4e731bd46b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-coffee-shop-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-coffee-shop-full.html",
+      "upstreamBlobSha1": "bf8516527a95dc9c718bd13f239e0732e7a8a1b4",
+      "mode": "100644",
+      "sha256": "ba03f90070b4bda66dc8cdbe3ba8334fadfa77e94f8ddde3d3aa3aa6b4d97e5a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-coffee-shop.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-coffee-shop.html",
+      "upstreamBlobSha1": "f61d965ead18f222f6addeca2f2bef3cd990f950",
+      "mode": "100644",
+      "sha256": "90f8f78c306ea5b96b64c6c5c5e68c85e13fdd9a4f40aecc25dccf1f9b34283e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-dark.html",
+      "upstreamBlobSha1": "53a5e45f0894f834be4843d24a3da764424b2e29",
+      "mode": "100644",
+      "sha256": "fa041519f9e71e518069334397886c6e545f9286b28dcdbc254a6aaa96a1034a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-full.html",
+      "upstreamBlobSha1": "f717c54e921af8166c2351492fa748cc180548b6",
+      "mode": "100644",
+      "sha256": "13a7506ec0f4576a4f10313ba954b9c85a88bda258542c0c2017189f15a06adc",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-warehouse-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-warehouse-animated.html",
+      "upstreamBlobSha1": "8c32c86e037fba9957c25a795691fa7583324d64",
+      "mode": "100644",
+      "sha256": "e43acc91d852143ea615cd30b4251627a3e1224c95e433565c185bb4045620f6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-warehouse-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-warehouse-dark.html",
+      "upstreamBlobSha1": "0302fa0c7d08084c5442668a4253f67ac50ff627",
+      "mode": "100644",
+      "sha256": "a85d79254ec2e1813a13055efb9951b84ea55a04f43aa6fb6c880aa448924d38",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-warehouse-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-warehouse-full.html",
+      "upstreamBlobSha1": "592cab6a983f018a67c8817d84cd048196eebe7b",
+      "mode": "100644",
+      "sha256": "596cf38433b5c5a3c0a1af348863a61e6c31ecff3c1b46e04d989b10822c37a5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan-warehouse.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-warehouse.html",
+      "upstreamBlobSha1": "cb79b797900d31cfb7c9a4b7148f2428b9df232f",
+      "mode": "100644",
+      "sha256": "aed38ba8afc9c560fe22c7cbba1448e3c8f0efe43853d2c457b32e76d1bfef76",
+      "modified": false
+    },
+    {
+      "path": "assets/example-axonometric-plan.html",
+      "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan.html",
+      "upstreamBlobSha1": "aa76f4118ac1851dab9f3b3ddcaecaaa3517c1ad",
+      "mode": "100644",
+      "sha256": "1ffd4767dbb9c0fd49190582a7304d0aac4cd6df7cd7d538eb6e84cd1803f30a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bar-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bar-dark.html",
+      "upstreamBlobSha1": "0d9aa66b39499ddde9ee4f89113e3eb336e4913f",
+      "mode": "100644",
+      "sha256": "fb96534eff0910a006dabca940d71aeb1019076abfbe9a020758747c2e2cbb0a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bar-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bar-full.html",
+      "upstreamBlobSha1": "c4533c7c7d42fb320af9b6a2b57afe0f9e6bfadc",
+      "mode": "100644",
+      "sha256": "ac8eff087cc5f2f04cffda1cb63b4e95641e9b05ca151a580e4df0016ddd08e1",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bar.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bar.html",
+      "upstreamBlobSha1": "7340852f39cfa684dd4dd02d1ec5d13266c0505f",
+      "mode": "100644",
+      "sha256": "b82fea59d393f0754f1543cf1e8d9189542fb93cf458bcd256a0c56fa060461b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-beeswarm-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-beeswarm-dark.html",
+      "upstreamBlobSha1": "9746cf6b4db45a66f8c166abd8a446f895ca7617",
+      "mode": "100644",
+      "sha256": "597cf05ad582eb0dbe8040949c6f164096ce84631e6d3ba85d5fbf778d2b1dc7",
+      "modified": false
+    },
+    {
+      "path": "assets/example-beeswarm-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-beeswarm-full.html",
+      "upstreamBlobSha1": "19899cbdef3a4629e4136877f50f15e2ed0a5348",
+      "mode": "100644",
+      "sha256": "515edbc59376ad9bc99afc8cf9d55c0fa6a7e68f8eca95a02cf282086857e6cc",
+      "modified": false
+    },
+    {
+      "path": "assets/example-beeswarm.html",
+      "upstreamPath": "skills/diagram-design/assets/example-beeswarm.html",
+      "upstreamBlobSha1": "0bf5c803d345685c50697c6d2324e92b002ef79a",
+      "mode": "100644",
+      "sha256": "e69a9b7ac33fae509c02a1ef06b39e1a548cd3925644e7cefd3ff2119a88a060",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bubble-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bubble-dark.html",
+      "upstreamBlobSha1": "626f6e4d92ed8d3e5268ed75a41838ae18ba38ee",
+      "mode": "100644",
+      "sha256": "e5297625f2a81cebcd63250dcd7455f5c84160da501354f530dfcf59baf0ab9e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bubble-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bubble-full.html",
+      "upstreamBlobSha1": "3e322f51689e1b4450858af6dd6d76b5360541e6",
+      "mode": "100644",
+      "sha256": "6aaf526da9c9eccb82c3f88d502e831268003c01f1de6cdc171b2a8970b03b99",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bubble.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bubble.html",
+      "upstreamBlobSha1": "484fb393b089e647d673d86d5ebd3d82f9b27ad1",
+      "mode": "100644",
+      "sha256": "48f6b009e1a05d780a66a8f9f3c3c9323da5aa3a6f7f6c50003558b4ba163657",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bump-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bump-dark.html",
+      "upstreamBlobSha1": "01a085fe4469a11c730e9cbf8ad4827b02ea4c72",
+      "mode": "100644",
+      "sha256": "0e1ed31a2850405f60a00df02942532642bcd1bd5c2d728721e2087045c12840",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bump-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bump-full.html",
+      "upstreamBlobSha1": "fc1461a348b08780d8a798fe47392455ab5091af",
+      "mode": "100644",
+      "sha256": "aa62110a0d9dc11b19477013de1da1e09d37efb58f1b56b4af47fe9e80a7de0f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-bump.html",
+      "upstreamPath": "skills/diagram-design/assets/example-bump.html",
+      "upstreamBlobSha1": "52a1b043f8cf436115733533025afff873179d63",
+      "mode": "100644",
+      "sha256": "cdf62733836ff70f2b04e3a9062609b24f17d3b8be60d110a8182f9bc12a02a7",
+      "modified": false
+    },
+    {
+      "path": "assets/example-data-flow-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-data-flow-dark.html",
+      "upstreamBlobSha1": "22b75a35e6ecbfd5c4f6cd1526d83d4e735e3374",
+      "mode": "100644",
+      "sha256": "a3f5f27b4a690a6d806c735bf2db42b1e3d7f235387018200830329379829917",
+      "modified": false
+    },
+    {
+      "path": "assets/example-data-flow-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-data-flow-full.html",
+      "upstreamBlobSha1": "15c464697066845824aa9638794fae48a1fbf18b",
+      "mode": "100644",
+      "sha256": "606d1f7650ea6db8e84f977beb591616fa32df9bc3085c09072da81885db5133",
+      "modified": false
+    },
+    {
+      "path": "assets/example-data-flow.html",
+      "upstreamPath": "skills/diagram-design/assets/example-data-flow.html",
+      "upstreamBlobSha1": "2c4a28f7d28fa39ee61c95e13b7fff66837ce76c",
+      "mode": "100644",
+      "sha256": "f65978b77410fff9993fc099f4cf0d25bcaf67ce98fea2e281976e2406783b99",
+      "modified": false
+    },
+    {
+      "path": "assets/example-datalake-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-datalake-dark.html",
+      "upstreamBlobSha1": "61f48597190510fc926ee39a3b365cbf1afc1ff3",
+      "mode": "100644",
+      "sha256": "7eb08a81b703a1fb87877d33c79c0f31fcbd9a8fbc1dac20646e3f68aff93404",
+      "modified": false
+    },
+    {
+      "path": "assets/example-datalake-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-datalake-full.html",
+      "upstreamBlobSha1": "6d7faf546b60591470ccec4238851ea3ca58439d",
+      "mode": "100644",
+      "sha256": "f978706df71ffcdd6b2408aaeab78360ad68010487b9a849459219cd8cb8f5a3",
+      "modified": false
+    },
+    {
+      "path": "assets/example-datalake.html",
+      "upstreamPath": "skills/diagram-design/assets/example-datalake.html",
+      "upstreamBlobSha1": "0846dd3493a80967df3d73db6a9b3958237895c8",
+      "mode": "100644",
+      "sha256": "311b9143dc66cb96d7fe1ca3fa6d9cbf17b864976b8168ee3e8e8c497fe264d6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-db-schema-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-db-schema-dark.html",
+      "upstreamBlobSha1": "18d7c014c5eb87f6902efcfbfbefc670615c425f",
+      "mode": "100644",
+      "sha256": "c1f566f092642c8c58969b7609598272ea78eae5beb172f35afe1d1366078c6a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-db-schema-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-db-schema-full.html",
+      "upstreamBlobSha1": "2bbad9b0f18fee880a89c1ff41cbd2852739e065",
+      "mode": "100644",
+      "sha256": "897c88e8cde6537409e0b0359495dfa33e658dc40581fdf0039bc65a0433cd25",
+      "modified": false
+    },
+    {
+      "path": "assets/example-db-schema.html",
+      "upstreamPath": "skills/diagram-design/assets/example-db-schema.html",
+      "upstreamBlobSha1": "4bbb2d6f2516bbd515456029036516fafbd79b44",
+      "mode": "100644",
+      "sha256": "5b65adae081c31b8f4a9772d8ba4a4066e759625197e2111885ac503cf8c2104",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dependency-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dependency-dark.html",
+      "upstreamBlobSha1": "bbbfd2c177abecf87f2777acfcd1415be227a0b6",
+      "mode": "100644",
+      "sha256": "2e7f6d263d67bd751ca8d00111dcccd4a6a18d4d4241a709321cd043b630785d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dependency-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dependency-full.html",
+      "upstreamBlobSha1": "c8faff05a14725142338bdff8fe9bd2901bcb443",
+      "mode": "100644",
+      "sha256": "8498d290f2a74e85e99836ca1146879c6068e476ac8f2a847daa837c4cd1cd7d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dependency.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dependency.html",
+      "upstreamBlobSha1": "8f040159be8a1c2e1811a0ec09c22dedd475d296",
+      "mode": "100644",
+      "sha256": "c75e1d72834ed4bbdd57f7470136d272f13d0cc7c41b02e84ae187553a6e893b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-deployment-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-deployment-dark.html",
+      "upstreamBlobSha1": "dd3c0d876ab0af864179c443ebc3d5932d0c5c62",
+      "mode": "100644",
+      "sha256": "2c0c99d16f6d85fac54552bd4fe102ce9e0286fdf8eabd97ab4d90e5a97667e6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-deployment-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-deployment-full.html",
+      "upstreamBlobSha1": "dc04ed7df01e0d760f95330b9899e8c59e0346a8",
+      "mode": "100644",
+      "sha256": "9187eaafb9107e979c2e43bcde77edf63e974fc59cf72a50fef33ea8df460650",
+      "modified": false
+    },
+    {
+      "path": "assets/example-deployment.html",
+      "upstreamPath": "skills/diagram-design/assets/example-deployment.html",
+      "upstreamBlobSha1": "774e01454e643efd65b796909ad1d6866b631e12",
+      "mode": "100644",
+      "sha256": "8e4cee0bc1105dcd040b19d0000f84c69f81bde75d4cb16d2261fab617a7aee5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dp-integration-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dp-integration-dark.html",
+      "upstreamBlobSha1": "86b2e7b67bd9bbc943e9eae1414d34b48a80c4b6",
+      "mode": "100644",
+      "sha256": "b139d91cf88a77b4dbf202da4a1ec21e29ca1862f2e8249925b605ce25fe97f6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dp-integration-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dp-integration-full.html",
+      "upstreamBlobSha1": "d95f287565f1afa2b83fa208e218c9cdd3725d50",
+      "mode": "100644",
+      "sha256": "17cd685b6bd522a5eb7ae972f76787b57383779c2f0b9f08de32a7d8d9e49f94",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dp-integration.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dp-integration.html",
+      "upstreamBlobSha1": "9d20f230ffc87421079ecae01bfbbf3881a8646c",
+      "mode": "100644",
+      "sha256": "d1624ee510d25780522637141e89dd95165d6cefa6b5aded0c0ad1beca2ecf24",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dp-security-matrix-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dp-security-matrix-dark.html",
+      "upstreamBlobSha1": "f71aa8c86f52f1496840b4ed58d3e97d9d8ccd91",
+      "mode": "100644",
+      "sha256": "1d93ac4553013cbb5d5fe962517601a0dadf03a8d1bf9ae522f10d7a83e05968",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dp-security-matrix-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dp-security-matrix-full.html",
+      "upstreamBlobSha1": "181dde242c08e33102022a849c0488ea6f8b58d5",
+      "mode": "100644",
+      "sha256": "8f34f504368ba9fd13c2bb20b028d2fc27800fbb46c238e73b0aa65101ca4ad0",
+      "modified": false
+    },
+    {
+      "path": "assets/example-dp-security-matrix.html",
+      "upstreamPath": "skills/diagram-design/assets/example-dp-security-matrix.html",
+      "upstreamBlobSha1": "6b69cf05de11e10fab6eb283a557c0f0bf52d86c",
+      "mode": "100644",
+      "sha256": "9ae674dcec652483ea75a9368f88fd4c61a447b34354b2f2386049c10491e83f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-er-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-er-dark.html",
+      "upstreamBlobSha1": "a21c32e68cac11e37a31f1a1195fba79a49ea52c",
+      "mode": "100644",
+      "sha256": "c007c14d88a48a8ea30b1144dd4ac392ee7891a2278262e2a6f6836b43aa7fdf",
+      "modified": false
+    },
+    {
+      "path": "assets/example-er-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-er-full.html",
+      "upstreamBlobSha1": "8ceeec0903a1253c18963a855801d574994a7c3a",
+      "mode": "100644",
+      "sha256": "e778b7e790c3fd3f9219807aef3115bda4d7b1efb9998df413bcd224f77ed163",
+      "modified": false
+    },
+    {
+      "path": "assets/example-er.html",
+      "upstreamPath": "skills/diagram-design/assets/example-er.html",
+      "upstreamBlobSha1": "5fd3bcf42c8dc37c18e7093a8b47ab88c6136bda",
+      "mode": "100644",
+      "sha256": "dcbca24c5eeeb84711510a60fae190754503f9b57d9551936b086f3fb589f617",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-ai-stack-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-ai-stack-animated.html",
+      "upstreamBlobSha1": "b57052458246af33ba441416ac780156d62f4fa4",
+      "mode": "100644",
+      "sha256": "f8448f23ac359dc698cf19a1288080f1f804fb8f157fbc830aa7d50fc1c930a0",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-ai-stack-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-ai-stack-dark.html",
+      "upstreamBlobSha1": "cba3faf4625fea05ca43b6db037bf273e54ea8a1",
+      "mode": "100644",
+      "sha256": "2c249164a0959ad426b7d6e071c5c66fc05037e6a425601ea1b90025b81f29b0",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-ai-stack-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-ai-stack-full.html",
+      "upstreamBlobSha1": "b04ca261b271114722b247b9d2eeb3b4ba60fe7f",
+      "mode": "100644",
+      "sha256": "0f1ba200c4f6391fde4e1b350889ec50d63c4c1ead0fee680b1bcf4b4e9cce6f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-ai-stack.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-ai-stack.html",
+      "upstreamBlobSha1": "2f8066518f48a9161c8b33384d99cd91fea057fd",
+      "mode": "100644",
+      "sha256": "d2ac4530f8e3fb8eb9b4f344704ab9c36c3e983e6e5f8725250df1aa06b0ef2b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-dark.html",
+      "upstreamBlobSha1": "da38b5c36d44f9c957b60445863abec18a07f7ad",
+      "mode": "100644",
+      "sha256": "408cdc4779bf0db7456cdda4651cd1678adbb129c5c06ba6bf0d6632b544770c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-full.html",
+      "upstreamBlobSha1": "21c44a86602e0070a86b35063e2475e2441fa07c",
+      "mode": "100644",
+      "sha256": "3f1ab91f536a6dd3547a61e2150b31a49bf9ba154ecc6f3bb813fd3d9269f16c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-keyboard-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-keyboard-animated.html",
+      "upstreamBlobSha1": "04cd068932af340c19da970bfeb057e7332345fe",
+      "mode": "100644",
+      "sha256": "7fac285e6daf22592a35cf1dedd6c54673923815b6c1f2ab20477464978e7566",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-keyboard-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-keyboard-dark.html",
+      "upstreamBlobSha1": "6c4a3ff654106387d6de0e3a946c832689f606d0",
+      "mode": "100644",
+      "sha256": "95ab0d91853a75c45e8b66de73373ae55bcd71fb722fda15ad586b6b0c04b0b4",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-keyboard-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-keyboard-full.html",
+      "upstreamBlobSha1": "fa242d9f13e4f58440d1607ec57367f143a344c4",
+      "mode": "100644",
+      "sha256": "8b1fb4cee1d8a80f710296cdf25e3985ae4041a3b6a3084b35e8e695de3527ca",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-keyboard.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-keyboard.html",
+      "upstreamBlobSha1": "cfebe94e795c9554970c8b9106d3b1778829350a",
+      "mode": "100644",
+      "sha256": "858d60f2af6025301751a296125aca03cd7ea253d3efa8fef0e74df953992dc8",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-phone-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-phone-animated.html",
+      "upstreamBlobSha1": "dd67f08331630f0ff45b1b27f33f38395f792039",
+      "mode": "100644",
+      "sha256": "de0bb80121f68b34449a08f028da0d1b5007aae88848ae79c8db7419a8d77067",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-phone-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-phone-dark.html",
+      "upstreamBlobSha1": "8808014dfcd8f6c899b3cbf2348320bfff2ca089",
+      "mode": "100644",
+      "sha256": "7dc2c3785b4456b54229f8c5fe56a22253614fc464ba7550e7f73c0619c21731",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-phone-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-phone-full.html",
+      "upstreamBlobSha1": "6e38feeeba9d47344585a6134609d43160858207",
+      "mode": "100644",
+      "sha256": "87c750c84a4e8811e09eef44cb9fba5567ff7fbc559718683b92922b954f6c4f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-phone.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-phone.html",
+      "upstreamBlobSha1": "c243788230decae29a1437c6dfb61717e3c4d47e",
+      "mode": "100644",
+      "sha256": "3866a52045df1b95333b09347b010871a73422f785bd7aad5de14fcf1f2189ef",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-unboxing-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-unboxing-animated.html",
+      "upstreamBlobSha1": "a14bd803fb3f648f67a125dafc2b531cd96e3b74",
+      "mode": "100644",
+      "sha256": "b0b081c3435ec728c776638757f69b8bbe286d40eadcafb0c1816d65b315eb00",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-unboxing-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-unboxing-dark.html",
+      "upstreamBlobSha1": "b66cac1935ec107402c3cd8a3c32e2cd0094fb3e",
+      "mode": "100644",
+      "sha256": "3bbe1e9be1c611e49796bdfe47bf69c714ec5e0ff5a13921cce548cfafe94f0b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-unboxing-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-unboxing-full.html",
+      "upstreamBlobSha1": "9e60aaa7b1e8b27ce893aeef99686e491e375b44",
+      "mode": "100644",
+      "sha256": "601554b9fc46d378031b89f78454a595821a0a693d4eeb916c088d2ec157c628",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded-unboxing.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded-unboxing.html",
+      "upstreamBlobSha1": "1bfc7a444132ae744f145e4db10bb331a1085feb",
+      "mode": "100644",
+      "sha256": "9cbec60cb42ca24315f5e3392485699d24a3d22cd0879e128eae5d3988b4333f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-exploded.html",
+      "upstreamPath": "skills/diagram-design/assets/example-exploded.html",
+      "upstreamBlobSha1": "04c3d89236b048f12c89c2876af6a1d41ddc521d",
+      "mode": "100644",
+      "sha256": "07eb320afdaa31516c221a80a9ae6a8e72be62185a8b790841237db823ef638a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-fishbone-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-fishbone-dark.html",
+      "upstreamBlobSha1": "46e6c2fca4e6c3f948540271c7b119647bdf0158",
+      "mode": "100644",
+      "sha256": "f884b81b83f7ce40cf85b8aa6c3a55db99b7fb2d38502deff222aaff36d7db47",
+      "modified": false
+    },
+    {
+      "path": "assets/example-fishbone-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-fishbone-full.html",
+      "upstreamBlobSha1": "d461dab269f68f14c0dc2ed48c63acd132b9f31f",
+      "mode": "100644",
+      "sha256": "cb55d2df262eec426d61503758aaef8c1f31322e71ac8fec5a2912655bfc337c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-fishbone.html",
+      "upstreamPath": "skills/diagram-design/assets/example-fishbone.html",
+      "upstreamBlobSha1": "554a4ace4476e9983a284e90e8727c82f461b2a8",
+      "mode": "100644",
+      "sha256": "d0925f006f7ae339b7e3467886dc069e73def905e1316a5de00b2baeb61a63b2",
+      "modified": false
+    },
+    {
+      "path": "assets/example-flowchart-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-flowchart-dark.html",
+      "upstreamBlobSha1": "e918695855b7bec1f4e26854f004c9c590495023",
+      "mode": "100644",
+      "sha256": "9b69415f880744d1c3dff23cf1dfa6bfbcc3bf38178456ce6668a74b783647ef",
+      "modified": false
+    },
+    {
+      "path": "assets/example-flowchart-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-flowchart-full.html",
+      "upstreamBlobSha1": "42df4401f58ef784d9714742e50dabfe911efc3c",
+      "mode": "100644",
+      "sha256": "68bdada8201f46df8c76aa27be10194bc8d870a683696d400435817a19f0b696",
+      "modified": false
+    },
+    {
+      "path": "assets/example-flowchart.html",
+      "upstreamPath": "skills/diagram-design/assets/example-flowchart.html",
+      "upstreamBlobSha1": "cf9053045f852422949990caacb74b366f15d89a",
+      "mode": "100644",
+      "sha256": "f9c92596d77b010417b78f710ae96cf161395831ad8e51153caa41fa4a31446c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-gantt-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-gantt-dark.html",
+      "upstreamBlobSha1": "35a71807adb453caa23a9fd68664e34ccdb674f4",
+      "mode": "100644",
+      "sha256": "777c051f19001dbfdf9ced01d836622bda2ee5ad9d2d753012cd6f23fdde70d4",
+      "modified": false
+    },
+    {
+      "path": "assets/example-gantt-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-gantt-full.html",
+      "upstreamBlobSha1": "c0d47865fe9086d6beb9107bea33ebd4f81abf63",
+      "mode": "100644",
+      "sha256": "171c7bed870d24976124e3f56aa884bd107d46380dd212bb0300fd92badd91b2",
+      "modified": false
+    },
+    {
+      "path": "assets/example-gantt.html",
+      "upstreamPath": "skills/diagram-design/assets/example-gantt.html",
+      "upstreamBlobSha1": "06d68820e688c38755584bcebd366a635689e4f7",
+      "mode": "100644",
+      "sha256": "4e017a543771aec9338e15df3be5f9278fa4883e306373c4ea0555b65c7c43a4",
+      "modified": false
+    },
+    {
+      "path": "assets/example-heatmap-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-heatmap-dark.html",
+      "upstreamBlobSha1": "5e35f908f17a109557438e8d662ad2c819204927",
+      "mode": "100644",
+      "sha256": "6ec2953db65dbabcdbd5abe3d43f7e001524317ddd3e1230398f9de927e547c0",
+      "modified": false
+    },
+    {
+      "path": "assets/example-heatmap-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-heatmap-full.html",
+      "upstreamBlobSha1": "5c917de2817e8715e5b5746e81815d4c34245a4c",
+      "mode": "100644",
+      "sha256": "f3b92bf979a5504fd2c5bc4c107830ec50b43cc6685f662976a28739c9691f2d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-heatmap.html",
+      "upstreamPath": "skills/diagram-design/assets/example-heatmap.html",
+      "upstreamBlobSha1": "043b40f7562bff14e94e674da0777469119807f9",
+      "mode": "100644",
+      "sha256": "18ee707bd2235b0530250218a4aa98574db42abcbfa02dae92c70b48cb0261da",
+      "modified": false
+    },
+    {
+      "path": "assets/example-high-level-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-high-level-dark.html",
+      "upstreamBlobSha1": "899cd54dcdceba3c92b60604bdddd1bf859fe206",
+      "mode": "100644",
+      "sha256": "d47d9056f2972d8ae68ddaabefdaf65c644cfafa2e19123e9ee0a675d19a0438",
+      "modified": false
+    },
+    {
+      "path": "assets/example-high-level-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-high-level-full.html",
+      "upstreamBlobSha1": "d92aca58b97480d07fcb3f724c6600b0b8580c4f",
+      "mode": "100644",
+      "sha256": "359dc10e77c8de97550dbfab993c4ce4d683bd089a44302e20c1dcd4ad27501e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-high-level-vertical-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-high-level-vertical-dark.html",
+      "upstreamBlobSha1": "a1cd5653dbc1f51fbe0d12c60d3fdd97d32a8827",
+      "mode": "100644",
+      "sha256": "aabf08d05808d96ef6c5b16395830234022ce1f48abf8c56b2719acdde9a8aa2",
+      "modified": false
+    },
+    {
+      "path": "assets/example-high-level-vertical-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-high-level-vertical-full.html",
+      "upstreamBlobSha1": "396b913d02a308e4c3a24404d8c11a9be4753a13",
+      "mode": "100644",
+      "sha256": "70a7fd733caba9e8c1bd05ea96b10bb22cb15594f24435058acfd4735f6fa3ae",
+      "modified": false
+    },
+    {
+      "path": "assets/example-high-level-vertical.html",
+      "upstreamPath": "skills/diagram-design/assets/example-high-level-vertical.html",
+      "upstreamBlobSha1": "2892399bcc335ae8df8052c355ad4b646788850c",
+      "mode": "100644",
+      "sha256": "4a11a730ccfffc6b3e4daf92c6402122c0db7f70e5b11253b021c0227e557769",
+      "modified": false
+    },
+    {
+      "path": "assets/example-high-level.html",
+      "upstreamPath": "skills/diagram-design/assets/example-high-level.html",
+      "upstreamBlobSha1": "7ed148b77bff7801be31150f90aff96776baffc8",
+      "mode": "100644",
+      "sha256": "7fc2cd00413de7a5221dde192403f87a8bef883984f8331f64c56f3bc387fa5e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-import-drawio.html",
+      "upstreamPath": "skills/diagram-design/assets/example-import-drawio.html",
+      "upstreamBlobSha1": "429d716142aafbabfa49b9b6e31d817b63df5c68",
+      "mode": "100644",
+      "sha256": "4404af257bf1216ef9959f3340cd82f2117d29d548b571e94ccf7931d4dd6bcd",
+      "modified": false
+    },
+    {
+      "path": "assets/example-import-excalidraw.html",
+      "upstreamPath": "skills/diagram-design/assets/example-import-excalidraw.html",
+      "upstreamBlobSha1": "273a7e8f9ec0ffdd25ae960b4bb3f25e76b99c48",
+      "mode": "100644",
+      "sha256": "8a09e53ae6b0efbb9360784917117e784f90da53a4cc1de2a838e3ccef57d712",
+      "modified": false
+    },
+    {
+      "path": "assets/example-import-mermaid.html",
+      "upstreamPath": "skills/diagram-design/assets/example-import-mermaid.html",
+      "upstreamBlobSha1": "dc77361bc55f599c0d4ca2c1b980614d955ab78a",
+      "mode": "100644",
+      "sha256": "ed6109da74fe8fa2f5d6385ef1dda20e1b2d95c3e3d2d274499362de1aa20db9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-it-state-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-it-state-dark.html",
+      "upstreamBlobSha1": "69e7e485c32fbdf420f4dc7321400fa08a84e622",
+      "mode": "100644",
+      "sha256": "3b571ce2bc0810586d8c125936fa1d90a898bad74b1079a6d8c6699024ae4c15",
+      "modified": false
+    },
+    {
+      "path": "assets/example-it-state-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-it-state-full.html",
+      "upstreamBlobSha1": "835afb113fbee9f3cfab74988d7bc37c6888caa5",
+      "mode": "100644",
+      "sha256": "ca864942c8d70da13e2ee19a35661c45be8c42ae79317eb08da2b1f5689a51ba",
+      "modified": false
+    },
+    {
+      "path": "assets/example-it-state.html",
+      "upstreamPath": "skills/diagram-design/assets/example-it-state.html",
+      "upstreamBlobSha1": "8481df94002b1e1ad15e41991b4a9363846f3305",
+      "mode": "100644",
+      "sha256": "9a91ec8959b77734745ddfa19f3dbf2992a3bf1134cb7352b9778ab3253e8d5b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-journey-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-journey-dark.html",
+      "upstreamBlobSha1": "1111ff0d932aaec76087b8a9f2afdb520127e18d",
+      "mode": "100644",
+      "sha256": "c1866ca355d8859d27f6e99d9e2415daf204c313ed4463ae9663ba9e930a9949",
+      "modified": false
+    },
+    {
+      "path": "assets/example-journey-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-journey-full.html",
+      "upstreamBlobSha1": "df7d946355c10553f405841ca73dcc0ed9d4d951",
+      "mode": "100644",
+      "sha256": "e739a7a1dbdd24bd3d9faae798ca02ed7d25b6e6944db1f43307287d541b348d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-journey.html",
+      "upstreamPath": "skills/diagram-design/assets/example-journey.html",
+      "upstreamBlobSha1": "f09031f73c8b799c1386ceb2c01c9db716870fb2",
+      "mode": "100644",
+      "sha256": "3703a5f553e1daabbf17d9785626ab63508bde326967bbce1390c1a72a0f2b37",
+      "modified": false
+    },
+    {
+      "path": "assets/example-kanban-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-kanban-dark.html",
+      "upstreamBlobSha1": "bf6643cc76b514cdc81c649cd42f305de70422c3",
+      "mode": "100644",
+      "sha256": "30809cae8600a1852131362df275d9ab1c6aeedc65d3855caed264d48e19f5dc",
+      "modified": false
+    },
+    {
+      "path": "assets/example-kanban-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-kanban-full.html",
+      "upstreamBlobSha1": "d7ee559ea32d3f56c9476fa5863467344b44c2b9",
+      "mode": "100644",
+      "sha256": "e557f78ae75b4f088f148ff7e3006d8c4aa0f8dfc0824e237ba656eb566021f8",
+      "modified": false
+    },
+    {
+      "path": "assets/example-kanban.html",
+      "upstreamPath": "skills/diagram-design/assets/example-kanban.html",
+      "upstreamBlobSha1": "4ed1e033b4c007509f615fabcd36090457cb6ae0",
+      "mode": "100644",
+      "sha256": "9171e229f6ca68c228a8ab3f47bd4a4b69f2ea77c2738282713a5f6271b32e1e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-layers-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-layers-dark.html",
+      "upstreamBlobSha1": "c03f897714fd75a8e116ac0c4e016d3c73e9bf01",
+      "mode": "100644",
+      "sha256": "412df7b0710cf14cd95c1e806e708241bda6b3bc8e1f142107adf857ed6aa7d1",
+      "modified": false
+    },
+    {
+      "path": "assets/example-layers-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-layers-full.html",
+      "upstreamBlobSha1": "1779f0c6a04af9fe01705542cb6ad5eef76362f4",
+      "mode": "100644",
+      "sha256": "6d9a2dc1eaa4f2d7309d93b8dedb9e379bb9debe42787030ee474725d26e68d8",
+      "modified": false
+    },
+    {
+      "path": "assets/example-layers.html",
+      "upstreamPath": "skills/diagram-design/assets/example-layers.html",
+      "upstreamBlobSha1": "92faaafc3b87cc0446e82d1a61dd9c2564a4ed21",
+      "mode": "100644",
+      "sha256": "e4edabd125d9d9de3e27d2a530b7e791042910e97ec71c3d8e23912eafda5082",
+      "modified": false
+    },
+    {
+      "path": "assets/example-line-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-line-dark.html",
+      "upstreamBlobSha1": "87294a6c22dafb8f1d76136b84705326e35114c8",
+      "mode": "100644",
+      "sha256": "552abdcac08788dac5ee7fa419ab854c5e09451b69822eb48935712880382a9d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-line-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-line-full.html",
+      "upstreamBlobSha1": "2ec71a97705eb5a4c65929f60bd01879dbc6f14f",
+      "mode": "100644",
+      "sha256": "d121a15bc242986e2ce490ea34623ceba4eca96d6e16a531ab985fbc60dfd079",
+      "modified": false
+    },
+    {
+      "path": "assets/example-line.html",
+      "upstreamPath": "skills/diagram-design/assets/example-line.html",
+      "upstreamBlobSha1": "e59922159af342ed8c9c65ab4ba7ef052c2cfac1",
+      "mode": "100644",
+      "sha256": "8d53adb388306a8593a72c4eea063b8a95a0ba79d2134f51313a645c2554e227",
+      "modified": false
+    },
+    {
+      "path": "assets/example-loop-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-loop-dark.html",
+      "upstreamBlobSha1": "ecad93f0701ab0f5fcff4f6b4f5a394b9fe36de5",
+      "mode": "100644",
+      "sha256": "8ef6feecb47dc6043e1a7714fd0a795e357d484d38df35b594be85105029eb01",
+      "modified": false
+    },
+    {
+      "path": "assets/example-loop-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-loop-full.html",
+      "upstreamBlobSha1": "cde9ee5be1b779f9c1530f37e37c611d4c0da346",
+      "mode": "100644",
+      "sha256": "975a0d3e2954b928473fdc4e6e1720c84ebf23a84cc295434ea2ec74894d4cc5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-loop-terminal.html",
+      "upstreamPath": "skills/diagram-design/assets/example-loop-terminal.html",
+      "upstreamBlobSha1": "2e22273acb3910760c78b646c004678a4a9254a0",
+      "mode": "100644",
+      "sha256": "93a2f86cca043537bf472973c6c1d51de54d85208ec54cd448c40e3f09aa73e8",
+      "modified": false
+    },
+    {
+      "path": "assets/example-loop.html",
+      "upstreamPath": "skills/diagram-design/assets/example-loop.html",
+      "upstreamBlobSha1": "c9d7ac5cbaff24216b0c4ebc7eb2e7978f04a7ab",
+      "mode": "100644",
+      "sha256": "7346157c67b6994b274772d0ffeb6c5ae2e935991246bd541e4aab84e31f3a8d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-marimekko-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-marimekko-dark.html",
+      "upstreamBlobSha1": "5134a660a789907a84bcccd33aa71a4eb969d808",
+      "mode": "100644",
+      "sha256": "91371c8c9915cd5a9fa5d04ddd425d2a17df8b495e2c1a195de8e73130bb3f44",
+      "modified": false
+    },
+    {
+      "path": "assets/example-marimekko-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-marimekko-full.html",
+      "upstreamBlobSha1": "271ed6bd757bccecc1571b2b5d8e1d0f39277317",
+      "mode": "100644",
+      "sha256": "e809f059a9df5634a62bcf0444311bb391b2168b45f4c4d4842a2692f1ff48b5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-marimekko.html",
+      "upstreamPath": "skills/diagram-design/assets/example-marimekko.html",
+      "upstreamBlobSha1": "6ea9884b836883612de54e040ba5f708b935fddd",
+      "mode": "100644",
+      "sha256": "2b1407bcdc69114d3c74ac4a7e257d5081212b87c2aff05913044fc622c46b4a",
+      "modified": false
+    },
+    {
+      "path": "assets/example-medallion-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-medallion-dark.html",
+      "upstreamBlobSha1": "5019dbced2c923c4a7c10f814b1ffffb65729f42",
+      "mode": "100644",
+      "sha256": "de936de0ee480c4fe9d789f576e1f9bbbc69613c903b73435879f5cbf02cb23e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-medallion-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-medallion-full.html",
+      "upstreamBlobSha1": "69eee77f0fa99d662e0ba7db88ab0b4f1b69034a",
+      "mode": "100644",
+      "sha256": "8d75d30cb7ae0d3a5479a929d0b288b8ec8cc9072e1ed167d68e97c64321b376",
+      "modified": false
+    },
+    {
+      "path": "assets/example-medallion.html",
+      "upstreamPath": "skills/diagram-design/assets/example-medallion.html",
+      "upstreamBlobSha1": "a75304d4e00b3bc15fdf60d7bfbedfc9347e5533",
+      "mode": "100644",
+      "sha256": "ccd63d89878af1f9d1bcc83e126ea11254f4bbfedb3d87a21e7242793cb2c526",
+      "modified": false
+    },
+    {
+      "path": "assets/example-nested-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-nested-dark.html",
+      "upstreamBlobSha1": "bebcbdb01a0e149fdc1b8d08672338c41700de6d",
+      "mode": "100644",
+      "sha256": "8c9862a5a41d2fc5485b51cb9aab318595ceadd2f799ccab7b57e3183906c4c5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-nested-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-nested-full.html",
+      "upstreamBlobSha1": "911f53f1c16f6db8c11726bcf18668c6c5338137",
+      "mode": "100644",
+      "sha256": "2b87e484fee759346562080dc7639549176af7998389cb0a8be7303649246494",
+      "modified": false
+    },
+    {
+      "path": "assets/example-nested.html",
+      "upstreamPath": "skills/diagram-design/assets/example-nested.html",
+      "upstreamBlobSha1": "2b1413caf0a4d755c37c7670ec980b3c0f370e27",
+      "mode": "100644",
+      "sha256": "fd4001be8af64a8aeae2c9b46e6f476030fcd8791ea3f9b508a503fc5bc70ffb",
+      "modified": false
+    },
+    {
+      "path": "assets/example-org-chart-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-org-chart-dark.html",
+      "upstreamBlobSha1": "b1ebf40523af007f57afdedd1d9851005f842dc6",
+      "mode": "100644",
+      "sha256": "2cb9f912a9ab635fe72924425a23aabb3ddfcbc704e6fdbc12cd0399b2d1de5f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-org-chart-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-org-chart-full.html",
+      "upstreamBlobSha1": "e0b3b5479154f0fa282a57dd7b6f072f9553bf9a",
+      "mode": "100644",
+      "sha256": "f74b14ed6e30a7cf8bcdc8e78dd97c7549d6c73187dea81a13c06edb6e6b1d78",
+      "modified": false
+    },
+    {
+      "path": "assets/example-org-chart.html",
+      "upstreamPath": "skills/diagram-design/assets/example-org-chart.html",
+      "upstreamBlobSha1": "5191b2a397ae48d4af680e9a942a1ea9bb899ace",
+      "mode": "100644",
+      "sha256": "82356766f5d5af0c10fa60a728c784674138c45416933c15f58d5553a7f4b9b4",
+      "modified": false
+    },
+    {
+      "path": "assets/example-paved-road-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-paved-road-animated.html",
+      "upstreamBlobSha1": "526b5d3d1d0b83a3aab3db8b868a4727347ca592",
+      "mode": "100644",
+      "sha256": "a17f220a610f0616a1d416bde05cb8591182293ac6cd25e3746eaaf08663fc19",
+      "modified": false
+    },
+    {
+      "path": "assets/example-polar-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-polar-dark.html",
+      "upstreamBlobSha1": "fcb1944f856779a42b65d3aa37d20c300e55cc05",
+      "mode": "100644",
+      "sha256": "7c284696cfed61e832dd4dde814840901967cca64bd54a4cddfff7cbeaddb04e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-polar-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-polar-full.html",
+      "upstreamBlobSha1": "e2967fc4a239a7fca3813f5f1e88044d35a3d08b",
+      "mode": "100644",
+      "sha256": "be8080fa08a05dd27191d3a26585d1246153f9fbdcd5122533833ae57eb016b0",
+      "modified": false
+    },
+    {
+      "path": "assets/example-polar.html",
+      "upstreamPath": "skills/diagram-design/assets/example-polar.html",
+      "upstreamBlobSha1": "bbe1e8c5d672f95cf731a90919ba6029e255fb51",
+      "mode": "100644",
+      "sha256": "3bbfe08f63c9be96cecfdb7432b8236d2f0788bf6008e69254cbbef18cd3fc39",
+      "modified": false
+    },
+    {
+      "path": "assets/example-policy-trace-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-policy-trace-animated.html",
+      "upstreamBlobSha1": "c36b415e296973e96a2177de45896ab94e65ac88",
+      "mode": "100644",
+      "sha256": "1303da75c366e6013dadbc4be0126ab9db34ed0c7a2fdae507c9bd449e871307",
+      "modified": false
+    },
+    {
+      "path": "assets/example-process-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-process-dark.html",
+      "upstreamBlobSha1": "502c89cadeb1bd7e091fdb5a003a873582cdb671",
+      "mode": "100644",
+      "sha256": "eb0a12c31ab57cce1f300e03c40aedb6d1a2d035320901688b12f32a3805475d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-process-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-process-full.html",
+      "upstreamBlobSha1": "16fa0dd73a3bfff54cc65b5d6fea72d0abab8783",
+      "mode": "100644",
+      "sha256": "801c93a1cde612566800cf6a07dd77ce5c030d4d065153946bdb84d2d88b8bf8",
+      "modified": false
+    },
+    {
+      "path": "assets/example-process.html",
+      "upstreamPath": "skills/diagram-design/assets/example-process.html",
+      "upstreamBlobSha1": "8e72e9621578b6137d4a3d4ee4e339026d329f41",
+      "mode": "100644",
+      "sha256": "7c336a00d6a63fbebd2f9055af8df1b421f25a209900aa70c4028cd747982fb5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-pyramid-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-pyramid-dark.html",
+      "upstreamBlobSha1": "b86fb668b43e469b3645c1303337c5329baf1629",
+      "mode": "100644",
+      "sha256": "831bc6531d0b3b0eba1b348722a0b3e4d5548f287f5380ddb7e26d3f5edcb80c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-pyramid-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-pyramid-full.html",
+      "upstreamBlobSha1": "140092656bc325d9654ddfdd57537ea5286efd3a",
+      "mode": "100644",
+      "sha256": "ca4c4c9a61072c25ec6e3446c8247f201b89d781d3d2000783fb7a4d50680e1f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-pyramid.html",
+      "upstreamPath": "skills/diagram-design/assets/example-pyramid.html",
+      "upstreamBlobSha1": "51b5a382d609d28d9ca59a43058a5c57bfd645a9",
+      "mode": "100644",
+      "sha256": "a49c1dd8f932ea82253c7fbbec54365cb722ae65fba975a15c2aa392c27c5fbf",
+      "modified": false
+    },
+    {
+      "path": "assets/example-quadrant-consultant.html",
+      "upstreamPath": "skills/diagram-design/assets/example-quadrant-consultant.html",
+      "upstreamBlobSha1": "c8beafd1b65a72fda986ff0b1618f7a6cb4834bc",
+      "mode": "100644",
+      "sha256": "0eff4b878e56a0ca3104457128254b1c5b329dc7ed6f891c10807063ccdfb983",
+      "modified": false
+    },
+    {
+      "path": "assets/example-quadrant-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-quadrant-dark.html",
+      "upstreamBlobSha1": "0d600cfa52a827e82db1bf2c9e89cf767a89bd7e",
+      "mode": "100644",
+      "sha256": "ac1edf5d9c1251a51a93eb82db17fc1820811f1934ec59c1272ea7f89c501465",
+      "modified": false
+    },
+    {
+      "path": "assets/example-quadrant-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-quadrant-full.html",
+      "upstreamBlobSha1": "2834c5d1b27f1e4bf5435ba4296bfbe78455f4a8",
+      "mode": "100644",
+      "sha256": "b4182d3f570e7379b0124667a3268b41f704541d6c6b2e44a4bede954b851457",
+      "modified": false
+    },
+    {
+      "path": "assets/example-quadrant.html",
+      "upstreamPath": "skills/diagram-design/assets/example-quadrant.html",
+      "upstreamBlobSha1": "8cef09aeb021438fed5a897e965bbe2d9bd5ca03",
+      "mode": "100644",
+      "sha256": "95f6100d6059a773bcce44d42a9eedba925226c65cacf6613b8488330ae09934",
+      "modified": false
+    },
+    {
+      "path": "assets/example-queue-animated.html",
+      "upstreamPath": "skills/diagram-design/assets/example-queue-animated.html",
+      "upstreamBlobSha1": "e42358d1abdaea02de5a1aa6120db0ed7dfbdfde",
+      "mode": "100644",
+      "sha256": "826566166454ba86fafd1731f6e591bbdbae0cb6bb49f5968222c49660d5535f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-radar-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-radar-dark.html",
+      "upstreamBlobSha1": "9ad78d503b8dd9423d990bb6d8f67537d13248e9",
+      "mode": "100644",
+      "sha256": "e24eabbc722e67b83ac498407247e1c09d162ff19e047944a323d44594a68258",
+      "modified": false
+    },
+    {
+      "path": "assets/example-radar-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-radar-full.html",
+      "upstreamBlobSha1": "81ae22939929fc5494f2ab01bf37480188315ca9",
+      "mode": "100644",
+      "sha256": "5a95adc1d24f5f02b0e5f2c27d901b8c221f50d5586da0e387cc58ecbf34976b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-radar.html",
+      "upstreamPath": "skills/diagram-design/assets/example-radar.html",
+      "upstreamBlobSha1": "9e303522030e0a853cc2544cfc1e0effaffa4ab7",
+      "mode": "100644",
+      "sha256": "9572164b5aa0d8d1e0e713e8ffb7ef750d0b04e06d3eb842829fa4bdaaaff2c1",
+      "modified": false
+    },
+    {
+      "path": "assets/example-ridgeline-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-ridgeline-dark.html",
+      "upstreamBlobSha1": "ae9dab65626dcef0310faa9e193ad84b8b3ed2cc",
+      "mode": "100644",
+      "sha256": "b430c4ec58ab69c044cba2eb39e20adbc8769cbd85fb5f41d8c3f75136d62f90",
+      "modified": false
+    },
+    {
+      "path": "assets/example-ridgeline-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-ridgeline-full.html",
+      "upstreamBlobSha1": "7afd9653a753cd4d32af05473a7a488f6d6eedcb",
+      "mode": "100644",
+      "sha256": "33fd98b39d5316ca4b65a65c8cd331c55d032ae5d7de3c94feb5e506168718b9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-ridgeline.html",
+      "upstreamPath": "skills/diagram-design/assets/example-ridgeline.html",
+      "upstreamBlobSha1": "a2b620eb1931e53ae7ab9b55b61911aba8b4ab2f",
+      "mode": "100644",
+      "sha256": "8c6a17edea0742642bfa991ba353c414d2e7608fff09c073d52c3f9de2d71337",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sankey-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sankey-dark.html",
+      "upstreamBlobSha1": "ee79097970665ded88500b6e16fc7f2ce03ed22a",
+      "mode": "100644",
+      "sha256": "4c2a4ff17cfba1412aee8b6569e76c1d314d9ce64d6038c99e89505225b9baf1",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sankey-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sankey-full.html",
+      "upstreamBlobSha1": "72d4b9bfd499b3a13a5ea059705fa9fddd7c886e",
+      "mode": "100644",
+      "sha256": "33f52288399db22c20374ecbfd26ec597b77f3512c03115cea240ece21485bb9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sankey.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sankey.html",
+      "upstreamBlobSha1": "910c214f56f3383c3d80709949386f55b7678a00",
+      "mode": "100644",
+      "sha256": "5997eca7d06b41cc779abed904ef1b782a5d9be160f9dffcb0fef067142b904f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-scatter-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-scatter-dark.html",
+      "upstreamBlobSha1": "47198f6059d48c1651459cfa58bb2fb9363fffa7",
+      "mode": "100644",
+      "sha256": "347bea032f65f2698f1ce0fe2a5fc01b02dfa03e4fadd84c7a4260369d95fb80",
+      "modified": false
+    },
+    {
+      "path": "assets/example-scatter-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-scatter-full.html",
+      "upstreamBlobSha1": "b6a2f7c6b1c824ee9a02fac02b259e42df0eb480",
+      "mode": "100644",
+      "sha256": "af03bf90e91b1a4449ee5b776f08df07a40dec1c1fa27457dc75540c8fa4e379",
+      "modified": false
+    },
+    {
+      "path": "assets/example-scatter.html",
+      "upstreamPath": "skills/diagram-design/assets/example-scatter.html",
+      "upstreamBlobSha1": "11fc90d03c2919a1cc6058a4c7edc4184fdb5ba3",
+      "mode": "100644",
+      "sha256": "baa3fe5115e6a0448fd90629c20729b78eb735d5d95b74501f8d3d0fd8183980",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sequence-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sequence-dark.html",
+      "upstreamBlobSha1": "9365d054ab6d77a3c87ee386cc019aa820dd9dee",
+      "mode": "100644",
+      "sha256": "f2c0fc2e127bce07c78ff09e6b8540f4993d1d85deafbca73af4834b8944e89b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sequence-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sequence-full.html",
+      "upstreamBlobSha1": "a270dbc2264fe0564b39fce26801434a3e197ac1",
+      "mode": "100644",
+      "sha256": "8e891b0498e318431dbf0a87c7e5a15d4ab51ff513cfea1fc7a71a68642143c9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sequence-oauth-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sequence-oauth-dark.html",
+      "upstreamBlobSha1": "7434166ece2a1c3682091d17b0fcebe27ab04a61",
+      "mode": "100644",
+      "sha256": "5d4755a698aa868126b51049445d3468a7b40401e902a80319a62a31a7969e64",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sequence-oauth-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sequence-oauth-full.html",
+      "upstreamBlobSha1": "ffddee4a849d37300fdde2bf604c24239a593451",
+      "mode": "100644",
+      "sha256": "f067c6bce636a823ac0aaa66c035bb31d75f793f77fb36729110fd9287213fe9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sequence-oauth.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sequence-oauth.html",
+      "upstreamBlobSha1": "ff48c14353ae716f2892e620e59c03fba9a0a3d0",
+      "mode": "100644",
+      "sha256": "40b38df11cb54fe055c223a44ddaa7363a2ec0c030dc995e7951a1fb8df42083",
+      "modified": false
+    },
+    {
+      "path": "assets/example-sequence.html",
+      "upstreamPath": "skills/diagram-design/assets/example-sequence.html",
+      "upstreamBlobSha1": "070d7e68b127fc01d1c963582c1418ef1124bfee",
+      "mode": "100644",
+      "sha256": "aac9bfcad5a001206567a577e9816e3d0904bb3e1afc9d8505fb576b93292db8",
+      "modified": false
+    },
+    {
+      "path": "assets/example-service-blueprint-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-service-blueprint-dark.html",
+      "upstreamBlobSha1": "67033fb6048cd47ae2cb035d3b3ddc4c3a7fa8d5",
+      "mode": "100644",
+      "sha256": "b09196833e457a760a435bbee90d21d09525b42ea467e0c0484b8573eb67f6bb",
+      "modified": false
+    },
+    {
+      "path": "assets/example-service-blueprint-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-service-blueprint-full.html",
+      "upstreamBlobSha1": "38401d9355650fac1f147d4e8a3fb6ec3688d5cf",
+      "mode": "100644",
+      "sha256": "23a36032d1f4ed031c1bd353a03504e4a53b29a766f2020f9619949f3fd67f53",
+      "modified": false
+    },
+    {
+      "path": "assets/example-service-blueprint.html",
+      "upstreamPath": "skills/diagram-design/assets/example-service-blueprint.html",
+      "upstreamBlobSha1": "fa480e95d36600ea52460903f5463f5484555ecd",
+      "mode": "100644",
+      "sha256": "e7c29fa4e09c5a7cff1ec75ee2310e3f1d623f4df80854dc2d72a2dd87c31c87",
+      "modified": false
+    },
+    {
+      "path": "assets/example-slopegraph-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-slopegraph-dark.html",
+      "upstreamBlobSha1": "0535a9eae6e4e952b62917ac6205f349fb216d34",
+      "mode": "100644",
+      "sha256": "36cdffff3d70fa34b091dd0e7814a8892cc6c3436525c666402d790cbbdc5ecc",
+      "modified": false
+    },
+    {
+      "path": "assets/example-slopegraph-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-slopegraph-full.html",
+      "upstreamBlobSha1": "456c19c1bb275aeef643ec5bd7b00700d2650535",
+      "mode": "100644",
+      "sha256": "1815f1854f486c5163780f2d8f9cf9c0b96a7e42594099dfb31bd14c453a1f55",
+      "modified": false
+    },
+    {
+      "path": "assets/example-slopegraph.html",
+      "upstreamPath": "skills/diagram-design/assets/example-slopegraph.html",
+      "upstreamBlobSha1": "88f888af8b94b31f469b92a5de8e14ac6f73a195",
+      "mode": "100644",
+      "sha256": "c20f22a1ba7ae6388d3fae506927242173475f6447da655a96f06f92adfd706e",
+      "modified": false
+    },
+    {
+      "path": "assets/example-state-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-state-dark.html",
+      "upstreamBlobSha1": "3f9b0236d62c14cafede9980f0b9ea7c8f185982",
+      "mode": "100644",
+      "sha256": "d5a29f22ee80fef6fe6f857e767fb0bf4afca8bc8f8cbb478f33286d76f88706",
+      "modified": false
+    },
+    {
+      "path": "assets/example-state-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-state-full.html",
+      "upstreamBlobSha1": "423f24740ae5c2e2b52b23baf4c52dfefc2b5d41",
+      "mode": "100644",
+      "sha256": "683febd8bf1c1658f52f44829d2e72e73453484b54d36409737961718fa2a83c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-state-lifecycle-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-state-lifecycle-dark.html",
+      "upstreamBlobSha1": "b30555ad082facbfff0c882ea897a81b3c3c8150",
+      "mode": "100644",
+      "sha256": "caf933ffcfffd7cc46e4354d5d3dd4d2c0ea8fc5c56e5fefb9b0ec63dc3358d9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-state-lifecycle-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-state-lifecycle-full.html",
+      "upstreamBlobSha1": "48599fdae978349ad56cbc4190dd6c437bdb5f58",
+      "mode": "100644",
+      "sha256": "6b354ce8290c458d3fdce5d30f8f759c8879c9ca490c115156ff6e746c4d3cc2",
+      "modified": false
+    },
+    {
+      "path": "assets/example-state-lifecycle.html",
+      "upstreamPath": "skills/diagram-design/assets/example-state-lifecycle.html",
+      "upstreamBlobSha1": "3c53a1d505a3b81c11cc9a2809463be7d4d4ad73",
+      "mode": "100644",
+      "sha256": "0c8406d87facec01143bc4356d896a3ffdc7c429ae481e7ee9fbcd06bfae674c",
+      "modified": false
+    },
+    {
+      "path": "assets/example-state.html",
+      "upstreamPath": "skills/diagram-design/assets/example-state.html",
+      "upstreamBlobSha1": "223c40c5bc35fe0e19b2cdcc165df1e07eccbf1d",
+      "mode": "100644",
+      "sha256": "33a210ded8261c3117222a7d897a17ccddae89267c4779f19eeaf868a5545a15",
+      "modified": false
+    },
+    {
+      "path": "assets/example-story-map-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-story-map-dark.html",
+      "upstreamBlobSha1": "2815f1b5dc8c12a621759b3a4873915558536f14",
+      "mode": "100644",
+      "sha256": "0c288216307ff36b43b513445e0e63fa83ed5902695ead17fdd507a470acc6b7",
+      "modified": false
+    },
+    {
+      "path": "assets/example-story-map-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-story-map-full.html",
+      "upstreamBlobSha1": "463a28d7bf2dd9cec01bfac30ec9a3bc62c6552c",
+      "mode": "100644",
+      "sha256": "fd3a8394c161f8db01c51eb8c3e89b3e0e6fbc85da45c221820dc4ff18036362",
+      "modified": false
+    },
+    {
+      "path": "assets/example-story-map.html",
+      "upstreamPath": "skills/diagram-design/assets/example-story-map.html",
+      "upstreamBlobSha1": "b9e960e7d9aed25a089ba7db03f9249b5b75460c",
+      "mode": "100644",
+      "sha256": "2e8765e83ee8fb3c62bd31105d3a73b9f11400035036466d14ec59874e194dde",
+      "modified": false
+    },
+    {
+      "path": "assets/example-streamgraph-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-streamgraph-dark.html",
+      "upstreamBlobSha1": "1ae4ad39d908e795d30b10da43f7523443ad919a",
+      "mode": "100644",
+      "sha256": "986d4485111c165a18f0eb86055aa326f932c618d26c32f90d6b9457f9189515",
+      "modified": false
+    },
+    {
+      "path": "assets/example-streamgraph-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-streamgraph-full.html",
+      "upstreamBlobSha1": "83372bfc80c727fb9610ac3df86f80c5005284d0",
+      "mode": "100644",
+      "sha256": "dbc513480b04e07056c6ca0532017ea56b107c278eb70360868fa484b762aedc",
+      "modified": false
+    },
+    {
+      "path": "assets/example-streamgraph.html",
+      "upstreamPath": "skills/diagram-design/assets/example-streamgraph.html",
+      "upstreamBlobSha1": "f7d1e9be0abd038d7dcae5bb1b0b2428930942dd",
+      "mode": "100644",
+      "sha256": "92f45dca6ce38436d1a790424ec1212b4b5eed74a1a309f85fa037c68facbff5",
+      "modified": false
+    },
+    {
+      "path": "assets/example-swimlane-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-swimlane-dark.html",
+      "upstreamBlobSha1": "2a7a3a8c37b46eea437a112883f9e31687878f66",
+      "mode": "100644",
+      "sha256": "d7038fab163c5fc5f56b58502a0d1e07d2961d08a6f6cd10a729864d670186de",
+      "modified": false
+    },
+    {
+      "path": "assets/example-swimlane-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-swimlane-full.html",
+      "upstreamBlobSha1": "106638df7ee3907570986da0468c80bb618c207f",
+      "mode": "100644",
+      "sha256": "dc7bf931bb2ee07072f0fe1e151b0b39a79e0da0317836f897c46b5d2a88953d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-swimlane.html",
+      "upstreamPath": "skills/diagram-design/assets/example-swimlane.html",
+      "upstreamBlobSha1": "45aaa9635ccec074fb8ffa7e2c9ec2c689c4c375",
+      "mode": "100644",
+      "sha256": "c044be167127091b9bc442fdfe7d1dea439a7de23ea2c9819fb8382e511bb6e9",
+      "modified": false
+    },
+    {
+      "path": "assets/example-timeline-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-timeline-dark.html",
+      "upstreamBlobSha1": "7b2c140c4cd2d05f12ebec9528b2293cdcad85b0",
+      "mode": "100644",
+      "sha256": "fb9a45991b281e7937e8288abbfeb6eb12e0140ee5dcac17821721d5129fb647",
+      "modified": false
+    },
+    {
+      "path": "assets/example-timeline-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-timeline-full.html",
+      "upstreamBlobSha1": "e0b53484f2d6869cd9c503e5a7618030b30ca28e",
+      "mode": "100644",
+      "sha256": "03b38d6dc44286113cf6680ece546affa53ff13092118fb8b4a68b671f55069f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-timeline.html",
+      "upstreamPath": "skills/diagram-design/assets/example-timeline.html",
+      "upstreamBlobSha1": "e5399e49da9d9e30e19dfbfbceef32103eae0117",
+      "mode": "100644",
+      "sha256": "d853c86bfd40491d5b747a07ca10b9d55d3349701ca01f508d83ba972b805788",
+      "modified": false
+    },
+    {
+      "path": "assets/example-tree-block-decomposition-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-tree-block-decomposition-dark.html",
+      "upstreamBlobSha1": "e90284d7e61e1ba73b6f6d1aa37adb12b8837f75",
+      "mode": "100644",
+      "sha256": "1a862a84bb85391a850e6c6cc5d657dd019a1c2a4efe8e7d05f6045b876856df",
+      "modified": false
+    },
+    {
+      "path": "assets/example-tree-block-decomposition-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-tree-block-decomposition-full.html",
+      "upstreamBlobSha1": "51390e3187516124fa29ae714646bd2e8a590569",
+      "mode": "100644",
+      "sha256": "9c315f8dcb3693c6c79e9057198e13cb6bd10eb2faa6ed2a5a1956f489271543",
+      "modified": false
+    },
+    {
+      "path": "assets/example-tree-block-decomposition.html",
+      "upstreamPath": "skills/diagram-design/assets/example-tree-block-decomposition.html",
+      "upstreamBlobSha1": "575d52078c4f0eaf9294e78216e13de8a66da6bf",
+      "mode": "100644",
+      "sha256": "c5f3051ea93495e6b040d25642ca7a5e67664678bb5e3147509404ed068551da",
+      "modified": false
+    },
+    {
+      "path": "assets/example-tree-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-tree-dark.html",
+      "upstreamBlobSha1": "6cdbedd831986d0f16bc068b595ddab7673c6605",
+      "mode": "100644",
+      "sha256": "43aa056d0761d323cad0bd6205de3083fe7413af4e10639cad5e92c8ed41beac",
+      "modified": false
+    },
+    {
+      "path": "assets/example-tree-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-tree-full.html",
+      "upstreamBlobSha1": "fb4e28f239ba3c95dac812e00e0aca37b0c07d2c",
+      "mode": "100644",
+      "sha256": "ee52773ac71a12d584fbe33569da0a64481e05c94ac1ab4729653552e631d8cc",
+      "modified": false
+    },
+    {
+      "path": "assets/example-tree.html",
+      "upstreamPath": "skills/diagram-design/assets/example-tree.html",
+      "upstreamBlobSha1": "e60c59d495f52e9b49e239c38c57293e00a0f087",
+      "mode": "100644",
+      "sha256": "6812d3e99c21ddc29d346cfb3713ea997bd6ac1fcb5b29b5c764c200afa0ea20",
+      "modified": false
+    },
+    {
+      "path": "assets/example-treemap-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-treemap-dark.html",
+      "upstreamBlobSha1": "635ef35643989dffa6698a7a364d2732c0b217be",
+      "mode": "100644",
+      "sha256": "43cbbb2ec7c30a71edf5f5436e51dd8369cedb1da80f6e6241b62278ea4e5698",
+      "modified": false
+    },
+    {
+      "path": "assets/example-treemap-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-treemap-full.html",
+      "upstreamBlobSha1": "0f385bbf7839766a93ed5130ed07627221620bd4",
+      "mode": "100644",
+      "sha256": "9339c9007d81969f6d04c30edcf9d3ef558f753ecf9cd8f401978551cfc5c069",
+      "modified": false
+    },
+    {
+      "path": "assets/example-treemap.html",
+      "upstreamPath": "skills/diagram-design/assets/example-treemap.html",
+      "upstreamBlobSha1": "d04ae8223918c1abbc16ab3a750bd74095ae251f",
+      "mode": "100644",
+      "sha256": "224c33a048dc64cbbd687bd826a3a09c8178dcd3d311ea3b53bc43f767f420f6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-uml-class-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-uml-class-dark.html",
+      "upstreamBlobSha1": "481bae4a477af355d22df19d658d3ab611e87080",
+      "mode": "100644",
+      "sha256": "eca2e26603714d4df494532a2a712101321a484cc2d1263f7629b8f0e214357d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-uml-class-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-uml-class-full.html",
+      "upstreamBlobSha1": "c3716a2d682b137e791da912a59896c808009ab2",
+      "mode": "100644",
+      "sha256": "0c73c3f1b9b4dd569d264a0caff859bf0a3a82849432294c73fed8435a4772e7",
+      "modified": false
+    },
+    {
+      "path": "assets/example-uml-class.html",
+      "upstreamPath": "skills/diagram-design/assets/example-uml-class.html",
+      "upstreamBlobSha1": "94013df59239ae6c95fbc83c3cd7d9ecc62628c8",
+      "mode": "100644",
+      "sha256": "98e58c2833cc6b4f2b3e176bbf173907e7168aedf5310cb900d7bdfeb6e22c8d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-venn-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-venn-dark.html",
+      "upstreamBlobSha1": "6fa75202f7d5f7395c6d1df9d5e09be70723f480",
+      "mode": "100644",
+      "sha256": "ea604fc7ff3c2da573bba856b54b0ac6a95491f26cb707caefda94ac64215a4f",
+      "modified": false
+    },
+    {
+      "path": "assets/example-venn-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-venn-full.html",
+      "upstreamBlobSha1": "10081997e432de63595cd05856ed2483a62a70ba",
+      "mode": "100644",
+      "sha256": "7dc6a440cc8881f70f6184200e3557a7501d21f93495a5aa209c6c8c479dd0ba",
+      "modified": false
+    },
+    {
+      "path": "assets/example-venn.html",
+      "upstreamPath": "skills/diagram-design/assets/example-venn.html",
+      "upstreamBlobSha1": "ac35a0570ac3912beb4c34a9b364b82015c6c100",
+      "mode": "100644",
+      "sha256": "a9f6ab1f15906f7618a2f876bc9cd998a1b0be9b31b7e49eeaf42c3c156340f6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-wardley-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-wardley-dark.html",
+      "upstreamBlobSha1": "c7c2cfb82bc71ba4d4220afcbd14df4d5d7a69e6",
+      "mode": "100644",
+      "sha256": "80aff4e268d3775541eca4cf1c1cac918f0895637cd79568d4895e84b9f2046b",
+      "modified": false
+    },
+    {
+      "path": "assets/example-wardley-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-wardley-full.html",
+      "upstreamBlobSha1": "c0523f5d8f420a5f4b55b907e3d2872f9204ea8d",
+      "mode": "100644",
+      "sha256": "1986784529ddb529a3d321e6dbc2add1046abccba5fd8bcab23679742731769d",
+      "modified": false
+    },
+    {
+      "path": "assets/example-wardley.html",
+      "upstreamPath": "skills/diagram-design/assets/example-wardley.html",
+      "upstreamBlobSha1": "b7a131c2ac849b1801e7cab07ef3f5478d329007",
+      "mode": "100644",
+      "sha256": "a386727c65063f36df75e096f963c305ca540799c5005daf079ff05e05428436",
+      "modified": false
+    },
+    {
+      "path": "assets/example-waterfall-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/example-waterfall-dark.html",
+      "upstreamBlobSha1": "2e7d0275061ccc2264bde342ac936a36fc095808",
+      "mode": "100644",
+      "sha256": "ce4eb6038b09b87eca88b6981a7b43d19f603f480b6e91fb16d5d7c58a9103a6",
+      "modified": false
+    },
+    {
+      "path": "assets/example-waterfall-full.html",
+      "upstreamPath": "skills/diagram-design/assets/example-waterfall-full.html",
+      "upstreamBlobSha1": "9430ced261b08f09096bd49d46ece37059796827",
+      "mode": "100644",
+      "sha256": "5a5987e9988cad66b26f769e07eca805796895a951a8cc084f0e0aa8503fca09",
+      "modified": false
+    },
+    {
+      "path": "assets/example-waterfall.html",
+      "upstreamPath": "skills/diagram-design/assets/example-waterfall.html",
+      "upstreamBlobSha1": "528420c4051f0e9a77f3c56a67ef551eec315ff1",
+      "mode": "100644",
+      "sha256": "501231921ae5065423f75efa6a37fbfc4753ef76d26b9ab116902dc9964ad818",
+      "modified": false
+    },
+    {
+      "path": "assets/icons.html",
+      "upstreamPath": "skills/diagram-design/assets/icons.html",
+      "upstreamBlobSha1": "942041f988ec701b978fe71051d1de02dbf3343b",
+      "mode": "100644",
+      "sha256": "8301219558a40abce2d739def01feda6a8b72adce00f8d60154c989dfb581090",
+      "modified": false
+    },
+    {
+      "path": "assets/index.html",
+      "upstreamPath": "skills/diagram-design/assets/index.html",
+      "upstreamBlobSha1": "205e637812034e9e8bfe760f39a08a143a3ecbae",
+      "mode": "100644",
+      "sha256": "0d0f4de6c372025f61e87e01e53d98d5940029375e3fd35e6c2c1641c0a1ba14",
+      "modified": false
+    },
+    {
+      "path": "assets/template-dark.html",
+      "upstreamPath": "skills/diagram-design/assets/template-dark.html",
+      "upstreamBlobSha1": "cc2652504cd282ead714ebc3f5c96adc76765ad8",
+      "mode": "100644",
+      "sha256": "98428c8de2c4fe8e799d7110606421effb876e2e788f8639140854c1033d82d5",
+      "modified": false
+    },
+    {
+      "path": "assets/template-full.html",
+      "upstreamPath": "skills/diagram-design/assets/template-full.html",
+      "upstreamBlobSha1": "07cbe6bd23b539d9f26f190cb0bfcd97c90aab45",
+      "mode": "100644",
+      "sha256": "bfe0aa003eb264f4a2b6f10c540d9d7a53950574ed0f5dba2af3cac61fc2f52a",
+      "modified": false
+    },
+    {
+      "path": "assets/template-motion.html",
+      "upstreamPath": "skills/diagram-design/assets/template-motion.html",
+      "upstreamBlobSha1": "0e3449e83fe0c7532b06255be819b063b107077b",
+      "mode": "100644",
+      "sha256": "0dc228e58e5810fe99d80b0895515bb9a7f129ced1de2960d343f1e9539d5359",
+      "modified": false
+    },
+    {
+      "path": "assets/template-terminal.html",
+      "upstreamPath": "skills/diagram-design/assets/template-terminal.html",
+      "upstreamBlobSha1": "dfd9384e5fd23d1bd82c39a1a724d7db78e665a9",
+      "mode": "100644",
+      "sha256": "d449b50f439214cef9025b91f7ad4d8f786c0f329496aa95b5ea864c1586708d",
+      "modified": false
+    },
+    {
+      "path": "assets/template.html",
+      "upstreamPath": "skills/diagram-design/assets/template.html",
+      "upstreamBlobSha1": "054e5c34961dd79ea48d16fbeadc7f95d7d6ff22",
+      "mode": "100644",
+      "sha256": "f6978a9d50dd286f32ab149bcf505261b9fc331df7320071f87509a285dee7f4",
+      "modified": false
+    },
+    {
+      "path": "references/animation.md",
+      "upstreamPath": "skills/diagram-design/references/animation.md",
+      "upstreamBlobSha1": "150c71857ca47d04e9dba1ee6fe00246ba814012",
+      "mode": "100644",
+      "sha256": "f68388e400f8e11968c7f69ea4c980fe8c01df384b17bddc9e5bf47e6e5eff67",
+      "modified": false
+    },
+    {
+      "path": "references/doctor.md",
+      "upstreamPath": "skills/diagram-design/references/doctor.md",
+      "upstreamBlobSha1": "14ff30a474a6bda618d6c920cce6b8efedbc6b65",
+      "mode": "100644",
+      "sha256": "b0b38905019ec2eda92ef41ab5fedfae6adbe02761cab563a16496e0294af926",
+      "modified": false
+    },
+    {
+      "path": "references/export-registry.md",
+      "upstreamPath": "skills/diagram-design/references/export-registry.md",
+      "upstreamBlobSha1": "b150f0fb8b0c7a5a0194c40530c7f48aad741596",
+      "mode": "100644",
+      "sha256": "6d35bdccf32e7a2f28ebafac75d099451881a3ad9e268798c86acea2c2c66410",
+      "modified": false
+    },
+    {
+      "path": "references/export.md",
+      "upstreamPath": "skills/diagram-design/references/export.md",
+      "upstreamBlobSha1": "93aaac08a34f5f8ff5a9bef4790303c459d607ea",
+      "mode": "100644",
+      "sha256": "f6512f9f110bb16f046c74a35a4c146f7398649b61b2bbc04ee541438ca10030",
+      "modified": true
+    },
+    {
+      "path": "references/import-drawio.md",
+      "upstreamPath": "skills/diagram-design/references/import-drawio.md",
+      "upstreamBlobSha1": "67c760766c0a89b08831d184113206ce57e8f515",
+      "mode": "100644",
+      "sha256": "a94b687bedba5795d3c960e58d014856135cea3cba558967b4c5e8b519c9a69e",
+      "modified": false
+    },
+    {
+      "path": "references/import-excalidraw.md",
+      "upstreamPath": "skills/diagram-design/references/import-excalidraw.md",
+      "upstreamBlobSha1": "a03dfdb18df03fc4a686b8ca325389be1992e53c",
+      "mode": "100644",
+      "sha256": "1424beba60d0d206685d45553539b31d58f6942e274f3a8f68718f2742e43da6",
+      "modified": false
+    },
+    {
+      "path": "references/import-mermaid.md",
+      "upstreamPath": "skills/diagram-design/references/import-mermaid.md",
+      "upstreamBlobSha1": "4a5c20d5e547d42337b8a1861ee57a1b94e2aa75",
+      "mode": "100644",
+      "sha256": "41c1e5a5d223c37b45897c331b481249ffbcb1a6d63e75d0e06a9d35bbfd07cc",
+      "modified": false
+    },
+    {
+      "path": "references/layout-budget.md",
+      "upstreamPath": "skills/diagram-design/references/layout-budget.md",
+      "upstreamBlobSha1": "3f3239eb7cbef443f0eeace849664060ba364dad",
+      "mode": "100644",
+      "sha256": "792a1f328bf3ae6e0584b87513afbdb0f7c6dc4c2bafc28a3986af2d16a285d8",
+      "modified": false
+    },
+    {
+      "path": "references/onboarding.md",
+      "upstreamPath": "skills/diagram-design/references/onboarding.md",
+      "upstreamBlobSha1": "2a0dd188ea6b31ae1fadb5eaa6053c12fd8c1fed",
+      "mode": "100644",
+      "sha256": "e8c066adc04ae9421a4331b970f65dfd4be0684fe11361999b7971baaa886840",
+      "modified": false
+    },
+    {
+      "path": "references/output-spec.md",
+      "upstreamPath": "skills/diagram-design/references/output-spec.md",
+      "upstreamBlobSha1": "9ae661c8617eb125302320d069e2424c12e86306",
+      "mode": "100644",
+      "sha256": "12dc0eed3514e387328651652604ef4fba1a76bce1823a79f4da2993336d1e69",
+      "modified": false
+    },
+    {
+      "path": "references/primitive-annotation.md",
+      "upstreamPath": "skills/diagram-design/references/primitive-annotation.md",
+      "upstreamBlobSha1": "3b596cff2be31558f0e3afbffaec3307791606fe",
+      "mode": "100644",
+      "sha256": "c4cab11c4660375856a8bea668922b07932199dc26a695ebcf95c5a23ba03ec5",
+      "modified": false
+    },
+    {
+      "path": "references/primitive-icons.md",
+      "upstreamPath": "skills/diagram-design/references/primitive-icons.md",
+      "upstreamBlobSha1": "9a2287c0a863c49f5c8c901f4713418c8fb864e4",
+      "mode": "100644",
+      "sha256": "ea768a2b2f169ff3cd98ed41da9ad3a30ed92374bc2da44a8ba83f1f3d453c43",
+      "modified": false
+    },
+    {
+      "path": "references/primitive-sketchy.md",
+      "upstreamPath": "skills/diagram-design/references/primitive-sketchy.md",
+      "upstreamBlobSha1": "a279024571497ffb2549f54b0b8941e3fdf2aff7",
+      "mode": "100644",
+      "sha256": "8859f0d70c10f46f59817cb348346e7fb9e1609b70a4a513d297b8c850c866a4",
+      "modified": false
+    },
+    {
+      "path": "references/primitive-terminal.md",
+      "upstreamPath": "skills/diagram-design/references/primitive-terminal.md",
+      "upstreamBlobSha1": "4d65ab32fe2206ad1e2c3c1cf3cf72df1d78301a",
+      "mode": "100644",
+      "sha256": "7b52c2fb229c822a60b0061caa64ae6a68aacd4f1c22a1a98d1d0eaaa2333b55",
+      "modified": false
+    },
+    {
+      "path": "references/primitives-core.md",
+      "upstreamPath": "skills/diagram-design/references/primitives-core.md",
+      "upstreamBlobSha1": "fdfd63818668ea8ffd631a3fbc300cc0efe91f02",
+      "mode": "100644",
+      "sha256": "9f61356d3c7814dd8c5adbfc2ecce736d05c64b9ec4dcaf64a53103e3c33e96c",
+      "modified": false
+    },
+    {
+      "path": "references/profiles.md",
+      "upstreamPath": "skills/diagram-design/references/profiles.md",
+      "upstreamBlobSha1": "ba8dccd9ca327ba7b4c2469fd58c99471f4fc214",
+      "mode": "100644",
+      "sha256": "a49536bba128e362c563cdd699b5a71d360f06cf5afd48bd577606bb8fa9d576",
+      "modified": false
+    },
+    {
+      "path": "references/semantic-patterns.md",
+      "upstreamPath": "skills/diagram-design/references/semantic-patterns.md",
+      "upstreamBlobSha1": "637ba9db996656679ca36ed81f3c61bb5b68ccf5",
+      "mode": "100644",
+      "sha256": "7aa5f7a0840be234d2b10bc3742b17151f94f550a0d72afd820413859a898c8f",
+      "modified": false
+    },
+    {
+      "path": "references/style-guide.md",
+      "upstreamPath": "skills/diagram-design/references/style-guide.md",
+      "upstreamBlobSha1": "b6045a819a426cb71312e266b4e694e2940843f5",
+      "mode": "100644",
+      "sha256": "2e2f0446c9bbe9b720e975d199f47a3d6477345386d646e2d2af594a8d239ce0",
+      "modified": true
+    },
+    {
+      "path": "references/type-architecture-delta.md",
+      "upstreamPath": "skills/diagram-design/references/type-architecture-delta.md",
+      "upstreamBlobSha1": "e418fb6c75da90a306cf80a2def9aed4dcc2bb50",
+      "mode": "100644",
+      "sha256": "e5813f26e1fb924863efe70db36f112e1b9570e47335d7f6fa6e46473136e4e5",
+      "modified": false
+    },
+    {
+      "path": "references/type-architecture.md",
+      "upstreamPath": "skills/diagram-design/references/type-architecture.md",
+      "upstreamBlobSha1": "139082e743dfa692f064897d2a109c35b94e9a56",
+      "mode": "100644",
+      "sha256": "28260c9c0a72fe17ddf6eed7b1fff01c04f58f62bbb7147c45372574c9e38eea",
+      "modified": false
+    },
+    {
+      "path": "references/type-axonometric-plan.md",
+      "upstreamPath": "skills/diagram-design/references/type-axonometric-plan.md",
+      "upstreamBlobSha1": "e27283dd1daa843652923d9839b367894e640de3",
+      "mode": "100644",
+      "sha256": "be8ead6d582df5c19fdf611f7540c058f166929293155ab40ddc3ef524232ba6",
+      "modified": false
+    },
+    {
+      "path": "references/type-bar.md",
+      "upstreamPath": "skills/diagram-design/references/type-bar.md",
+      "upstreamBlobSha1": "3654304041d5127a880ec3156ced2404b03fca73",
+      "mode": "100644",
+      "sha256": "0e4d2c7b1df4b1c7a1c47c27db1d298f810bc73f4eb30186eda9827518d38f5b",
+      "modified": false
+    },
+    {
+      "path": "references/type-data-flow.md",
+      "upstreamPath": "skills/diagram-design/references/type-data-flow.md",
+      "upstreamBlobSha1": "dab7447ed6c64dd348350516f74a1a1ee8903096",
+      "mode": "100644",
+      "sha256": "ad1cd8358c9360663200f5100a199e57e43a4e6702982752220ad423127941e8",
+      "modified": false
+    },
+    {
+      "path": "references/type-db-schema.md",
+      "upstreamPath": "skills/diagram-design/references/type-db-schema.md",
+      "upstreamBlobSha1": "e1ab89fd3492720ad7c19d57c2b8a20310c1615b",
+      "mode": "100644",
+      "sha256": "91f017b8813cfc63d775809d18659971d0aa5982967af94d47def31690713083",
+      "modified": false
+    },
+    {
+      "path": "references/type-dependency.md",
+      "upstreamPath": "skills/diagram-design/references/type-dependency.md",
+      "upstreamBlobSha1": "3a01e1649f050e1f0752c8abeac8fcd5667e6519",
+      "mode": "100644",
+      "sha256": "dd76bc521408b1cf0a3f86ee7c9ea93e4ad0650e4855c8f2be2358db7b721a43",
+      "modified": false
+    },
+    {
+      "path": "references/type-deployment.md",
+      "upstreamPath": "skills/diagram-design/references/type-deployment.md",
+      "upstreamBlobSha1": "e757a3aec0ee6fe6b634068cd426e4bb650ae55b",
+      "mode": "100644",
+      "sha256": "296adfee79069e8fd8f9a19012cca731c5cc237990a0274ca1a8a807173c9fec",
+      "modified": false
+    },
+    {
+      "path": "references/type-dp-integration.md",
+      "upstreamPath": "skills/diagram-design/references/type-dp-integration.md",
+      "upstreamBlobSha1": "2da6f558e06c91fb2291f8a77e454390b6da552f",
+      "mode": "100644",
+      "sha256": "6bf9b678d37e9f01f61ac8203e4ad5c29024ecd7a9f3ae0b42e71851522774f7",
+      "modified": false
+    },
+    {
+      "path": "references/type-dp-security-matrix.md",
+      "upstreamPath": "skills/diagram-design/references/type-dp-security-matrix.md",
+      "upstreamBlobSha1": "4b099ec3853544e8518644871e15fd8db532374b",
+      "mode": "100644",
+      "sha256": "209f4870ec19d90eff1ab80ecfe0062f3a5075c3b666b1a3a900a27260ba8832",
+      "modified": false
+    },
+    {
+      "path": "references/type-er.md",
+      "upstreamPath": "skills/diagram-design/references/type-er.md",
+      "upstreamBlobSha1": "5792e978f77b46ffd6fdfa7936fcea19db55fd6c",
+      "mode": "100644",
+      "sha256": "d1495abeb6f5004bd89fface17d3767ebab71c8450dca195b055e18bf3132c57",
+      "modified": false
+    },
+    {
+      "path": "references/type-exploded.md",
+      "upstreamPath": "skills/diagram-design/references/type-exploded.md",
+      "upstreamBlobSha1": "c7849d8ed3907ba204d350c5dcc7fb66df95703a",
+      "mode": "100644",
+      "sha256": "785b904ce1a1be806824c97a5719578a2c32c931fb424d0a1a69c4480a527152",
+      "modified": false
+    },
+    {
+      "path": "references/type-fishbone.md",
+      "upstreamPath": "skills/diagram-design/references/type-fishbone.md",
+      "upstreamBlobSha1": "c735730870a6d30224a57f7b370c9dbfdca31778",
+      "mode": "100644",
+      "sha256": "3441d3c73334813bf55cf1d0d96ea1aa4f9e46a60001ba83dfe9442be1745f8b",
+      "modified": false
+    },
+    {
+      "path": "references/type-flowchart.md",
+      "upstreamPath": "skills/diagram-design/references/type-flowchart.md",
+      "upstreamBlobSha1": "1042be73817e1196da5106b5ff41766c132ba817",
+      "mode": "100644",
+      "sha256": "c2af5e2b849255ae4859125db7b101b74bfb9b201204725c1e83fac51a98ebab",
+      "modified": false
+    },
+    {
+      "path": "references/type-gantt.md",
+      "upstreamPath": "skills/diagram-design/references/type-gantt.md",
+      "upstreamBlobSha1": "2fed6693e6773d52619381a41c3a9da4d214e7d4",
+      "mode": "100644",
+      "sha256": "d7d6b199fd804b417200f2b878f36042cb5d6b025af711c06d3d3e429b0ae6b0",
+      "modified": false
+    },
+    {
+      "path": "references/type-heatmap.md",
+      "upstreamPath": "skills/diagram-design/references/type-heatmap.md",
+      "upstreamBlobSha1": "bdd3272ead9d1f59800319cb8e2fa9f3178a87c5",
+      "mode": "100644",
+      "sha256": "9ea18de9d461abd8afddef34c7658812ea7f2b22e45fbc3b03caa1099765966a",
+      "modified": false
+    },
+    {
+      "path": "references/type-high-level.md",
+      "upstreamPath": "skills/diagram-design/references/type-high-level.md",
+      "upstreamBlobSha1": "1a34c9117e2dcdf6b239cd55024d4cc9feefab80",
+      "mode": "100644",
+      "sha256": "f9629c9b3dd4b85da3a19c762d0f5fd58213b5e3994ad783b2033f4e83260264",
+      "modified": false
+    },
+    {
+      "path": "references/type-it-state.md",
+      "upstreamPath": "skills/diagram-design/references/type-it-state.md",
+      "upstreamBlobSha1": "a1b1cec56fb61cc961c94f25edf80b730da5fe3a",
+      "mode": "100644",
+      "sha256": "b5c35f1703a53e3ca4196352912898e5ea5f1fce054a40d4a3568629535cd7ec",
+      "modified": false
+    },
+    {
+      "path": "references/type-journey.md",
+      "upstreamPath": "skills/diagram-design/references/type-journey.md",
+      "upstreamBlobSha1": "cd041a095a2be1504c509fb43075b2db6324796b",
+      "mode": "100644",
+      "sha256": "85be7b12d841aec1638d67ad9a599d313a9d42300e35af675a87a0a3e67d9b6f",
+      "modified": false
+    },
+    {
+      "path": "references/type-kanban.md",
+      "upstreamPath": "skills/diagram-design/references/type-kanban.md",
+      "upstreamBlobSha1": "5bbec1cfa263ea189d967aa259ab422217568252",
+      "mode": "100644",
+      "sha256": "447a8a231d5bb1e822945a02e8bd4adc219b0791bb0182cab48680fbbd88d045",
+      "modified": false
+    },
+    {
+      "path": "references/type-layers.md",
+      "upstreamPath": "skills/diagram-design/references/type-layers.md",
+      "upstreamBlobSha1": "fb3b436350fc4b2823a53974d35f9b52a30e4d21",
+      "mode": "100644",
+      "sha256": "a822afe4e06ffaf9793f5466810e2504c020e6ae3abd0b9e53c6f7b1368f2609",
+      "modified": false
+    },
+    {
+      "path": "references/type-line.md",
+      "upstreamPath": "skills/diagram-design/references/type-line.md",
+      "upstreamBlobSha1": "6781c247d4116d9e3a69f817323b96d4ec981418",
+      "mode": "100644",
+      "sha256": "f7fa213f2398da9e6bf30402bc2c430e778e57d95e60174bf082ba67d629b831",
+      "modified": false
+    },
+    {
+      "path": "references/type-loop.md",
+      "upstreamPath": "skills/diagram-design/references/type-loop.md",
+      "upstreamBlobSha1": "aaf2bce0d906cf4d02472f28bb290c75e63d067d",
+      "mode": "100644",
+      "sha256": "c7e98b8eda1e6d6904920f4d96310745deb0651920e9d531c8f40e54304ab60d",
+      "modified": false
+    },
+    {
+      "path": "references/type-medallion.md",
+      "upstreamPath": "skills/diagram-design/references/type-medallion.md",
+      "upstreamBlobSha1": "63afec9a4da3e509e7574d123a49f1fd9644bea2",
+      "mode": "100644",
+      "sha256": "a1af03521adb53431766a559e05c984ee07871fd3cf495cf63146999f56f6f42",
+      "modified": false
+    },
+    {
+      "path": "references/type-nested.md",
+      "upstreamPath": "skills/diagram-design/references/type-nested.md",
+      "upstreamBlobSha1": "ae2fa31ed1eee5dfd363f45526c4f902c970379f",
+      "mode": "100644",
+      "sha256": "c16da375df52f047748c65276f564a1b0d7d2dd420170b92dbf7cdac68981516",
+      "modified": false
+    },
+    {
+      "path": "references/type-org-chart.md",
+      "upstreamPath": "skills/diagram-design/references/type-org-chart.md",
+      "upstreamBlobSha1": "c22ceaaebdb2839e9ebb9a902137e2c70ec54d77",
+      "mode": "100644",
+      "sha256": "fd64716f3f419f41785c40fbabb96b36cfddcdfd0cc7ee444585f3e2b528f9c9",
+      "modified": false
+    },
+    {
+      "path": "references/type-polar.md",
+      "upstreamPath": "skills/diagram-design/references/type-polar.md",
+      "upstreamBlobSha1": "e630b93b4c2ba695bfd49cab19897235ea1e0f6c",
+      "mode": "100644",
+      "sha256": "11237fa0be82c3c6e963bc1aaed20283d839c7570dadfd0805e202ea129edba0",
+      "modified": false
+    },
+    {
+      "path": "references/type-process.md",
+      "upstreamPath": "skills/diagram-design/references/type-process.md",
+      "upstreamBlobSha1": "91e28e2105948465549f2990b7aa7d9365c71463",
+      "mode": "100644",
+      "sha256": "cefb9669074ecbc7cd4c78dccb941db1ae52b5bbdc5f20b66edcdf05ea7e2928",
+      "modified": false
+    },
+    {
+      "path": "references/type-pyramid.md",
+      "upstreamPath": "skills/diagram-design/references/type-pyramid.md",
+      "upstreamBlobSha1": "703f15aa549aa4624514a7ec35b8b38892415507",
+      "mode": "100644",
+      "sha256": "c21ef0c6f3832eb30f0cd1aef0e0ec72b6758abbb1b8128acf36e81384679714",
+      "modified": false
+    },
+    {
+      "path": "references/type-quadrant.md",
+      "upstreamPath": "skills/diagram-design/references/type-quadrant.md",
+      "upstreamBlobSha1": "186399a6652af01db2a37ccddccd133410eaf0f5",
+      "mode": "100644",
+      "sha256": "eb7d542ddac72e2e1a75cb7ca64ddb67901283859413a133a332137e7fb9e5b1",
+      "modified": false
+    },
+    {
+      "path": "references/type-radar.md",
+      "upstreamPath": "skills/diagram-design/references/type-radar.md",
+      "upstreamBlobSha1": "a26fea65b2011afb06ff5dbdfa1f0d7ce1842650",
+      "mode": "100644",
+      "sha256": "49c66e7921e1fd7575cf879852c41aa86e0db7f98b0c8105e3103202af49f563",
+      "modified": false
+    },
+    {
+      "path": "references/type-sankey.md",
+      "upstreamPath": "skills/diagram-design/references/type-sankey.md",
+      "upstreamBlobSha1": "b801f134be7a10ab2adb244aca2e0d9a1f3d88a0",
+      "mode": "100644",
+      "sha256": "874866a0867e56525f11f38a11b442b9c33f02f416b632ee76aced7f3bfc2bb5",
+      "modified": false
+    },
+    {
+      "path": "references/type-scatter.md",
+      "upstreamPath": "skills/diagram-design/references/type-scatter.md",
+      "upstreamBlobSha1": "80c44fafab7618d2df961ccb6f44cbd7c66e16d4",
+      "mode": "100644",
+      "sha256": "2f0770c4aaea747d14788805e45b13aee44350796ab4035bdfc2ab3d8c0c787f",
+      "modified": false
+    },
+    {
+      "path": "references/type-sequence.md",
+      "upstreamPath": "skills/diagram-design/references/type-sequence.md",
+      "upstreamBlobSha1": "0a26f9cb8d9146317ff5f589bbda2ebb8bc0887e",
+      "mode": "100644",
+      "sha256": "e3a109d4983a951ff670346c352529e48619c1e81db1774edfa6f05d3e93f778",
+      "modified": false
+    },
+    {
+      "path": "references/type-service-blueprint.md",
+      "upstreamPath": "skills/diagram-design/references/type-service-blueprint.md",
+      "upstreamBlobSha1": "e13899751f37daa7f786608376cf2a1e6558d9e0",
+      "mode": "100644",
+      "sha256": "ae0475dc5972273d3ff2ab0bf53ae9947e8e35f59decef85f4422459c60c64ca",
+      "modified": false
+    },
+    {
+      "path": "references/type-state.md",
+      "upstreamPath": "skills/diagram-design/references/type-state.md",
+      "upstreamBlobSha1": "85b8cdda0544368ad79def4279ee6deb6e1e5208",
+      "mode": "100644",
+      "sha256": "9c8ed85762d5bbb3672907bc1664ebf94bcc72850efbacf33d5ee12731053122",
+      "modified": false
+    },
+    {
+      "path": "references/type-story-map.md",
+      "upstreamPath": "skills/diagram-design/references/type-story-map.md",
+      "upstreamBlobSha1": "391972ca360aa0080f80f8caf984a768344f02ee",
+      "mode": "100644",
+      "sha256": "0ab4fae3de1f9909e20f27ca30414c5574fd8af583c28e1f55ba2af1b50f51fc",
+      "modified": false
+    },
+    {
+      "path": "references/type-swimlane.md",
+      "upstreamPath": "skills/diagram-design/references/type-swimlane.md",
+      "upstreamBlobSha1": "c93183952bc78efeaaba584e8b2e6bc52c727d0a",
+      "mode": "100644",
+      "sha256": "3557f11a03e5660e4e44e767caba91a4b8c35892d9aa920967b4387708bcf9fb",
+      "modified": false
+    },
+    {
+      "path": "references/type-timeline.md",
+      "upstreamPath": "skills/diagram-design/references/type-timeline.md",
+      "upstreamBlobSha1": "e0e8d9b65028d9315ceee453570146aad9030894",
+      "mode": "100644",
+      "sha256": "a6b4ad26c05957835705229579f8c733b32791de9d01f9f268fea8a70228f501",
+      "modified": false
+    },
+    {
+      "path": "references/type-tree.md",
+      "upstreamPath": "skills/diagram-design/references/type-tree.md",
+      "upstreamBlobSha1": "439efd41c11dda59021cb68be70a3b1e6911dbfc",
+      "mode": "100644",
+      "sha256": "60194950ef4e46725d7670d93e405a7d4b9af44bf775c549b8f3ce63ca6ce15c",
+      "modified": false
+    },
+    {
+      "path": "references/type-treemap.md",
+      "upstreamPath": "skills/diagram-design/references/type-treemap.md",
+      "upstreamBlobSha1": "1ed6c5edb756b7c03c0fae1bff722a36551b4f2d",
+      "mode": "100644",
+      "sha256": "7c80b1aa7f3fff205ec74261d874971f5bb09324e3cd357d58c0214acdbbf2de",
+      "modified": false
+    },
+    {
+      "path": "references/type-uml-class.md",
+      "upstreamPath": "skills/diagram-design/references/type-uml-class.md",
+      "upstreamBlobSha1": "0c8af2222106f532655b573eed56a0d2ea99f524",
+      "mode": "100644",
+      "sha256": "2940353d4c0afeb25b8d5e830e3408d5fdec3c4c89504739f5d847e064ad12c2",
+      "modified": false
+    },
+    {
+      "path": "references/type-venn.md",
+      "upstreamPath": "skills/diagram-design/references/type-venn.md",
+      "upstreamBlobSha1": "c93392c25aca21e5d19c97466e59b24161f38868",
+      "mode": "100644",
+      "sha256": "7ead49ed70f1b2506beb83e9c84862d7dbc63f1225f0e50ecc6e2b1b4a632b38",
+      "modified": false
+    },
+    {
+      "path": "references/type-wardley.md",
+      "upstreamPath": "skills/diagram-design/references/type-wardley.md",
+      "upstreamBlobSha1": "0b76832640d8af38543675ad8d72a70c5b5ffdfb",
+      "mode": "100644",
+      "sha256": "4060402f648fa2ec858850f532675f52ac5d5df0b209c9c9450cc3df332114fb",
+      "modified": false
+    },
+    {
+      "path": "references/type-waterfall.md",
+      "upstreamPath": "skills/diagram-design/references/type-waterfall.md",
+      "upstreamBlobSha1": "4b702e0248507638422e5f49eeceaf3698bcc8ee",
+      "mode": "100644",
+      "sha256": "07db1d30ce52356884b9c7005ad473434c6104257eee0252e3487209e59d0da9",
+      "modified": false
+    },
+    {
+      "path": "scripts/drawio_extract.py",
+      "upstreamPath": "skills/diagram-design/scripts/drawio_extract.py",
+      "upstreamBlobSha1": "ea3a4ef76cf486f54d5979108983725461d2698e",
+      "mode": "100644",
+      "sha256": "72098800fb5893ba620a432275b332901cfdbfa45bcd608c15d055466b25abe6",
+      "modified": false
+    },
+    {
+      "path": "scripts/excalidraw_extract.py",
+      "upstreamPath": "skills/diagram-design/scripts/excalidraw_extract.py",
+      "upstreamBlobSha1": "6b57876425fcbe51e0ae8529addd62e6e37081d8",
+      "mode": "100644",
+      "sha256": "10f6a6b999b3b2e8a626774515ba6817df331a6d39d671a4876541262b63697c",
+      "modified": false
+    },
+    {
+      "path": "scripts/export_png.py",
+      "upstreamPath": "skills/diagram-design/scripts/export_png.py",
+      "upstreamBlobSha1": "0bc16e9e3b3517ef6ef152c0ca2e1c0c22ad776c",
+      "mode": "100755",
+      "sha256": "430ddcc2d39441808bd4217fbdeb944dbb6de0be281782705a81747986d7d348",
+      "modified": false
+    },
+    {
+      "path": "scripts/export_svg.py",
+      "upstreamPath": "skills/diagram-design/scripts/export_svg.py",
+      "upstreamBlobSha1": "0bf43c0a83642b0ff23110866aeb5edbe2a74ebb",
+      "mode": "100755",
+      "sha256": "f61fb56777067365f17dac7857609ca7a46b6dd794ec176c1a716adbcb971081",
+      "modified": false
+    },
+    {
+      "path": "scripts/mermaid_extract.py",
+      "upstreamPath": "skills/diagram-design/scripts/mermaid_extract.py",
+      "upstreamBlobSha1": "c86d846925434b759af0c7626ca2fdda0e9f83cb",
+      "mode": "100644",
+      "sha256": "751d5eb38476e3b1f6176524a57cc4f30f9f8e55d0e05220921f4b7802d41cb4",
+      "modified": false
+    },
+    {
+      "path": "scripts/self_check.py",
+      "upstreamPath": "skills/diagram-design/scripts/self_check.py",
+      "upstreamBlobSha1": "11cd1039201b39e8153db06588abc32a1dd66e11",
+      "mode": "100644",
+      "sha256": "4da309dc768c921153872715666859f4d2c3af384ec804b3d4159b549b7697ea",
+      "modified": false
+    }
+  ],
+  "excluded": [],
+  "license": "MIT",
+  "retrievedAt": "2026-10-16T12:14:00.528089+00:00",
+  "runtime": {
+    "required": [
+      "Python 3 for packaged import/export/self-check helpers"
+    ],
+    "optional": [
+      "Python Playwright + installed Chromium for PNG export"
+    ],
+    "network": [
+      "Google Fonts unless offline/system-fonts output is chosen"
+    ]
+  },
+  "adaptations": [
+    "Added eLLMsha integration rules for loaded paths, available tools, canonical memory, runtime setup, and credential consent.",
+    "Preserved upstream dependency layout (including directories with more than 10 children) to retain relative imports, references, and future update comparability.",
+    "Normalized bundled helper examples to the loaded SKILL_DIR; upstream repository-only commands remain explicitly identified.",
+    "Clarified onboarding/profile working copies: bundled style guides remain read-only; durable profile choices use canonical memory, requested profile artifacts use an authorized output path."
+  ],
+  "modifiedFiles": [
+    "SKILL.md",
+    "references/export.md",
+    "references/style-guide.md"
+  ]
+}

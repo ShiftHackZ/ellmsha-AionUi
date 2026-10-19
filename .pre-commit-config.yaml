@@ -31,13 +31,25 @@ repos:
       - id: check-case-conflict
       - id: check-added-large-files
         args: [--maxkb=1000]
+        # Pinned upstream font lookup data (1.1 MB), covered by the bundle hash check.
+        exclude: ^resources/ellmsha-skills/community/impeccable/scripts/data/font-index\.json$
       - id: end-of-file-fixer
         # Only fix text files, exclude binary files and special OS files
-        exclude: '^(\.DS_Store|Thumbs\.db|.*\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|otf|pdf|zip|tar|gz|bz2|7z|exe|dll|so|dylib|node|bin))$'
+        exclude: '^resources/ellmsha-skills/community/|^(\.DS_Store|Thumbs\.db|.*\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|otf|pdf|zip|tar|gz|bz2|7z|exe|dll|so|dylib|node|bin))$'
       - id: trailing-whitespace
         # Auto-fix trailing whitespace in text files
         # Excludes binary files (matching end-of-file-fixer pattern)
-        exclude: '^(\.DS_Store|Thumbs\.db|.*\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|otf|pdf|zip|tar|gz|bz2|7z|exe|dll|so|dylib|node|bin|patch))$'
+        exclude: '^resources/ellmsha-skills/community/|^(\.DS_Store|Thumbs\.db|.*\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|otf|pdf|zip|tar|gz|bz2|7z|exe|dll|so|dylib|node|bin|patch))$'
+
+  # Preserve pinned vendor bytes; verify deliberate adaptations and provenance.
+  - repo: local
+    hooks:
+      - id: community-skills
+        name: Bundled community skills
+        entry: node scripts/skills/verify-community.mjs
+        language: system
+        files: ^(resources/ellmsha-skills/community/|scripts/skills/)
+        pass_filenames: false
 
   # TypeScript type checking (full project check required)
   - repo: local
@@ -67,6 +79,7 @@ repos:
         entry: bun run format
         language: system
         files: \.(ts|tsx|js|jsx|json|css|md|yaml|yml|toml)$
+        exclude: ^resources/ellmsha-skills/community/
         pass_filenames: true
 
   # i18n translation files validation

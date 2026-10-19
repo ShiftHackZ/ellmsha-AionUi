@@ -41,8 +41,8 @@
     {
       "name": "Ponytail",
       "url": "https://github.com/DietrichGebert/ponytail",
-      "upstream": "v5.1.0 · 9cc65d0",
-      "commit": "9cc65d03aa2da1db7121b912d03596409ee340b8",
+      "upstream": "v5.2.0 · 2961b52",
+      "commit": "2961b52fc1fe6a5a87c7a959a79512e5c2f3ffe5",
       "patch": 0
     },
     {
@@ -65,6 +65,62 @@
       "forkUrl": "https://github.com/ShiftHackZ/ellmsha-open-codex-computer-use",
       "upstream": "0.3.6",
       "commit": "83a521e546102564efd002f61a6763912081e5c7",
+      "patch": 1
+    },
+    {
+      "name": "Humanizer (skill)",
+      "url": "https://github.com/blader/humanizer",
+      "upstream": "v3.1.0",
+      "commit": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8",
+      "patch": 1
+    },
+    {
+      "name": "Hallmark (skill)",
+      "url": "https://github.com/Nutlope/hallmark",
+      "upstream": "13ac0ec",
+      "commit": "13ac0ec7e148655948100b6396439e481361d690",
+      "patch": 1
+    },
+    {
+      "name": "REA (skill)",
+      "url": "https://github.com/morluto/rea",
+      "upstream": "rea-agents-6.5.0",
+      "commit": "3b79af28e80785afce9f5998d8f03289402a1847",
+      "patch": 1
+    },
+    {
+      "name": "Impeccable (skill)",
+      "url": "https://github.com/pbakaus/impeccable",
+      "upstream": "cli-v4.6.0",
+      "commit": "8a0e198da34ebc5b936a9d5975fb7a3b1cf353b7",
+      "patch": 1
+    },
+    {
+      "name": "UI UX Pro Max (skill)",
+      "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "upstream": "v2.15.0",
+      "commit": "a38d04c3d5c298c851dbe5e6ee1965ee3de42cb5",
+      "patch": 1
+    },
+    {
+      "name": "Last30days (skill)",
+      "url": "https://github.com/mvanhorn/last30days-skill",
+      "upstream": "v3.28.0",
+      "commit": "50998cd1ba583f13a63b20e3fb5d906c71c31655",
+      "patch": 1
+    },
+    {
+      "name": "Scrapling (skill)",
+      "url": "https://github.com/D4Vinci/Scrapling",
+      "upstream": "v0.4.15",
+      "commit": "333fa22b7a5821194ce66b59b11f4b16a6484f02",
+      "patch": 1
+    },
+    {
+      "name": "Diagram Design (skill)",
+      "url": "https://github.com/cathrynlavery/diagram-design",
+      "upstream": "b46c970",
+      "commit": "b46c9701f035844a20b13ab0551315977188933b",
       "patch": 1
     }
   ]

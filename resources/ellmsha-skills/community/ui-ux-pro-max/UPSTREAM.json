@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+  "revision": "v2.15.0",
+  "commit": "a38d04c3d5c298c851dbe5e6ee1965ee3de42cb5",
+  "sourcePath": ".claude/skills/ui-ux-pro-max",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "upstreamBlobSha1": "41f8e2fd7f8c568228d0b55186ebe3f7b4007377",
+      "mode": "100644",
+      "sha256": "ff23423e34678b6b64e760c7efb3e6a58ffd7c639fdd0eed27684601bb89c1e3",
+      "modified": true
+    },
+    {
+      "path": "data/app-interface.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/app-interface.csv",
+      "upstreamBlobSha1": "95e328c807a23be02c9c32c736d0fa19109c6076",
+      "mode": "100644",
+      "sha256": "331e7cf2c0b222d80c566c5f255c63cb339f65bfd02e471a720f28e4864a9f08",
+      "modified": false
+    },
+    {
+      "path": "data/catalog-summary.json",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/catalog-summary.json",
+      "upstreamBlobSha1": "4a8c76432bcd5e125ad2ff5035d22074938573f0",
+      "mode": "100644",
+      "sha256": "65fe0b64480a8a827738297d0a64ca55c627d4afcb774fe4555c59cea8dd6905",
+      "modified": false
+    },
+    {
+      "path": "data/charts.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/charts.csv",
+      "upstreamBlobSha1": "c6f4f875fd5b34379f24dbb541539492366a1058",
+      "mode": "100644",
+      "sha256": "4115cf1120680f2cedef0676cb648f30c7ef4699e2a947535d4113e71ed3b12a",
+      "modified": false
+    },
+    {
+      "path": "data/colors.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/colors.csv",
+      "upstreamBlobSha1": "5d2bf7389105f8a824b504b57cc93c00dc1d7e0a",
+      "mode": "100644",
+      "sha256": "8162429222bce22df62b564085946a30d07cc9722c58d0a3a494bd0d1d00841c",
+      "modified": false
+    },
+    {
+      "path": "data/data-provenance.json",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/data-provenance.json",
+      "upstreamBlobSha1": "e41d2e553bdc7e5a8e6d16f5daab565faf372188",
+      "mode": "100644",
+      "sha256": "e82fb33ed49375a300e93d9c11ccd1c1493c999e84ee7ee295e527634786e2e0",
+      "modified": false
+    },
+    {
+      "path": "data/google-font-licenses.json",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/google-font-licenses.json",
+      "upstreamBlobSha1": "3ac2c34e80665bc902e265c52ab6c27b1654524c",
+      "mode": "100644",
+      "sha256": "35688523f2955795caa1a47c53b83099e60c1708461476f9cc3a050cf3b0148a",
+      "modified": false
+    },
+    {
+      "path": "data/google-fonts.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/google-fonts.csv",
+      "upstreamBlobSha1": "d7f87e3e0159b1caba083b9954793d9852256aa0",
+      "mode": "100644",
+      "sha256": "1c8c3b2ea1faf6a1012da463756def8b3889db33f2226f0343bb4daa80307d03",
+      "modified": false
+    },
+    {
+      "path": "data/icons.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/icons.csv",
+      "upstreamBlobSha1": "cfc3f1eccd7e5aee15d8d70f86d8fa17ba737958",
+      "mode": "100644",
+      "sha256": "50816c6012030178195a16ee481ebf58b47bd985d70e8ec58886cc83f6eddafc",
+      "modified": false
+    },
+    {
+      "path": "data/landing.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/landing.csv",
+      "upstreamBlobSha1": "34858160aa2789c49dca274d48bb116d51dd3f0a",
+      "mode": "100644",
+      "sha256": "9a2edd3bb676c2a58f00ade7a062e285222d4297bfd847c8d5b056f0dbbf52d0",
+      "modified": false
+    },
+    {
+      "path": "data/motion.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/motion.csv",
+      "upstreamBlobSha1": "8e0ca9ceb0e4cd4832aee60ac74713e1e1830de8",
+      "mode": "100644",
+      "sha256": "381affe8df8ea1f66fbbda2598827f9f54299107bbe6a1b4e9b68f6b62091ceb",
+      "modified": false
+    },
+    {
+      "path": "data/phosphor-icons-upstream.json",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/phosphor-icons-upstream.json",
+      "upstreamBlobSha1": "ec1d76b8117ccbfdce5df214bf0d993e41a75318",
+      "mode": "100644",
+      "sha256": "2399325233b277b5c97a80e6a5e8941154f5d057beee4e7613db87c87d700236",
+      "modified": false
+    },
+    {
+      "path": "data/products.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/products.csv",
+      "upstreamBlobSha1": "9f40f1d1f9743c4a81603076dfbfd115bbb55246",
+      "mode": "100644",
+      "sha256": "42473f75e8dde5987bdf89ce55d8c168091b80a356cae691dd60247d80720b70",
+      "modified": false
+    },
+    {
+      "path": "data/react-performance.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/react-performance.csv",
+      "upstreamBlobSha1": "425a8e76c6b3bae40e8c633ffbf7ad6222c9f73a",
+      "mode": "100644",
+      "sha256": "3d925802539abac5afeb63ae8aa1960b7229ad271b3a47caed40ab2d97ad0734",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/angular.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/angular.csv",
+      "upstreamBlobSha1": "5a1878dbee2b3c55c6468cbb18699b84d1a8c4d2",
+      "mode": "100644",
+      "sha256": "704be83f2bad30c7e6de01afb113ffa01e0c458762f48b7102f31ba2367b5553",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/astro.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/astro.csv",
+      "upstreamBlobSha1": "1fd2492420b20a0b311295ab883597fadb8245a6",
+      "mode": "100644",
+      "sha256": "2c2f55fadaafc05e04cc321c8194a1a28b656e6757fe2ba316f41b16428299c6",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/avalonia.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/avalonia.csv",
+      "upstreamBlobSha1": "c67f4117105865587eda9020c57d8c209f3a929a",
+      "mode": "100644",
+      "sha256": "442fca14675a020683473e7e49f08abb27b9df0765c80efe54aef61f1a4ac258",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/flutter.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/flutter.csv",
+      "upstreamBlobSha1": "731805c4076bd9f2755ca4bd7def5be6f6df7e9c",
+      "mode": "100644",
+      "sha256": "64dba0ac17349f28bce517a0f5f48c54d9ed2e487ec0c0258303463b382f41a0",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/html-tailwind.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/html-tailwind.csv",
+      "upstreamBlobSha1": "9089eb0fc821ff0c8d135f8ee503be345e8fcb84",
+      "mode": "100644",
+      "sha256": "d05a581d20af57b8ca0104a6d31d90a07c437d500662a96c3029fc2f9a4678ee",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/javafx.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/javafx.csv",
+      "upstreamBlobSha1": "744bd80f437f12bfb5bb9c84630a58022604675a",
+      "mode": "100644",
+      "sha256": "2e819b8d5abdd23ad4dae0991650fdb57af497aabd68b37463aa9c442944c869",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/jetpack-compose.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/jetpack-compose.csv",
+      "upstreamBlobSha1": "8daa0b8f9a2ca3f0f1711664d9d677cd1c38dd9e",
+      "mode": "100644",
+      "sha256": "699de218b286948eaec7d15767b6e1350ee299167e49bf476d82e3ff58724e0a",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/laravel.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/laravel.csv",
+      "upstreamBlobSha1": "ed11b0fba457e02857f996d1542fb0b8e1271756",
+      "mode": "100644",
+      "sha256": "854ea4daa5fc61292d22235ad33b49ba3fe22423c3de8d3cb03758ffed3b59f9",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/nextjs.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/nextjs.csv",
+      "upstreamBlobSha1": "acdaf097dff26ba0d3b22ab4544bf6169c87afd4",
+      "mode": "100644",
+      "sha256": "ecd2c27b2ea0127d203ae726060efcdd7335b5e83f96b99e4f3befbbfeebd5a4",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/nuxt-ui.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/nuxt-ui.csv",
+      "upstreamBlobSha1": "555501fc8943454af149ec8f50d705c32684c70f",
+      "mode": "100644",
+      "sha256": "c36ee8470926b4a0748d241363c71664c9969c2edbc62f7f72de0db73880fac6",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/nuxtjs.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/nuxtjs.csv",
+      "upstreamBlobSha1": "ceab9cf3358d2788af0bd7dc14cb3fab769740d0",
+      "mode": "100644",
+      "sha256": "3d9b54ed2d151bd9c86e9e5609b8a6f88a00c4c52fa601a30af96c49b2c4d176",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/react-native.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/react-native.csv",
+      "upstreamBlobSha1": "a5aea45dc1d0341b11ee42076a86db842d4d2a19",
+      "mode": "100644",
+      "sha256": "ba31dd9c0c04da6bc02a74448bf121f9c0728ae5ba3b4d47b487778b0a1135b5",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/react.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/react.csv",
+      "upstreamBlobSha1": "320429bea22784fdaaa2765cf8e4404400f58813",
+      "mode": "100644",
+      "sha256": "2d2b9c198e875106a30f7ee68341a9ee0033cad60a7e130cf23152783e08aeda",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/shadcn.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/shadcn.csv",
+      "upstreamBlobSha1": "0e8bedf3084e7a40d6310bcd3011c437efcb1700",
+      "mode": "100644",
+      "sha256": "e56cfde5b74907836ac3582a4779d5b7f3d206a702ab81b8669a1b668c3eeb51",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/svelte.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/svelte.csv",
+      "upstreamBlobSha1": "51684fe70448e15333cd16207db7da8aea0508e6",
+      "mode": "100644",
+      "sha256": "f6e379ba802941ba26b01d4ffbe3cd39120f2587659a1d93851c707f66bc13db",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/swiftui.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/swiftui.csv",
+      "upstreamBlobSha1": "ea9b95e8922e663b2adf27a7346e2c2f44c7a215",
+      "mode": "100644",
+      "sha256": "bdd9231ff3ad658f4e7c063e1eb49df2fd09ac8d90631a86df899b39833b9623",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/threejs.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/threejs.csv",
+      "upstreamBlobSha1": "2e2cefe996c7c0622f58442bea4d11c333c4d616",
+      "mode": "100644",
+      "sha256": "97542e0ba34915a0ff7578be20e1619495df47c95c8c1c39b83e3785e1de771f",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/uno.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/uno.csv",
+      "upstreamBlobSha1": "9cab32326b4ad3a3cf43451a3c24553a41126cc1",
+      "mode": "100644",
+      "sha256": "a0474363e4225b5367214d5675fd3e075f137026f9500f0d04357882ef4f6d48",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/uwp.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/uwp.csv",
+      "upstreamBlobSha1": "04a84ea092a7657fef11e5daa97982be52dc6f59",
+      "mode": "100644",
+      "sha256": "c409f08c1fbba1f1029f1acaa554e7b4471cc85517a5751c9f2e62465badcd5c",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/vue.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/vue.csv",
+      "upstreamBlobSha1": "83997c515775170f22b638635aae0a67a46dfc87",
+      "mode": "100644",
+      "sha256": "b655f1ebb9dff2652d15981f31b1784c8a6d4759efd2815a14f3088257569f95",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/winui.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/winui.csv",
+      "upstreamBlobSha1": "107ecead11728a83ec0ea10d815a9d1f43a35792",
+      "mode": "100644",
+      "sha256": "e676dc1c13ee6c205c40b0746f1335150a346c7a49a0616d2545bc3d2c930c85",
+      "modified": false
+    },
+    {
+      "path": "data/stacks/wpf.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/wpf.csv",
+      "upstreamBlobSha1": "4e88d6750833a74f85ba487cf2b8f4ff6ebd2f4a",
+      "mode": "100644",
+      "sha256": "9781a9950b20333637b30a02e498b7efca21b618a3eeb8665836f3ac6e974da7",
+      "modified": false
+    },
+    {
+      "path": "data/styles.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/styles.csv",
+      "upstreamBlobSha1": "d1eb2c216e453005ffa8232ffb94491c183afe3c",
+      "mode": "100644",
+      "sha256": "a93a4d9d7025856575d7b7583bda020be9043013432c5af7c58af9dbdfb206b7",
+      "modified": false
+    },
+    {
+      "path": "data/typography.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/typography.csv",
+      "upstreamBlobSha1": "70d107d107de30150863c965767320ec33ef29ad",
+      "mode": "100644",
+      "sha256": "321fc446e89024488ebae96dda93efc4d2307bd8bddb240857ad51364f6782c8",
+      "modified": false
+    },
+    {
+      "path": "data/ui-reasoning.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/ui-reasoning.csv",
+      "upstreamBlobSha1": "8931d4c809f8e22ddac00ce612ce0c35f34a59b6",
+      "mode": "100644",
+      "sha256": "f0774dd741cecdad5eec842034bd6d5e9ea50e9f220a1910069748daa0bb8e9a",
+      "modified": false
+    },
+    {
+      "path": "data/ux-guidelines.csv",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/data/ux-guidelines.csv",
+      "upstreamBlobSha1": "4e7d52b296537a03513b18b2c3f2b946cc802051",
+      "mode": "100644",
+      "sha256": "ff81ec613f70ba9fc3fcce52dbe4ae35d44b2079dbe6dc066d2d6e38c28facd5",
+      "modified": false
+    },
+    {
+      "path": "references/pro-rules.md",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/references/pro-rules.md",
+      "upstreamBlobSha1": "b2ce233287e37ec9ca13476c4014b922e9d5a0e9",
+      "mode": "100644",
+      "sha256": "d28442d61c310b49c054a4ea736f89fb3008beebdbbc38c4b3a540b8f7fadf23",
+      "modified": false
+    },
+    {
+      "path": "references/quick-reference.md",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/references/quick-reference.md",
+      "upstreamBlobSha1": "7acc7e7540ca6981d878a90aae4455c1638e2385",
+      "mode": "100644",
+      "sha256": "0609bc7c89dacb40472465d8fc14257b56b2c43439660fc8d6fa3b8c022e1876",
+      "modified": false
+    },
+    {
+      "path": "scripts/core.py",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/scripts/core.py",
+      "upstreamBlobSha1": "e7b76486499478518cdfa919c0d2eff62afef65f",
+      "mode": "100644",
+      "sha256": "e544826963efefce3c59b65e18d83d92a5baf571f05458025bf1fa9021eced42",
+      "modified": false
+    },
+    {
+      "path": "scripts/design_system.py",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/scripts/design_system.py",
+      "upstreamBlobSha1": "1114088ea5886c7e5b8986fb22aef61acecc83ea",
+      "mode": "100644",
+      "sha256": "6a94743c3362c9c7e6d1450b94f4014d9ea752e7b4e151f6f0bdb217e0544bf7",
+      "modified": false
+    },
+    {
+      "path": "scripts/reasoning_contract.py",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/scripts/reasoning_contract.py",
+      "upstreamBlobSha1": "63652a666b130c249ea1e2954316f1ac8a5a73d5",
+      "mode": "100644",
+      "sha256": "b8bac1af82aa280d3e06f00aabaeac4337e632996b07fed874e2b6ee6e9c5913",
+      "modified": false
+    },
+    {
+      "path": "scripts/search.py",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/scripts/search.py",
+      "upstreamBlobSha1": "07be642c10e59a182f02822663eab95a8860a289",
+      "mode": "100644",
+      "sha256": "8373e2dd2d560d9853ec116140de0e0d5bee45a6abe5e041173c84e1c36a7f87",
+      "modified": false
+    },
+    {
+      "path": "scripts/validate_data.py",
+      "upstreamPath": ".claude/skills/ui-ux-pro-max/scripts/validate_data.py",
+      "upstreamBlobSha1": "c7797cd9cb011bbea48c426ed70818fa557905d6",
+      "mode": "100644",
+      "sha256": "718ad4cbb227436015c9c2bc80fc583d6ed738b01c1a940ef85e350780d99f58",
+      "modified": false
+    },
+    {
+      "path": "LICENSE",
+      "upstreamPath": "LICENSE",
+      "upstreamBlobSha1": "1e71cbf26660f31903807d099fe902c098fc7e4c",
+      "mode": "100644",
+      "sha256": "738f69dfa83db5c347c678fb9d90e560877059f0de93a327c39001bff92dc014",
+      "modified": false
+    }
+  ],
+  "excluded": [
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-api.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-catalog.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-existing.csv",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-metadata.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-overrides.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/icons-curated.csv",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-core.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-package.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-react-exports.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/catalogs/phosphor-react-package.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/relevance-baseline.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/relevance-cases.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/fixtures/relevance-thresholds.json",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_catalog_refresh.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_core.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_core_data_quality.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_data_contracts.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_design_system_mode.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_native_desktop_stack_freshness.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_relevance_evaluator.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_style_taxonomy.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_text_layout_resilience.py",
+    ".claude/skills/ui-ux-pro-max/scripts/tests/test_web_stack_freshness.py"
+  ],
+  "license": "MIT",
+  "retrievedAt": "2026-10-16T12:14:00.504715+00:00",
+  "runtime": {
+    "required": [
+      "Python 3 (standard library)"
+    ],
+    "optional": [],
+    "network": [
+      "None for local search; external font/icon use depends on the generated artifact"
+    ]
+  },
+  "adaptations": [
+    "Added eLLMsha integration rules for loaded paths, available tools, canonical memory, runtime setup, and credential consent.",
+    "Preserved upstream dependency layout (including directories with more than 10 children) to retain relative imports, references, and future update comparability.",
+    "Normalized bundled helper examples to the loaded SKILL_DIR; upstream repository-only commands remain explicitly identified.",
+    "Excluded only demo media/development or test artifacts listed under excluded; retained runtime dependency closure."
+  ],
+  "modifiedFiles": [
+    "SKILL.md"
+  ]
+}

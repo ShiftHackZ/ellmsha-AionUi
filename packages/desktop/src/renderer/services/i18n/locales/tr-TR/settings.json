@@ -1485,5 +1485,98 @@
   "pluginComponent": {
     "skills": "Skills",
     "mcp_servers": "MCP servers"
+  },
+  "autoRouter": {
+    "title": "Auto Router",
+    "description": "Yapılandırılmış sağlayıcı hesaplarınız ve kullanılabilir ajanlar arasından seçim yapın. Varsayılanlar yeni sohbetlere uygulanır; mevcut yönlendirmeler sabit kalır.",
+    "mode": "Yönlendirme modu",
+    "modes": {
+      "auto": "Otomatik",
+      "semi_auto": "Yarı otomatik",
+      "manual": "Manuel"
+    },
+    "modeHelp": {
+      "auto": "Ana ajanı ve yönetilen her alt ajanı görevine göre seçin.",
+      "semi_auto": "Seçtiğiniz ana ajanı kullanın ve yönetilen alt ajanları otomatik yönlendirin.",
+      "manual": "Ana ajan ve alt ajanlar için seçtiğiniz hedefleri kullanın. Tekil sohbetler yerel çalışma zamanındaki sağlayıcı hedeflerini gerektirir; Takımlar farklı ajan çalışma zamanlarını destekler."
+    },
+    "root": "Ana ajanın sağlayıcısı ve modeli",
+    "child": "Alt ajanların varsayılan sağlayıcısı ve modeli",
+    "profile": "Optimizasyon önceliği",
+    "profiles": {
+      "cost": "Bilinen en düşük maliyet",
+      "speed": "Bilinen en düşük gecikme",
+      "quality": "Kalite tercihi",
+      "balanced": "Dengeli"
+    },
+    "localOnly": "Yalnızca yerel çıkarım",
+    "localHelp": "Model ve sınıflandırıcı seçimini, loopback uç noktalarında açıkça yerel olduğu belirtilmiş çıkarımla sınırlandırın. Araçlar ve bellek mevcut erişim kurallarını korur; bu bir ağ güvenlik duvarı değildir.",
+    "allTargets": "Yapılandırılmış tüm uygun hedefleri kullan",
+    "pool": "İzin verilen hedefler",
+    "poolRequired": "En az bir hedef bırakın veya tüm uygun hedefleri açıkça etkinleştirin.",
+    "selectTarget": "Sağlayıcı veya ajan ve model seçin",
+    "classifier": "Görev sınıflandırıcısı (isteğe bağlı yerleşik model)",
+    "classifierHelp": "Bu model görevi analiz eder ve ek bir çıkarım isteği oluşturur. Sınıflandırıcı yoksa seçim, açıklanmış sabit bir temel kuralı, bilinen meta verileri ve kabul edilmiş sonuçları kullanır. Sınıflandırıcı fiyat uyduramaz veya rastgele hesaplar seçemez.",
+    "childScopeHelp": "Yerleşik alt ajanlar ve takım üyeleri yönlendirilebilir. Harici CLI ajanlarının iç alt ajanlarını ilgili CLI yönetmeye devam eder. Optimizasyon önceliği, modelin akıl yürütme çabasından ve izinlerden ayrıdır.",
+    "hints": "Hedef için isteğe bağlı meta veriler",
+    "hintsHelp": "Yalnızca bilinen değerleri girin. Eksik değerler bilinmiyor olarak kalır. Kalite ve güçlü yönler sizin tercihlerinizdir; karşılaştırmalı test sonuçları veya doğrulanmış doğruluk değildir.",
+    "unknown": "Bilinmiyor",
+    "metrics": {
+      "input_usd_per_million": "Girdi: milyon token başına USD",
+      "output_usd_per_million": "Çıktı: milyon token başına USD",
+      "expected_latency_ms": "Beklenen gecikme (ms)",
+      "context_tokens": "Bağlam kapasitesi (token)",
+      "quality_tier": "Kalite tercihi (1–5)",
+      "supports_tools": "Araç çağırma",
+      "supports_vision": "Görüntü girdisi"
+    },
+    "strengths": "Tercih edilen görev türleri",
+    "tasks": {
+      "coding": "Kodlama",
+      "review": "İnceleme",
+      "research": "Araştırma",
+      "writing": "Yazma",
+      "analysis": "Analiz",
+      "general": "Genel"
+    },
+    "declareLocal": "Bu uç noktanın çıkarımı yerel olarak yaptığını onaylıyorum",
+    "saved": "Yönlendirici varsayılanları kaydedildi",
+    "pinned": "Bu somut yönlendirme bu sohbet için sabittir. Başka bir yönlendirme seçmek için yeni bir sohbet başlatın.",
+    "managedChildren": "Yönetilen alt ajanlar bu yönlendirme politikasını kullanır.",
+    "cliChildren": "CLI içindeki alt ajanları seçilen ajan yönetir.",
+    "otherReason": "Yönlendirici, seçimi destekleyen ek bilgileri kaydetti.",
+    "reviewLabel": "Bu sonucu değerlendir",
+    "accept": "Sonucu kabul et",
+    "reject": "Düzeltme gerekiyor",
+    "reviewSaved": "Değerlendirmeniz bu sonuç için kaydedildi",
+    "initialTask": "Yönlendirme için ilk görev",
+    "initialTaskPlaceholder": "Bu üyenin gerçek görevini açıklayın",
+    "initialTaskHelp": "Başlangıçtan önce modeli seçmek için kullanılır. Mesaj göndermez veya görevi başlatmaz; Takımı oluşturduktan sonra görevi gönderin.",
+    "initialTaskRequired": "Yönlendirilecek her üyenin ilk görevini açıklayın.",
+    "errors": {
+      "empty": "Önce etkin bir sağlayıcı modeli veya modellerini bildiren kullanılabilir bir ajan ekleyin.",
+      "rootRequired": "Ana ajan için kullanılabilir bir hedef seçin.",
+      "childRequired": "Alt ajanlar için kullanılabilir bir hedef seçin.",
+      "classifierRequired": "Sınıflandırma için kullanılabilir bir yerleşik sağlayıcı modeli seçin.",
+      "unavailable": "Seçilen hedeflerden biri devre dışı veya artık kullanılamıyor. Hedef listesini güncelleyin.",
+      "manualNative": "Manuel tekil sohbetler, ana ajan ve alt ajanlar için yerleşik sağlayıcı modelleri gerektirir. Farklı ajan çalışma zamanlarını birleştirmek için bir Takım kullanın.",
+      "localRequired": "Uygun yerel hedefleri seçin ve yerel çıkarım meta verilerini doğrulayın. Bu modda bulut sınıflandırıcısına izin verilmez.",
+      "loadFailed": "Yönlendirme ayarları yüklenemedi. Göndermeden önce tekrar deneyin."
+    },
+    "reasons": {
+      "manual_target": "Kullanıcının seçtiği hedef",
+      "cost_unknown": "Maliyet bilinmiyor",
+      "latency_unknown": "Gecikme bilinmiyor",
+      "quality_unknown": "Kalite bilinmiyor",
+      "user_priors_not_verified_accuracy": "Kullanıcı tercihleri doğrulanmış doğruluk değildir",
+      "explicit_user_acceptance_history": "Kullanıcının açık kabul geçmişini içerir",
+      "conservative_stable_baseline": "Temkinli ve sabit temel kural",
+      "classification_unconfigured": "Görev sınıflandırıcısı yapılandırılmamış",
+      "structured_classification": "Yapılandırılmış görev sınıflandırması uygulandı",
+      "classification_failed_conservative_baseline": "Sınıflandırma başarısız; temkinli temel kural uygulandı",
+      "local_inference_only": "Model çıkarımı uygun yerel hedeflerle sınırlandırıldı",
+      "memory_locality_unverified_skipped": "Embedding işleminin yerel olduğu doğrulanamadığından yönlendiricinin bellek sorgusu atlandı",
+      "classification_unconfigured_conservative_keywords": "Sınıflandırıcı yok; temkinli anahtar kelime sezgileri"
+    }
   }
 }

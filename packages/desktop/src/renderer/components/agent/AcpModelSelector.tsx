@@ -72,7 +72,7 @@ const AcpModelSelector: React.FC<{
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobileHeaderCompact = Boolean(layout?.isMobile);
-  const { model_info, canSwitch, isLoading, isSetting, selectModel, thoughtLevel, setStatus, setConfigOption } =
+  const { model_info, canSwitch, locked, isLoading, isSetting, selectModel, thoughtLevel, setStatus, setConfigOption } =
     useAcpModelInfo({
       conversation_id,
       backend,
@@ -97,7 +97,9 @@ const AcpModelSelector: React.FC<{
     defaultModelLabel,
     fallbackLabel: t('conversation.welcome.useCliModel'),
   });
-  const combinedLabel = composeRuntimeSelectorLabel({ modelLabel: display_label, thoughtLevel });
+  const combinedLabel = locked
+    ? getCurrentThoughtLevelLabel(thoughtLevel)
+    : composeRuntimeSelectorLabel({ modelLabel: display_label, thoughtLevel });
   const isRuntimeSetting = isConfigSetting(setStatus);
   const handleThoughtLevelSelect = useCallback(
     async (value: string) => {
@@ -164,6 +166,8 @@ const AcpModelSelector: React.FC<{
     );
   };
 
+  if (locked && !thoughtLevel) return null;
+
   if (!model_info && isLoading) {
     return (
       <div
@@ -179,7 +183,7 @@ const AcpModelSelector: React.FC<{
     return renderReadonlyPill(t('conversation.welcome.useCliModel'), t('conversation.welcome.modelSwitchNotSupported'));
   }
 
-  if (!canSwitch) {
+  if (!canSwitch && !locked) {
     return renderReadonlyPill(combinedLabel, tooltipContent);
   }
 
@@ -195,23 +199,25 @@ const AcpModelSelector: React.FC<{
             <>
               {/* Two-level layout: first level shows model + thought-level rows;
                   each expands into a left-side submenu with the full option list. */}
-              <Menu.SubMenu
-                key='model'
-                triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
-                title={
-                  <RuntimeSelectorSubMenuTitle
-                    label={t('common.model', { defaultValue: 'Model' })}
-                    value={display_label}
+              {!locked && (
+                <Menu.SubMenu
+                  key='model'
+                  triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                  title={
+                    <RuntimeSelectorSubMenuTitle
+                      label={t('common.model', { defaultValue: 'Model' })}
+                      value={display_label}
+                    />
+                  }
+                >
+                  <RuntimeSelectorModelList
+                    models={model_info.available_models}
+                    currentModelId={model_info.current_model_id}
+                    disabled={isRuntimeSetting}
+                    onSelect={selectModel}
                   />
-                }
-              >
-                <RuntimeSelectorModelList
-                  models={model_info.available_models}
-                  currentModelId={model_info.current_model_id}
-                  disabled={isRuntimeSetting}
-                  onSelect={selectModel}
-                />
-              </Menu.SubMenu>
+                </Menu.SubMenu>
+              )}
               <Menu.SubMenu
                 key='thought-level'
                 triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}

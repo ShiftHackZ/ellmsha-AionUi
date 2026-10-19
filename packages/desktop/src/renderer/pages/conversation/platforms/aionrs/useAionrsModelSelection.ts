@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getRoutingSnapshot } from '@/common/types/agent/routerTypes';
+import { useRouterConversation } from '@/renderer/components/agent/AutoRouter/useRouter';
 import type { IProvider, TProviderWithModel } from '@/common/config/storage';
 import { useModelProviderList } from '@/renderer/hooks/agent/useModelProviderList';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export type AionrsModelSelection = {
+  locked?: boolean;
   current_model?: TProviderWithModel;
   providers: IProvider[];
   getAvailableModels: (provider: IProvider) => string[];
@@ -17,14 +20,18 @@ export type AionrsModelSelection = {
 };
 
 export type UseAionrsModelSelectionOptions = {
+  conversationId?: string;
   initialModel: TProviderWithModel | undefined;
   onSelectModel: (provider: IProvider, modelName: string) => Promise<boolean>;
 };
 
 export const useAionrsModelSelection = ({
   initialModel,
+  conversationId,
   onSelectModel,
 }: UseAionrsModelSelectionOptions): AionrsModelSelection => {
+  const { data: conversation } = useRouterConversation(conversationId);
+  const locked = Boolean(getRoutingSnapshot(conversation?.extra));
   const [current_model, setCurrentModel] = useState<TProviderWithModel | undefined>(initialModel);
 
   useEffect(() => {
@@ -41,6 +48,7 @@ export const useAionrsModelSelection = ({
 
   const handleSelectModel = useCallback(
     async (provider: IProvider, modelName: string) => {
+      if (locked) return;
       const selected = {
         ...(provider as unknown as TProviderWithModel),
         use_model: modelName,
@@ -50,7 +58,7 @@ export const useAionrsModelSelection = ({
         setCurrentModel(selected);
       }
     },
-    [onSelectModel]
+    [locked, onSelectModel]
   );
 
   const getDisplayModelName = useCallback(
@@ -64,6 +72,7 @@ export const useAionrsModelSelection = ({
   );
 
   return {
+    locked,
     current_model,
     providers,
     getAvailableModels,

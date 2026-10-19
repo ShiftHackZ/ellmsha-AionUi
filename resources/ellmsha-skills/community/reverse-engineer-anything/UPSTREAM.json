@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/morluto/rea",
+  "revision": "rea-agents-6.5.0",
+  "commit": "3b79af28e80785afce9f5998d8f03289402a1847",
+  "sourcePath": ".agents/skills/reverse-engineer-anything",
+  "license": "MIT",
+  "retrievedAt": "2026-10-16T12:06:09.078585+00:00",
+  "runtime": {
+    "required": [
+      "REA MCP server or CLI rea-agents@6.5.0 for REA tool execution.",
+      "Node.js ^22.19.0 || ^24.11.0 || >=26.0.0 for the REA runtime."
+    ],
+    "optional": [
+      "Hopper, Ghidra or IDA for native decompilation.",
+      "Chrome-family browser for live website analysis.",
+      "Node.js 24.15+ or 26+ for SQLite inspection.",
+      "Target-specific caller-supplied tools including JADX/JDK, adb, Apktool, WABT, Binwalk/Unblob, TShark, sigrok-cli or Frida; consult actual operation diagnostics."
+    ],
+    "network": [
+      "Runtime acquisition only if explicitly authorized; live website analysis only within the user-requested scope."
+    ]
+  },
+  "adaptations": [
+    "Added an eLLMsha integration section after skill frontmatter; preserved upstream workflow and license.",
+    "Preserved the upstream vendor directory layout to keep reference paths stable.",
+    "Pinned upstream rea-agents@latest command examples to the matching stable runtime rea-agents@6.5.0; explicit eLLMsha guidance prevents global client setup or autostart."
+  ],
+  "excluded": [
+    "Repository setup/install scripts, agent-global registrations, hooks, CI and demonstration applications.",
+    "REA MCP runtime, dependency tree, native analysis engines and automatic client setup."
+  ],
+  "files": [
+    {
+      "path": "SKILL.md",
+      "upstreamPath": ".agents/skills/reverse-engineer-anything/SKILL.md",
+      "upstreamSha256": "278a5826b004ebd33b83c9534f3081d8e4c0eae514be96a0124ceb6f3081d21c",
+      "sha256": "6643a07a517bfa825450ce48f4de639342feec082f7b3152fbd9f11d994b8c5a"
+    },
+    {
+      "path": "references/android-applications.md",
+      "upstreamPath": ".agents/skills/reverse-engineer-anything/references/android-applications.md",
+      "upstreamSha256": "412d9cb462d85b07f6fdbc2453dd741ca3da2c0dbba627867d5624df94afa74c",
+      "sha256": "412d9cb462d85b07f6fdbc2453dd741ca3da2c0dbba627867d5624df94afa74c"
+    },
+    {
+      "path": "references/connection-and-recovery.md",
+      "upstreamPath": ".agents/skills/reverse-engineer-anything/references/connection-and-recovery.md",
+      "upstreamSha256": "a33760c84ae100f6ffd27d666e515956c5014ac33a6ee2414807833ae666a2b1",
+      "sha256": "a33760c84ae100f6ffd27d666e515956c5014ac33a6ee2414807833ae666a2b1"
+    },
+    {
+      "path": "references/evidence-workflows.md",
+      "upstreamPath": ".agents/skills/reverse-engineer-anything/references/evidence-workflows.md",
+      "upstreamSha256": "2bdee98a843d018cf850c706111bb74c459ba8640da00799e9208122e4d5ab80",
+      "sha256": "2bdee98a843d018cf850c706111bb74c459ba8640da00799e9208122e4d5ab80"
+    },
+    {
+      "path": "references/javascript-applications.md",
+      "upstreamPath": ".agents/skills/reverse-engineer-anything/references/javascript-applications.md",
+      "upstreamSha256": "b3e5e999833baac828addbb6b7a4ed859f0c68befd465812597bf19c27aa7a0b",
+      "sha256": "b3e5e999833baac828addbb6b7a4ed859f0c68befd465812597bf19c27aa7a0b"
+    },
+    {
+      "path": "references/native-and-artifacts.md",
+      "upstreamPath": ".agents/skills/reverse-engineer-anything/references/native-and-artifacts.md",
+      "upstreamSha256": "1d2ac5f64feb5ad6ef8b98d803d570e1c48aa588281ff91a4bbf50d40f924450",
+      "sha256": "1d2ac5f64feb5ad6ef8b98d803d570e1c48aa588281ff91a4bbf50d40f924450"
+    },
+    {
+      "path": "references/runtime-observation.md",
+      "upstreamPath": ".agents/skills/reverse-engineer-anything/references/runtime-observation.md",
+      "upstreamSha256": "fea85e2005a8fd1c86a946eeede24c20e57592a1deb36576b45216e9854803c8",
+      "sha256": "fea85e2005a8fd1c86a946eeede24c20e57592a1deb36576b45216e9854803c8"
+    },
+    {
+      "path": "LICENSE",
+      "upstreamPath": "LICENSE",
+      "upstreamSha256": "798f9e4d18e49b30bf2f12696c8ced73dc4e1413da375a333d01281543a1ea8b",
+      "sha256": "798f9e4d18e49b30bf2f12696c8ced73dc4e1413da375a333d01281543a1ea8b"
+    }
+  ]
+}

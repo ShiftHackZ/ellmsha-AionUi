@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUILTIN_TDAI_MEMORY_NAME } from '@/common/config/constants';
+import { DEFAULT_ROUTER_CONFIG } from '@/common/types/agent/routerTypes';
 import type { IMcpServer } from '@/common/config/storage';
 import { useGuidSend, type GuidSendDeps } from '@/renderer/pages/guid/hooks/useGuidSend';
 
@@ -78,10 +79,57 @@ const createDeps = (): GuidSendDeps => ({
 
 describe('useGuidSend', () => {
   beforeEach(() => {
+    sessionStorage.clear();
     createConversationInvokeMock.mockReset();
     createConversationInvokeMock.mockResolvedValue({ id: 'conv-1' });
     swrMutateMock.mockReset();
     swrMutateMock.mockResolvedValue(undefined);
+  });
+
+  it.each([
+    ['aionrs', 'aionrs'],
+    ['acp', 'acp'],
+    ['antigravity', 'acp'],
+  ])('queues the first routed prompt once for returned %s runtime', async (type, queue) => {
+    const deps = createDeps();
+    deps.selectedAssistantId = 'bare:auto-router';
+    deps.selectedAssistantBackend = 'auto-router';
+    deps.routerConfig = DEFAULT_ROUTER_CONFIG;
+    deps.guidEnabledSkills = ['review-skill'];
+    createConversationInvokeMock.mockResolvedValue({ id: 'routed', type });
+    const { result } = renderHook(() => useGuidSend(deps));
+    await act(async () => {
+      await result.current.handleSend();
+    });
+    expect(createConversationInvokeMock).toHaveBeenCalledTimes(1);
+    const payload = createConversationInvokeMock.mock.calls[0][0];
+    expect(payload.routing).toEqual({ initial_prompt: 'hello', config: DEFAULT_ROUTER_CONFIG, has_images: false });
+    expect(payload).not.toHaveProperty('model');
+    expect(payload.assistant.conversation_overrides).toMatchObject({
+      permission: 'bypassPermissions',
+      skill_ids: ['review-skill'],
+    });
+    expect(payload.assistant.conversation_overrides.model).toBeUndefined();
+    expect(payload.extra).not.toHaveProperty('routing');
+    expect(JSON.parse(sessionStorage.getItem(`${queue}_initial_message_routed`)!)).toEqual({ input: 'hello' });
+    expect(sessionStorage.getItem(`${queue === 'acp' ? 'aionrs' : 'acp'}_initial_message_routed`)).toBeNull();
+    expect(deps.navigate).toHaveBeenCalledWith('/conversation/routed');
+  });
+
+  it('retains the draft and never queues a prompt when routing fails', async () => {
+    const deps = createDeps();
+    deps.selectedAssistantBackend = 'auto-router';
+    deps.routerConfig = DEFAULT_ROUTER_CONFIG;
+    createConversationInvokeMock.mockRejectedValue(new Error('No eligible local target'));
+    const { result } = renderHook(() => useGuidSend(deps));
+    await act(async () => {
+      result.current.sendMessageHandler();
+    });
+    await waitFor(() => expect(deps.setLoading).toHaveBeenLastCalledWith(false));
+    expect(deps.setInput).not.toHaveBeenCalled();
+    expect(deps.setFiles).not.toHaveBeenCalled();
+    expect(deps.navigate).not.toHaveBeenCalled();
+    expect(sessionStorage.length).toBe(0);
   });
 
   it.each(['claude', 'aionrs'])('keeps the private first prompt out of %s creation metadata', async (backend) => {

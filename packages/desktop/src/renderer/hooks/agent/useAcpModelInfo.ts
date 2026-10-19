@@ -5,6 +5,8 @@
  */
 
 import { ipcBridge } from '@/common';
+import { getRoutingSnapshot } from '@/common/types/agent/routerTypes';
+import { useRouterConversation } from '@/renderer/components/agent/AutoRouter/useRouter';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import type { AcpConfigOptionDto, AcpModelInfo } from '@/common/types/platform/acpTypes';
 import {
@@ -30,6 +32,7 @@ type UseAcpModelInfoArgs = {
 export type UseAcpModelInfoResult = {
   model_info: AcpModelInfo | null;
   canSwitch: boolean;
+  locked?: boolean;
   isLoading: boolean;
   isSetting: boolean;
   selectModel: (model_id: string) => void;
@@ -74,6 +77,8 @@ export const useAcpModelInfo = ({
   onSelectModelSuccess,
   onSelectModelFailed,
 }: UseAcpModelInfoArgs): UseAcpModelInfoResult => {
+  const { data: conversation } = useRouterConversation(conversation_id);
+  const locked = Boolean(getRoutingSnapshot(conversation?.extra));
   const { model, thoughtLevel, setStatus, setConfigOption, isLoading } = useAcpConfigOptions({
     conversation_id,
     prepareRuntime,
@@ -136,7 +141,7 @@ export const useAcpModelInfo = ({
 
   const selectModel = useCallback(
     (model_id: string) => {
-      if (!enabled || !model) return;
+      if (!enabled || !model || locked) return;
       void setConfigOption(model.id, model_id)
         .then(async () => {
           onSelectModelSuccess?.(model_id);
@@ -145,12 +150,13 @@ export const useAcpModelInfo = ({
           onSelectModelFailed?.(model_id, error);
         });
     },
-    [enabled, model, onSelectModelFailed, onSelectModelSuccess, setConfigOption]
+    [enabled, locked, model, onSelectModelFailed, onSelectModelSuccess, setConfigOption]
   );
 
   return {
+    locked,
     model_info,
-    canSwitch: Boolean(configModelInfo && configModelInfo.available_models.length > 0),
+    canSwitch: !locked && Boolean(configModelInfo && configModelInfo.available_models.length > 0),
     isLoading: !model_info && isLoading,
     isSetting: setStatus.state === 'setting' && setStatus.optionId === model?.id,
     selectModel,

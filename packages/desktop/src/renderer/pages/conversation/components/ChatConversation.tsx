@@ -5,6 +5,8 @@
  */
 
 import { ipcBridge } from '@/common';
+import { getRoutingSnapshot } from '@/common/types/agent/routerTypes';
+import { RouterDecisionBadge } from '@/renderer/components/agent/AutoRouter/RouterDecisionBadge';
 import type { IConversationMcpStatus, IProvider, TChatConversation, TProviderWithModel } from '@/common/config/storage';
 import { uuid } from '@/common/utils';
 import addChatIcon from '@/renderer/assets/icons/add-chat.svg';
@@ -190,6 +192,7 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
 
   const modelSelection = useAionrsModelSelection({
     initialModel: conversation.model,
+    conversationId: conversation.id,
     onSelectModel,
   });
   // Project conversations get the Layout-level Explorer column (stage3 FULL);
@@ -229,7 +232,10 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
     headerExtra: (
       <div className='flex items-center gap-8px'>
         <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
-        {!isMobile && (
+        {!getSubagentMetadata(conversation) && getRoutingSnapshot(conversation.extra) && (
+          <RouterDecisionBadge snapshot={getRoutingSnapshot(conversation.extra)!} />
+        )}
+        {!isMobile && !getSubagentMetadata(conversation) && (
           <AionrsModelSelector
             selection={modelSelection}
             thoughtLevel={runtimeConfig.thoughtLevel}
@@ -415,6 +421,9 @@ const ChatConversation: React.FC<{
         <div className='shrink-0'>
           <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
         </div>
+      )}
+      {!subagent && conversation && getRoutingSnapshot(conversation.extra) && (
+        <RouterDecisionBadge snapshot={getRoutingSnapshot(conversation.extra)!} />
       )}
       {!subagent && modelSelector && <div className='shrink-0'>{modelSelector}</div>}
     </div>

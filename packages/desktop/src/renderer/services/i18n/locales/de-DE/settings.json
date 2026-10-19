@@ -1485,5 +1485,98 @@
   "pluginComponent": {
     "skills": "Skills",
     "mcp_servers": "MCP servers"
+  },
+  "autoRouter": {
+    "title": "Auto Router",
+    "description": "Wähle aus deinen eingerichteten Anbieterkonten und verfügbaren Agenten. Die Voreinstellungen gelten für neue Chats; bestehende Zuordnungen bleiben festgelegt.",
+    "mode": "Routing-Modus",
+    "modes": {
+      "auto": "Automatisch",
+      "semi_auto": "Halbautomatisch",
+      "manual": "Manuell"
+    },
+    "modeHelp": {
+      "auto": "Hauptagent und jeden verwalteten Unteragenten passend zu ihrer Aufgabe auswählen.",
+      "semi_auto": "Den gewählten Hauptagenten verwenden und verwaltete Unteragenten automatisch zuordnen.",
+      "manual": "Die gewählten Ziele für Haupt- und Unteragenten verwenden. Einzelchats benötigen native Anbieterziele; Teams unterstützen unterschiedliche Agentenlaufzeiten."
+    },
+    "root": "Anbieter und Modell des Hauptagenten",
+    "child": "Standardanbieter und -modell für Unteragenten",
+    "profile": "Optimierungspriorität",
+    "profiles": {
+      "cost": "Niedrigste bekannte Kosten",
+      "speed": "Geringste bekannte Latenz",
+      "quality": "Qualitätspräferenz",
+      "balanced": "Ausgewogen"
+    },
+    "localOnly": "Nur lokale Inferenz",
+    "localHelp": "Die Auswahl von Modell und Klassifikator auf ausdrücklich als lokal bestätigte Inferenz über Loopback-Endpunkte beschränken. Für Werkzeuge und Speicher gelten weiterhin ihre bisherigen Zugriffsregeln; dies ist keine Netzwerk-Firewall.",
+    "allTargets": "Alle geeigneten eingerichteten Ziele verwenden",
+    "pool": "Erlaubte Ziele",
+    "poolRequired": "Behalte mindestens ein Ziel bei oder aktiviere ausdrücklich alle geeigneten Ziele.",
+    "selectTarget": "Anbieter oder Agent und Modell auswählen",
+    "classifier": "Aufgabenklassifikator (optionales natives Modell)",
+    "classifierHelp": "Dieses Modell analysiert die Aufgabe und erzeugt eine zusätzliche Inferenzanfrage. Ohne Klassifikator verwendet die Auswahl eine offengelegte, stabile Basisregel, bekannte Metadaten und bewertete Ergebnisse. Der Klassifikator kann keine Preise erfinden oder beliebige Konten auswählen.",
+    "childScopeHelp": "Native Unteragenten und Teammitglieder können zugeordnet werden. Interne Unteragenten externer CLI-Agenten werden weiterhin von der jeweiligen CLI gesteuert. Optimierungspriorität, Denkaufwand des Modells und Berechtigungen sind getrennte Einstellungen.",
+    "hints": "Optionale Metadaten für ein Ziel",
+    "hintsHelp": "Gib nur bekannte Werte ein. Fehlende Werte bleiben unbekannt. Qualität und Stärken sind deine Präferenzen, keine Benchmark-Ergebnisse oder nachgewiesene Genauigkeit.",
+    "unknown": "Unbekannt",
+    "metrics": {
+      "input_usd_per_million": "Eingabe: USD je Million Tokens",
+      "output_usd_per_million": "Ausgabe: USD je Million Tokens",
+      "expected_latency_ms": "Erwartete Latenz (ms)",
+      "context_tokens": "Kontextkapazität (Tokens)",
+      "quality_tier": "Qualitätspräferenz (1–5)",
+      "supports_tools": "Werkzeugaufrufe",
+      "supports_vision": "Bildeingabe"
+    },
+    "strengths": "Bevorzugte Aufgabentypen",
+    "tasks": {
+      "coding": "Programmieren",
+      "review": "Prüfen",
+      "research": "Recherchieren",
+      "writing": "Schreiben",
+      "analysis": "Analysieren",
+      "general": "Allgemein"
+    },
+    "declareLocal": "Ich bestätige, dass dieser Endpunkt die Inferenz lokal ausführt",
+    "saved": "Router-Voreinstellungen gespeichert",
+    "pinned": "Diese konkrete Zuordnung ist für diesen Chat festgelegt. Starte einen neuen Chat, um eine andere zu wählen.",
+    "managedChildren": "Verwaltete Unteragenten verwenden diese Routing-Regel.",
+    "cliChildren": "CLI-interne Unteragenten werden vom gewählten Agenten gesteuert.",
+    "otherReason": "Zusätzliche Auswahlgrundlagen wurden vom Router protokolliert.",
+    "reviewLabel": "Dieses Ergebnis bewerten",
+    "accept": "Ergebnis akzeptieren",
+    "reject": "Korrektur erforderlich",
+    "reviewSaved": "Deine Bewertung wurde für dieses Ergebnis gespeichert",
+    "initialTask": "Erste Aufgabe für das Routing",
+    "initialTaskPlaceholder": "Beschreibe die tatsächliche Aufgabe dieses Mitglieds",
+    "initialTaskHelp": "Wird verwendet, um das Modell vor dem Start auszuwählen. Es wird keine Nachricht gesendet und die Aufgabe wird nicht gestartet; sende die Aufgabe nach dem Erstellen des Teams.",
+    "initialTaskRequired": "Beschreibe die erste Aufgabe für jedes zuzuordnende Mitglied.",
+    "errors": {
+      "empty": "Füge zuerst ein aktiviertes Anbietermodell oder einen verfügbaren Agenten mit gemeldeten Modellen hinzu.",
+      "rootRequired": "Wähle ein verfügbares Ziel für den Hauptagenten.",
+      "childRequired": "Wähle ein verfügbares Ziel für Unteragenten.",
+      "classifierRequired": "Wähle ein verfügbares natives Anbietermodell für die Klassifizierung.",
+      "unavailable": "Ein gewähltes Ziel ist deaktiviert oder nicht mehr verfügbar. Aktualisiere die Auswahl.",
+      "manualNative": "Manuelle Einzelchats benötigen native Anbietermodelle für Haupt- und Unteragenten. Verwende ein Team für unterschiedliche Agentenlaufzeiten.",
+      "localRequired": "Wähle geeignete lokale Ziele und bestätige ihre Metadaten zur lokalen Inferenz. Ein Cloud-Klassifikator ist in diesem Modus nicht erlaubt.",
+      "loadFailed": "Routing-Einstellungen konnten nicht geladen werden. Versuche es vor dem Senden erneut."
+    },
+    "reasons": {
+      "manual_target": "Vom Nutzer gewähltes Ziel",
+      "cost_unknown": "Kosten unbekannt",
+      "latency_unknown": "Latenz unbekannt",
+      "quality_unknown": "Qualität unbekannt",
+      "user_priors_not_verified_accuracy": "Nutzerpräferenzen sind keine nachgewiesene Genauigkeit",
+      "explicit_user_acceptance_history": "Berücksichtigt ausdrücklich akzeptierte Ergebnisse des Nutzers",
+      "conservative_stable_baseline": "Vorsichtige, stabile Basisregel",
+      "classification_unconfigured": "Aufgabenklassifikator nicht eingerichtet",
+      "structured_classification": "Strukturierte Aufgabenklassifizierung angewendet",
+      "classification_failed_conservative_baseline": "Klassifizierung fehlgeschlagen; vorsichtige Basisregel angewendet",
+      "local_inference_only": "Modellinferenz auf geeignete lokale Ziele beschränkt",
+      "memory_locality_unverified_skipped": "Speicherabfrage des Routers übersprungen, da die lokale Ausführung der Einbettungen nicht bestätigt ist",
+      "classification_unconfigured_conservative_keywords": "Kein Klassifikator; konservative Schlüsselwortheuristik"
+    }
   }
 }

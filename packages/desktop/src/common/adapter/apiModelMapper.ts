@@ -5,6 +5,7 @@
  */
 
 import type { TProviderWithModel } from '../config/storage';
+import type { RouterCreateRequest } from '../types/agent/routerTypes';
 
 export type ApiProviderWithModel = {
   provider_id: string;
@@ -39,6 +40,7 @@ export function toApiModelOptional(m?: TProviderWithModel): ApiProviderWithModel
 
 /** Minimal shape of a create-conversation request consumed by the body builder. */
 export type CreateConversationBodyInput = {
+  routing?: RouterCreateRequest;
   type?: 'acp' | 'aionrs';
   id?: string;
   name?: string;
@@ -61,6 +63,7 @@ export function buildCreateConversationBody(p: CreateConversationBodyInput): Rec
     name: p.name,
     assistant: p.assistant,
     extra: p.extra,
+    ...(p.routing ? { routing: p.routing } : {}),
   };
   const model = p.type === 'acp' ? undefined : toApiModelOptional(p.model);
   if (model) body.model = model;

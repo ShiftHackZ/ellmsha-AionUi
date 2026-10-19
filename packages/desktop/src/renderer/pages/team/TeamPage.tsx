@@ -6,6 +6,8 @@ import useSWR, { useSWRConfig } from 'swr';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { ipcBridge } from '@/common';
+import { getRoutingSnapshot } from '@/common/types/agent/routerTypes';
+import { RouterDecisionBadge } from '@/renderer/components/agent/AutoRouter/RouterDecisionBadge';
 import type { TeamAssistant, TTeam } from '@/common/types/team/teamTypes';
 import type { IProvider, TChatConversation, TProviderWithModel } from '@/common/config/storage';
 import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/agent/useAcpConfigOptions';
@@ -80,7 +82,7 @@ const AionrsHeaderModelSelector: React.FC<{ conversation_id: string; initialMode
     },
     [conversation_id]
   );
-  const modelSelection = useAionrsModelSelection({ initialModel, onSelectModel });
+  const modelSelection = useAionrsModelSelection({ initialModel, onSelectModel, conversationId: conversation_id });
   const runtimeConfig = useAcpConfigOptions({
     conversation_id,
     prepareSetRuntime: teamPermission?.warmupSession,
@@ -147,6 +149,7 @@ const AssistantChatSlot: React.FC<{
     () => getConversationOrNull(assistant.conversation_id)
   );
 
+  const routing = getRoutingSnapshot(conversation?.extra);
   const isAionrs = conversation?.type === 'aionrs';
   const initialModelId = (conversation?.extra as { current_model_id?: string })?.current_model_id;
   const isAcpLike = conversation?.type === 'acp' || isAcpLikeBackend(assistant.assistant_backend);
@@ -176,6 +179,7 @@ const AssistantChatSlot: React.FC<{
           nameStyle={{ color }}
         />
         <div className='flex items-center gap-8px shrink-0'>
+          {routing && <RouterDecisionBadge snapshot={routing} />}
           {conversation && <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />}
           {!isMobile && assistant.conversation_id && !isAionrs && isAcpLike && (
             <div className='min-w-0 max-w-140px [&_button]:max-w-full [&_button_span]:truncate'>

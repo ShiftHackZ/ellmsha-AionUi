@@ -81,7 +81,11 @@ const AionrsTeamChat: React.FC<{
     [conversation.id]
   );
 
-  const modelSelection = useAionrsModelSelection({ initialModel: conversation.model, onSelectModel });
+  const modelSelection = useAionrsModelSelection({
+    initialModel: conversation.model,
+    onSelectModel,
+    conversationId: conversation.id,
+  });
 
   return (
     <AionrsChat

@@ -1724,6 +1724,7 @@ export interface IConfirmMessageParams {
 }
 
 export interface ICreateConversationParams {
+  routing?: import('../types/agent/routerTypes').RouterCreateRequest;
   type?: 'acp' | 'aionrs';
   id?: string;
   name?: string;
