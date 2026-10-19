@@ -85,7 +85,10 @@
       "completed": "完了",
       "errored": "失敗",
       "interrupted": "中断",
-      "shutdown": "停止"
+      "shutdown": "停止",
+      "idle": "待機中",
+      "unknown": "状態を取得できません",
+      "cancelling": "停止中"
     }
   },
   "historySearch": {

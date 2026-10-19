@@ -27,6 +27,7 @@ import { useConversations } from './hooks/useConversations';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import {
   getSubagentMetadata,
+  getSubagentDisplayStatus,
   isSubagentRunning,
   type ConversationRowProps,
   type WorkspaceGroupedHistoryProps,
@@ -295,7 +296,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
           >
             {children.map((child) => {
               const metadata = getSubagentMetadata(child)!;
-              const status = metadata.status ?? 'running';
+              const status = getSubagentDisplayStatus(child);
               const isRunning = isSubagentRunning(child);
               const statusLabel = t(`conversation.history.subagentStatus.${status}`, { defaultValue: status });
               return (

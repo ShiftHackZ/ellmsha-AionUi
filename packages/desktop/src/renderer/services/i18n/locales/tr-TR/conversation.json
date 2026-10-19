@@ -85,7 +85,10 @@
       "completed": "Tamamlandı",
       "errored": "Başarısız",
       "interrupted": "Kesildi",
-      "shutdown": "Durduruldu"
+      "shutdown": "Durduruldu",
+      "idle": "Boşta",
+      "unknown": "Durum kullanılamıyor",
+      "cancelling": "Durduruluyor"
     }
   },
   "historySearch": {

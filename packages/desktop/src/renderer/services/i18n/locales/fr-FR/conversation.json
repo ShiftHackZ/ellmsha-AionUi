@@ -85,7 +85,10 @@
       "completed": "Terminé",
       "errored": "Échec",
       "interrupted": "Interrompu",
-      "shutdown": "Arrêté"
+      "shutdown": "Arrêté",
+      "idle": "Inactif",
+      "unknown": "État indisponible",
+      "cancelling": "Arrêt en cours"
     }
   },
   "historySearch": {

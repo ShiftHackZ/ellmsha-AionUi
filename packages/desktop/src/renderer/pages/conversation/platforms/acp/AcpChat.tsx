@@ -34,6 +34,7 @@ const AcpChat: React.FC<{
   agent_name?: string;
   cron_job_id?: string;
   hideSendBox?: boolean;
+  managedChild?: boolean;
   emptySlot?: React.ReactNode;
   loadedSkills?: string[];
   loadedMcpServers?: string[];
@@ -50,6 +51,7 @@ const AcpChat: React.FC<{
   agent_name,
   cron_job_id,
   hideSendBox,
+  managedChild,
   emptySlot,
   loadedSkills,
   loadedMcpServers,
@@ -63,8 +65,8 @@ const AcpChat: React.FC<{
   usePendingConfirmationsRecovery(conversation_id);
   const teamPermission = useTeamPermission();
   const messageState = useAcpMessage(conversation_id, {
-    skipWarmup: Boolean(teamPermission),
-    prepareRuntime: teamPermission?.warmupSession,
+    skipWarmup: Boolean(teamPermission) || managedChild,
+    prepareRuntime: managedChild ? undefined : teamPermission?.warmupSession,
   });
 
   return (

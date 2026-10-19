@@ -5,6 +5,7 @@
  */
 
 import type { TChatConversation } from '@/common/config/storage';
+import { getRouterChildMetadata } from '@/common/types/agent/routerTypes';
 import type { ReactNode } from 'react';
 
 export type WorkspaceGroup = {
@@ -31,17 +32,31 @@ export type SubagentMetadata = {
 
 export const getSubagentMetadata = (conversation?: TChatConversation): SubagentMetadata | undefined => {
   const metadata = (conversation?.extra as { subagent?: SubagentMetadata } | undefined)?.subagent;
-  return metadata?.parent_conversation_id && metadata.ref ? metadata : undefined;
+  if (metadata?.parent_conversation_id && metadata.ref) return metadata;
+  const managed = getRouterChildMetadata(conversation?.extra);
+  return managed ? { parent_conversation_id: managed.parent_conversation_id, ref: managed.task_id } : undefined;
 };
 
 export const isSubagentConversation = (conversation?: TChatConversation): boolean =>
   Boolean(getSubagentMetadata(conversation));
 
+/** Managed children use current runtime state; persisted running metadata may outlive Core. */
+export const getSubagentDisplayStatus = (
+  conversation?: TChatConversation
+): NonNullable<SubagentMetadata['status']> | 'idle' | 'unknown' | 'cancelling' => {
+  const persisted = getSubagentMetadata(conversation)?.status ?? 'running';
+  if (!getRouterChildMetadata(conversation?.extra)) return persisted;
+  const runtime = conversation?.runtime;
+  if (!runtime) return 'unknown';
+  if (runtime.pending_confirmations > 0 || runtime.state === 'waiting_confirmation') return 'waiting_for_approval';
+  if (runtime.state === 'starting') return 'pending_init';
+  if (runtime.state === 'running') return 'running';
+  if (runtime.state === 'cancelling') return 'cancelling';
+  return ['completed', 'errored', 'interrupted', 'shutdown'].includes(persisted) ? persisted : 'idle';
+};
 export const isSubagentRunning = (conversation?: TChatConversation): boolean => {
-  const metadata = getSubagentMetadata(conversation);
-  if (!metadata) return false;
-  const status = metadata.status ?? 'running';
-  return status === 'pending_init' || status === 'running';
+  if (!getSubagentMetadata(conversation)) return false;
+  return ['pending_init', 'running', 'cancelling'].includes(getSubagentDisplayStatus(conversation));
 };
 
 export const isConversationRuntimeActive = (conversation?: TChatConversation): boolean =>

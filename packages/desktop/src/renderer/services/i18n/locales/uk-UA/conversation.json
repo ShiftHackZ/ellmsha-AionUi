@@ -85,7 +85,10 @@
       "completed": "Завершено",
       "errored": "Помилка",
       "interrupted": "Перервано",
-      "shutdown": "Зупинено"
+      "shutdown": "Зупинено",
+      "idle": "Очікує",
+      "unknown": "Статус недоступний",
+      "cancelling": "Зупиняється"
     }
   },
   "historySearch": {

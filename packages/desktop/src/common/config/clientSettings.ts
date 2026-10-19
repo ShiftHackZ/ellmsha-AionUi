@@ -1,6 +1,6 @@
 import type { SpeechToTextConfig } from '@/common/types/provider/speech';
 import type { IMcpServer, TProviderWithModel } from '@/common/config/storage';
-import type { RouterConfig } from '@/common/types/agent/routerTypes';
+import type { RouterConfig, RouterSettings } from '@/common/types/agent/routerTypes';
 
 export type GoogleClientSetting = {
   proxy?: string;
@@ -11,7 +11,7 @@ export type ImageGenerationModelSetting = TProviderWithModel & {
 };
 
 export type ClientBusinessSettingMap = {
-  'router.config': RouterConfig;
+  'router.config': RouterConfig | RouterSettings;
   'google.config': GoogleClientSetting;
   'mcp.config': IMcpServer[] | undefined;
   'tools.imageGenerationModel': ImageGenerationModelSetting | undefined;

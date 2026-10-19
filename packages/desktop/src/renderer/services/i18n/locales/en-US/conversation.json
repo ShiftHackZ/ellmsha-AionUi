@@ -88,7 +88,10 @@
       "completed": "Completed",
       "errored": "Failed",
       "interrupted": "Interrupted",
-      "shutdown": "Stopped"
+      "shutdown": "Stopped",
+      "idle": "Idle",
+      "unknown": "Status unavailable",
+      "cancelling": "Stopping"
     }
   },
   "historySearch": {

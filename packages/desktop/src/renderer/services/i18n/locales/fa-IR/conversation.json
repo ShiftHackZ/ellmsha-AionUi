@@ -85,7 +85,10 @@
       "completed": "تکمیل‌شده",
       "errored": "ناموفق",
       "interrupted": "متوقف‌شده",
-      "shutdown": "خاموش"
+      "shutdown": "خاموش",
+      "idle": "بیکار",
+      "unknown": "وضعیت در دسترس نیست",
+      "cancelling": "در حال توقف"
     }
   },
   "historySearch": {

@@ -3,6 +3,7 @@ export type RouterTarget =
   | { kind: 'provider'; provider_id: string; model: string }
   | { kind: 'agent'; agent_id: string; model: string };
 export type RouterMode = 'auto' | 'semi_auto' | 'manual';
+export type RouterPreset = RouterProfile | 'local_only';
 export type RouterProfile = 'cost' | 'speed' | 'quality' | 'balanced';
 export type RouterTaskKind = 'coding' | 'review' | 'research' | 'writing' | 'analysis' | 'general';
 export type RouterHint = {
@@ -17,7 +18,11 @@ export type RouterHint = {
   supports_vision?: boolean | null;
   local_inference: boolean;
 };
+export type RouterClass = { id: string; name: string; description: string; target: RouterTarget };
 export type RouterConfig = {
+  /** Missing denotes an immutable legacy V1 snapshot. */
+  schema_version?: 1 | 2;
+  classes?: RouterClass[];
   mode: RouterMode;
   profile: RouterProfile;
   local_only: boolean;
@@ -28,6 +33,39 @@ export type RouterConfig = {
   allowed_targets: RouterTarget[];
   hints: RouterHint[];
 };
+export type RouterSettings = {
+  schema_version: 2;
+  active_mode: RouterMode;
+  active_presets: Record<RouterMode, RouterPreset>;
+  configurations: Partial<Record<RouterMode, Partial<Record<RouterPreset, RouterConfig>>>>;
+};
+export type RouterEligibility = { supported: boolean; reason?: string };
+export type RouterCatalogEntry = {
+  target: RouterTarget;
+  label: string;
+  backend: string;
+  local: boolean;
+  root: RouterEligibility;
+  child: RouterEligibility;
+  classifier: RouterEligibility;
+};
+export type RouterChildMetadata = {
+  version: 1;
+  root_conversation_id: string;
+  parent_conversation_id: string;
+  parent_turn_id: string;
+  task_id: string;
+};
+/** Only the host-owned, versioned lineage identifies an approval-capable child. */
+export function getRouterChildMetadata(extra: unknown): RouterChildMetadata | undefined {
+  if (!extra || typeof extra !== 'object' || !('router_child' in extra)) return undefined;
+  const marker = extra.router_child;
+  if (!marker || typeof marker !== 'object' || !('version' in marker) || marker.version !== 1) return undefined;
+  const fields = ['root_conversation_id', 'parent_conversation_id', 'parent_turn_id', 'task_id'] as const;
+  const record = marker as Record<string, unknown>;
+  if (!fields.every((field) => typeof record[field] === 'string' && (record[field] as string).trim())) return undefined;
+  return marker as RouterChildMetadata;
+}
 export type RouterSnapshot = {
   config: RouterConfig;
   decision: {
@@ -43,6 +81,8 @@ export type RouterSnapshot = {
 };
 export type RouterCreateRequest = { initial_prompt: string; config?: RouterConfig; has_images: boolean };
 export const DEFAULT_ROUTER_CONFIG: RouterConfig = {
+  schema_version: 2,
+  classes: [],
   mode: 'auto',
   profile: 'balanced',
   local_only: false,

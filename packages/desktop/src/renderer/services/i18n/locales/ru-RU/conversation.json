@@ -85,7 +85,10 @@
       "completed": "Завершён",
       "errored": "Ошибка",
       "interrupted": "Прерван",
-      "shutdown": "Остановлен"
+      "shutdown": "Остановлен",
+      "idle": "Ожидает",
+      "unknown": "Статус недоступен",
+      "cancelling": "Останавливается"
     }
   },
   "historySearch": {

@@ -54,6 +54,30 @@ describe('useAionrsMessage turn clock', () => {
     responseStreamHandlerRef.current = undefined;
   });
 
+  it('passively merges managed-child output without writing usage or executing local commands', async () => {
+    vi.mocked(getConversationOrNull).mockResolvedValue(null);
+    const { result } = renderHook(() => useAionrsMessage('child', { passive: true }));
+    await waitFor(() => expect(result.current.hasHydratedRunningState).toBe(true));
+    act(() =>
+      responseStreamHandlerRef.current?.({
+        conversation_id: 'child',
+        type: 'content',
+        msg_id: 'message',
+        data: 'Child result',
+      } as IResponseMessage)
+    );
+    act(() =>
+      responseStreamHandlerRef.current?.({
+        conversation_id: 'child',
+        type: 'stream_end',
+        msg_id: 'message',
+        data: { input_tokens: 10 },
+      } as IResponseMessage)
+    );
+    expect(conversationUpdateInvokeMock).not.toHaveBeenCalled();
+    expect(addOrUpdateMessageMock).toHaveBeenCalled();
+  });
+
   it('preserves the turn start timestamp when switching away and back to a running conversation', async () => {
     vi.mocked(getConversationOrNull).mockResolvedValue(null);
 

@@ -26,10 +26,12 @@ type TokenUsage = {
 export const useAionrsMessage = (
   conversation_id: string,
   options?: {
+    passive?: boolean;
     onError?: (message: IResponseMessage) => void;
     onConfigChanged?: (capabilities: Record<string, unknown>) => void;
   }
 ) => {
+  const passive = options?.passive === true;
   const onError = options?.onError;
   const onConfigChanged = options?.onConfigChanged;
   const onConfigChangedRef = useRef(onConfigChanged);
@@ -150,7 +152,7 @@ export const useAionrsMessage = (
 
   const processCompletedAssistantMessage = useCallback(
     async (msgId: string) => {
-      if (!msgId || processedCronMsgIdsRef.current.has(msgId)) {
+      if (passive || !msgId || processedCronMsgIdsRef.current.has(msgId)) {
         return;
       }
 
@@ -199,7 +201,7 @@ export const useAionrsMessage = (
         processedCronMsgIdsRef.current.delete(msgId);
       }
     },
-    [mergeLiveMessage, conversation_id]
+    [mergeLiveMessage, conversation_id, passive]
   );
 
   useEffect(() => {
@@ -269,7 +271,7 @@ export const useAionrsMessage = (
             logStreamTerminalObserved(conversation_id, message.turn_id, 'aionrs', message.type);
             // aionrs stream_end carries usage in data field
             const usageData = message.data as TokenUsage | undefined;
-            if (usageData && typeof usageData === 'object' && 'input_tokens' in usageData) {
+            if (!passive && usageData && typeof usageData === 'object' && 'input_tokens' in usageData) {
               const newTokenUsage: TokenUsageData = {
                 total_tokens: (usageData.input_tokens || 0) + (usageData.output_tokens || 0),
               };
@@ -385,7 +387,7 @@ export const useAionrsMessage = (
       }
     });
     // Note: hasActiveTools and streamRunning are accessed via refs to avoid re-subscription
-  }, [conversation_id, mergeLiveMessage, onError, processCompletedAssistantMessage]);
+  }, [conversation_id, mergeLiveMessage, onError, processCompletedAssistantMessage, passive]);
 
   useEffect(() => {
     let cancelled = false;

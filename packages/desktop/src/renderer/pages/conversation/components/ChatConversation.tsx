@@ -5,7 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
-import { getRoutingSnapshot } from '@/common/types/agent/routerTypes';
+import { getRoutingSnapshot, getRouterChildMetadata } from '@/common/types/agent/routerTypes';
 import { RouterDecisionBadge } from '@/renderer/components/agent/AutoRouter/RouterDecisionBadge';
 import type { IConversationMcpStatus, IProvider, TChatConversation, TProviderWithModel } from '@/common/config/storage';
 import { uuid } from '@/common/utils';
@@ -168,10 +168,12 @@ const _AddNewConversation: React.FC<{ conversation: TChatConversation }> = ({ co
 
 type AionrsConversation = Extract<TChatConversation, { type: 'aionrs' }>;
 
-const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; sliderTitle: React.ReactNode }> = ({
-  conversation,
-  sliderTitle,
-}) => {
+const AionrsConversationPanel: React.FC<{
+  conversation: AionrsConversation;
+  sliderTitle: React.ReactNode;
+  hideSendBox?: boolean;
+}> = ({ conversation, sliderTitle, hideSendBox }) => {
+  const managedChild = getRouterChildMetadata(conversation.extra);
   const runtimeView = useConversationRuntimeView(conversation.id);
   const onSelectModel = useCallback(
     async (_provider: IProvider, modelName: string) => {
@@ -209,7 +211,7 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
   const { t } = useTranslation();
   const runtimeConfig = useAcpConfigOptions({
     conversation_id: conversation.id,
-    enabled: !isMobile,
+    enabled: !isMobile && !managedChild,
   });
   const handleThoughtLevelSetOption = useCallback(
     async (optionId: string, value: string) => {
@@ -231,7 +233,11 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
     sider: <ChatSlider conversation={conversation} />,
     headerExtra: (
       <div className='flex items-center gap-8px'>
-        <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
+        {managedChild ? (
+          <SubagentBackButton parentConversationId={managedChild.parent_conversation_id} />
+        ) : (
+          <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
+        )}
         {!getSubagentMetadata(conversation) && getRoutingSnapshot(conversation.extra) && (
           <RouterDecisionBadge snapshot={getRoutingSnapshot(conversation.extra)!} />
         )}
@@ -267,6 +273,7 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
         conversation_id={conversation.id}
         workspace={conversation.extra.workspace}
         modelSelection={modelSelection}
+        hideSendBox={hideSendBox || Boolean(managedChild)}
         session_mode={conversation.extra?.session_mode}
         cron_job_id={cronJobId}
         loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
@@ -288,6 +295,7 @@ const ChatConversation: React.FC<{
   const { t } = useTranslation();
   const conversations = useOptionalConversationHistoryContext()?.conversations ?? EMPTY_CONVERSATIONS;
   const subagent = getSubagentMetadata(conversation);
+  const managedChild = getRouterChildMetadata(conversation?.extra);
   useActiveLease({ type: 'conversation', id: subagent ? undefined : conversation?.id });
   const workspaceEnabled = Boolean(conversation?.extra?.workspace) && !conversation?.project_id;
   const cronJobId = resolveCronJobId(conversation?.extra);
@@ -304,8 +312,9 @@ const ChatConversation: React.FC<{
         : [],
     [conversation, conversations, subagent]
   );
-  const isLegacyReadOnlyConversation = Boolean(subagent) || isLegacyReadOnlyConversationType(conversation?.type);
-  const resolvedHideSendBox = hideSendBox || isLegacyReadOnlyConversation;
+  const isLegacyReadOnlyConversation =
+    (Boolean(subagent) && !managedChild) || isLegacyReadOnlyConversationType(conversation?.type);
+  const resolvedHideSendBox = hideSendBox || isLegacyReadOnlyConversation || Boolean(managedChild);
 
   // 使用统一的 Hook 获取预设助手信息（ACP/Codex 会话）
   // Use unified hook for preset assistant info (ACP/Codex conversations)
@@ -340,6 +349,7 @@ const ChatConversation: React.FC<{
             agent_name={assistantDisplayName}
             cron_job_id={cronJobId}
             hideSendBox={resolvedHideSendBox}
+            managedChild={Boolean(managedChild)}
             loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
             loadedMcpServers={(conversation.extra as { mcp_servers?: string[] } | undefined)?.mcp_servers}
             loadedMcpStatuses={
@@ -360,6 +370,7 @@ const ChatConversation: React.FC<{
     assistantDisplayName,
     cronJobId,
     resolvedHideSendBox,
+    managedChild,
     acpAssistantId,
   ]);
 
@@ -378,7 +389,7 @@ const ChatConversation: React.FC<{
   const modelSelector = useMemo(() => {
     if (!conversation || isAionrsConversation) return undefined;
     if (isMobile) return undefined;
-    if (isLegacyReadOnlyConversation) return undefined;
+    if (isLegacyReadOnlyConversation || managedChild) return undefined;
     // Antigravity included: the backend discovers agy's model list and writes it
     // into the same catalog the ACP picker reads, so it must not fall through to
     // the disabled selector below.
@@ -394,10 +405,24 @@ const ChatConversation: React.FC<{
       );
     }
     return <GoogleModelSelector disabled={true} />;
-  }, [conversation, isAionrsConversation, isMobile, isLegacyReadOnlyConversation, resolvedConversationBackend]);
+  }, [
+    conversation,
+    isAionrsConversation,
+    isMobile,
+    isLegacyReadOnlyConversation,
+    resolvedConversationBackend,
+    managedChild,
+  ]);
 
   if (conversation && conversation.type === 'aionrs') {
-    return <AionrsConversationPanel key={conversation.id} conversation={conversation} sliderTitle={sliderTitle} />;
+    return (
+      <AionrsConversationPanel
+        key={conversation.id}
+        conversation={conversation}
+        sliderTitle={sliderTitle}
+        hideSendBox={hideSendBox}
+      />
+    );
   }
 
   // 如果有预设助手信息，使用预设助手的 logo 和名称；加载中时不进入 fallback；否则使用 backend 的 logo

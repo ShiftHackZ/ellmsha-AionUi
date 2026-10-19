@@ -85,7 +85,10 @@
       "completed": "Completado",
       "errored": "Fallido",
       "interrupted": "Interrumpido",
-      "shutdown": "Detenido"
+      "shutdown": "Detenido",
+      "idle": "Inactivo",
+      "unknown": "Estado no disponible",
+      "cancelling": "Deteniéndose"
     }
   },
   "historySearch": {

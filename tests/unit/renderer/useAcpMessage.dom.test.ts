@@ -84,6 +84,15 @@ describe('useAcpMessage', () => {
     responseStreamHandlerRef.current = undefined;
   });
 
+  it('observes host-managed child output with skipWarmup without starting a new runtime', async () => {
+    vi.mocked(getConversationOrNull).mockResolvedValue(null);
+    const { result } = renderHook(() => useAcpMessage('child', { skipWarmup: true }));
+    await waitFor(() => expect(result.current.hasHydratedRunningState).toBe(true));
+    expect(responseStreamOnMock).toHaveBeenCalled();
+    expect(ensureRuntimeInvokeMock).not.toHaveBeenCalled();
+    expect(getSlashCommandsInvokeMock).not.toHaveBeenCalled();
+  });
+
   it('completes hydration when the conversation lookup fails', async () => {
     vi.mocked(getConversationOrNull).mockRejectedValue(new TypeError('Failed to fetch'));
 

@@ -20,7 +20,8 @@ import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/componen
 import AssistantSelectionArea from './components/AssistantSelectionArea';
 import { RouterPolicyButton } from '@/renderer/components/agent/AutoRouter';
 import { useRouterConfig } from '@/renderer/components/agent/AutoRouter/useRouter';
-import type { RouterConfig } from '@/common/types/agent/routerTypes';
+import { activeRouterConfig } from '@/renderer/components/agent/AutoRouter/routerConfigState';
+import type { RouterSettings } from '@/common/types/agent/routerTypes';
 import GuidActionRow from './components/GuidActionRow';
 import GuidInputCard from './components/GuidInputCard';
 import GuidModelSelector from './components/GuidModelSelector';
@@ -257,11 +258,11 @@ const GuidPage: React.FC = () => {
   );
 
   const routerDefaults = useRouterConfig();
-  const [routerOverride, setRouterOverride] = useState<RouterConfig>();
+  const [routerOverride, setRouterOverride] = useState<RouterSettings>();
   const routerConfig = routerOverride ?? routerDefaults.data;
   const isAutoRouter = agentSelection.selectedAssistantBackend === 'auto-router';
   const send = useGuidSend({
-    routerConfig,
+    routerConfig: isAutoRouter && routerConfig ? activeRouterConfig(routerConfig) : undefined,
     routerConfigError: routerDefaults.error,
     // Input state
     input: guidInput.input,

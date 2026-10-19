@@ -85,7 +85,10 @@
       "completed": "완료",
       "errored": "실패",
       "interrupted": "중단됨",
-      "shutdown": "종료됨"
+      "shutdown": "종료됨",
+      "idle": "대기 중",
+      "unknown": "상태 확인 불가",
+      "cancelling": "중지 중"
     }
   },
   "historySearch": {

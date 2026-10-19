@@ -85,7 +85,10 @@
       "completed": "Concluído",
       "errored": "Falhou",
       "interrupted": "Interrompido",
-      "shutdown": "Encerrado"
+      "shutdown": "Encerrado",
+      "idle": "Inativo",
+      "unknown": "Status indisponível",
+      "cancelling": "Parando"
     }
   },
   "historySearch": {

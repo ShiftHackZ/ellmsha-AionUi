@@ -223,6 +223,35 @@ describe('ChatConversation legacy runtime rendering', () => {
     );
   });
 
+  it('uses approval-capable ACP for host-managed children while keeping composer and model controls hidden', () => {
+    const child = {
+      ...legacyConversation('codex'),
+      type: 'acp',
+      extra: {
+        workspace: '/tmp/router-child',
+        backend: 'codex',
+        router_child: {
+          version: 1,
+          root_conversation_id: 'parent',
+          parent_conversation_id: 'parent',
+          parent_turn_id: 'turn',
+          task_id: 'task',
+        },
+        subagent: { parent_conversation_id: 'parent', ref: 'task', status: 'running' },
+      },
+    } as unknown as TChatConversation;
+    render(
+      <MemoryRouter>
+        <ChatConversation conversation={child} />
+      </MemoryRouter>
+    );
+    expect(acpChatMock).toHaveBeenCalledWith(
+      expect.objectContaining({ managedChild: true, hideSendBox: true, conversation_id: child.id })
+    );
+    expect(screen.queryByTestId('mock-acp-model-selector')).not.toBeInTheDocument();
+    expect(screen.queryByText('cron')).not.toBeInTheDocument();
+  });
+
   it('renders persisted subagent history through the read-only surface', () => {
     const child = {
       id: 'subagent:parent:child-thread',

@@ -10,7 +10,7 @@ import classNames from 'classnames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { getSubagentMetadata, isSubagentRunning } from '../../GroupedHistory/types';
+import { getSubagentMetadata, getSubagentDisplayStatus, isSubagentRunning } from '../../GroupedHistory/types';
 import { useContainerWidth } from '../../hooks/useContainerWidth';
 import styles from './SubagentAvatars.module.css';
 
@@ -26,7 +26,7 @@ const SubagentAvatars: React.FC<{ conversations: TChatConversation[] }> = ({ con
   const hidden = conversations.slice(visibleCount);
   const describe = (child: TChatConversation) => {
     const metadata = getSubagentMetadata(child)!;
-    const status = metadata.status ?? 'running';
+    const status = getSubagentDisplayStatus(child);
     return `${metadata.label ?? child.name} · ${t(`conversation.history.subagentStatus.${status}`)}`;
   };
 
@@ -39,7 +39,7 @@ const SubagentAvatars: React.FC<{ conversations: TChatConversation[] }> = ({ con
       {conversations.slice(0, visibleCount).map((child) => {
         const metadata = getSubagentMetadata(child)!;
         const label = metadata.label ?? child.name;
-        const status = metadata.status ?? 'running';
+        const status = getSubagentDisplayStatus(child);
         return (
           <Tooltip key={child.id} content={describe(child)} trigger={['hover', 'focus']}>
             <Button

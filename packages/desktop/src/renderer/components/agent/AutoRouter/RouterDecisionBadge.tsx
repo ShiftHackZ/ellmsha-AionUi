@@ -14,11 +14,19 @@ import {
 
 export const RouterDecisionBadge: React.FC<{ snapshot: RouterSnapshot }> = ({ snapshot }) => {
   const { t } = useTranslation();
-  const { options } = useRouterOptions();
+  const { options } = useRouterOptions(snapshot.config);
   const target = snapshot.decision.target;
-  const label =
-    options.find((option) => option.key === routerTargetKey(target))?.label ??
-    `${target.kind === 'provider' ? target.provider_id : target.agent_id} · ${target.model}`;
+  const option = options.find((entry) => entry.key === routerTargetKey(target));
+  const label = `${option?.label ?? (target.kind === 'provider' ? target.provider_id : target.agent_id)} · ${target.model}`;
+  const reasonLabel = (reason: string) => {
+    if (reason.startsWith('custom_class:')) {
+      const entry = snapshot.config.classes?.find((item) => item.id === reason.slice('custom_class:'.length));
+      return entry
+        ? t('settings.autoRouter.reasons.customClass', { name: entry.name })
+        : t('settings.autoRouter.otherReason');
+    }
+    return t(`settings.autoRouter.reasons.${reason}`, { defaultValue: t('settings.autoRouter.otherReason') });
+  };
   return (
     <Tooltip
       trigger={['hover', 'click', 'focus']}
@@ -38,9 +46,7 @@ export const RouterDecisionBadge: React.FC<{ snapshot: RouterSnapshot }> = ({ sn
             )}
           </span>
           {snapshot.decision.reasons.map((reason) => (
-            <span key={reason}>
-              {t(`settings.autoRouter.reasons.${reason}`, { defaultValue: t('settings.autoRouter.otherReason') })}
-            </span>
+            <span key={reason}>{reasonLabel(reason)}</span>
           ))}
         </div>
       }
