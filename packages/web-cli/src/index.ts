@@ -38,6 +38,7 @@ const packagedLayout = ['aionui-web', 'aionui-web.exe'].includes(path.basename(p
 const integrationRoot = packagedLayout ? cliRoot : path.resolve(cliRoot, '../../..');
 process.env.AIONUI_TDAI_MEMORY_MCP_PATH ||= path.join(cliRoot, 'mcp', 'builtin-mcp-tencent-memory.js');
 process.env.AIONUI_CHAT_HISTORY_MCP_PATH ||= path.join(cliRoot, 'mcp', 'builtin-mcp-chat-history.js');
+process.env.AIONUI_MCP_DISCOVERY_PATH ||= path.join(cliRoot, 'mcp', 'builtin-mcp-discovery.js');
 process.env.ELLM_SHA_BMAD_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'bmad');
 process.env.ELLM_SHA_PONYTAIL_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'ponytail');
 process.env.ELLM_SHA_SKILLS_DIR ||= path.join(cliRoot, 'global-skills', 'ellmsha');

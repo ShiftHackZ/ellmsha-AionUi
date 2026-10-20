@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import Usage from '@/renderer/components/Usage';
 import { ipcBridge } from '@/common';
 import { downloadFileFromPath, downloadTextContent } from '@/renderer/utils/file/download';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -453,6 +454,7 @@ const PreviewPanel: React.FC = () => {
     // Browser tabs are rendered by the always-mounted BrowserTabLayer; rendering
     // them here would reload the page on every tab switch.
     if (content_type === 'browser') return null;
+    if (content_type === 'usage') return <Usage key={content} conversationId={content} />;
 
     // Markdown 模式 / Markdown mode
     if (isMarkdown) {

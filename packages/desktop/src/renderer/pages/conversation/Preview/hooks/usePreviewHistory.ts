@@ -127,7 +127,7 @@ export const usePreviewHistory = ({ activeTab, updateContent }: UsePreviewHistor
 
   // 构建历史目标对象 / Build history target object
   const historyTarget = useMemo<PreviewHistoryTarget | null>(() => {
-    if (!activeTab) return null;
+    if (!activeTab || activeTab.content_type === 'usage') return null;
     const meta = activeTab.metadata;
     const fallbackName = meta?.file_name || meta?.title || activeTab.title;
     return {

@@ -767,6 +767,7 @@ const handleAppReady = async (): Promise<void> => {
   // History is injected per session so its short-lived runtime token and current
   // conversation scope never enter the persisted MCP catalog.
   process.env.AIONUI_CHAT_HISTORY_MCP_PATH = getBuiltinMcpScriptPath('builtin-mcp-chat-history');
+  process.env.AIONUI_MCP_DISCOVERY_PATH = getBuiltinMcpScriptPath('builtin-mcp-discovery');
   process.env.ELLM_SHA_BMAD_SKILLS_DIR ||=
     app.isPackaged && !process.env.ELECTRON_RENDERER_URL
       ? path.join(process.resourcesPath, 'global-skills', 'bmad')

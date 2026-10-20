@@ -11,6 +11,7 @@ import type { PreviewContentType } from '@/common/types/office/preview';
  * Mapping configuration from file extensions to content types
  */
 export const FILE_EXTENSION_MAP: Record<PreviewContentType, readonly string[]> = {
+  usage: [],
   markdown: ['md', 'markdown', 'mdown', 'mkd'],
   html: ['html', 'htm'],
   pdf: ['pdf'],

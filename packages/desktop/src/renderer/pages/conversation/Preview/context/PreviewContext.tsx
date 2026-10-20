@@ -357,6 +357,8 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // title/content fallbacks below would wrongly merge two fresh tabs that
       // happen to share a placeholder title.
       if (type === 'browser') return null;
+      if (type === 'usage')
+        return tabList.find((tab) => tab.content_type === 'usage' && tab.content === content) ?? null;
 
       const normalizedFileName = normalize(meta?.file_name);
       const normalizedTitle = normalize(meta?.title);

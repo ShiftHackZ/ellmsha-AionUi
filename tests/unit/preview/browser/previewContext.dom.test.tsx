@@ -655,3 +655,15 @@ it('reserves popup capacity synchronously across batched native create events', 
   expect(browserTabs()).toHaveLength(MAX_BROWSER_TABS);
   expect(browserTabs().some((tab) => tab.id === 'browser-popup-overflow')).toBe(false);
 });
+
+describe('PreviewContext usage tabs', () => {
+  it('reuses one statistics tab per chat without merging equal titles across chats', () => {
+    renderProvider();
+    act(() => ctx.openPreview('chat-one', 'usage', { title: 'Usage' }, { tabId: 'usage:chat-one' }));
+    act(() => ctx.openPreview('chat-two', 'usage', { title: 'Usage' }, { tabId: 'usage:chat-two' }));
+    act(() => ctx.openPreview('chat-one', 'usage', { title: 'Usage' }, { tabId: 'usage:chat-one' }));
+    expect(ctx.tabs.filter((tab) => tab.content_type === 'usage')).toHaveLength(2);
+    expect(ctx.activeTabId).toBe('usage:chat-one');
+    expect(browserTabs()).toHaveLength(0);
+  });
+});

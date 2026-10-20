@@ -4,6 +4,7 @@ import { type IExtensionSettingsTab } from '@/common/adapter/ipcBridge';
 import { useExtI18n } from '@/renderer/hooks/system/useExtI18n';
 import { useExtensionSettingsTabs } from '@/renderer/hooks/system/useExtensionSettingsTabs';
 import {
+  ChartPie,
   Cat,
   Communication,
   Computer,
@@ -34,6 +35,7 @@ export const BUILTIN_TAB_IDS = [
   'appearance',
   'webui',
   'pet',
+  'usage',
   'system',
   'about',
 ] as const;
@@ -109,6 +111,7 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
         icon: <Toolkit />,
         path: 'tools',
       },
+      usage: { id: 'usage', label: t('settings.usage.title'), icon: <ChartPie />, path: 'usage' },
       memory: { id: 'memory', label: 'Memory', icon: <LinkCloud />, path: 'memory' },
       appearance: { id: 'appearance', label: t('settings.appearancePanel'), icon: <Computer />, path: 'appearance' },
       webui: {

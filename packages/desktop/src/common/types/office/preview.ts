@@ -15,7 +15,8 @@ export type PreviewContentType =
   | 'excel'
   | 'image'
   | 'url'
-  | 'browser';
+  | 'browser'
+  | 'usage';
 
 export interface PreviewHistoryTarget {
   contentType: PreviewContentType;

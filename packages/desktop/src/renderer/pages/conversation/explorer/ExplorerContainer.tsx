@@ -29,6 +29,7 @@ import { dispatchWorkspaceHasFilesEvent } from '@/renderer/utils/workspace/works
 import { ipcBridge } from '@/common';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import { PROJECT_ERROR_DUPLICATE, PROJECT_ERROR_OVERLAP } from '@/common/types/project';
+import { ChartPie } from '@icon-park/react';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
 import WorkspaceOpenButton from '@/renderer/pages/conversation/components/ChatLayout/WorkspaceOpenButton';
 import { getContentTypeByExtension } from '@/renderer/pages/conversation/Preview/fileUtils';
@@ -423,6 +424,25 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
                 aria-label={t('conversation.explorer.codeIndex.title')}
                 aria-pressed={indexOpen}
                 onClick={() => setIndexOpen(true)}
+              />
+            </Tooltip>
+          )}
+          {activeConversationId && (
+            <Tooltip content={t('settings.usage.title')} mini>
+              <Button
+                type='text'
+                size='small'
+                className='!h-28px !w-28px !min-w-28px !p-0 flex items-center justify-center !text-t-secondary'
+                icon={<ChartPie size={16} />}
+                aria-label={t('settings.usage.title')}
+                onClick={() =>
+                  openPreview(
+                    activeConversationId,
+                    'usage',
+                    { title: t('settings.usage.title') },
+                    { tabId: `usage:${activeConversationId}` }
+                  )
+                }
               />
             </Tooltip>
           )}

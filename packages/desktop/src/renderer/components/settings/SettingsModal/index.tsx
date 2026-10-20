@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import Usage from '@/renderer/components/Usage';
 import AionModal from '@/renderer/components/base/AionModal';
 import AionScrollArea from '@/renderer/components/base/AionScrollArea';
 import { iconColors } from '@/renderer/styles/colors';
@@ -56,7 +57,7 @@ const RESIZE_DEBOUNCE_DELAY = 150;
 /**
  * 内置设置标签页类型 / Built-in settings tab type
  */
-export type BuiltinSettingTab = 'model' | 'agent' | 'plugins' | 'tools' | 'webui' | 'system' | 'about';
+export type BuiltinSettingTab = 'model' | 'agent' | 'plugins' | 'tools' | 'webui' | 'system' | 'about' | 'usage';
 
 /**
  * 设置标签页类型（内置 + 扩展）/ Settings tab type (built-in + extension)
@@ -222,6 +223,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
         label: t('settings.system'),
         icon: <Computer theme='outline' size='20' fill={iconColors.secondary} />,
       },
+      { key: 'usage', label: t('settings.usage.title'), icon: <Toolkit theme='outline' size='20' /> },
       { key: 'about', label: t('settings.about'), icon: <Info theme='outline' size='20' fill={iconColors.secondary} /> }
     );
 
@@ -318,6 +320,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
         return <WebuiModalContent />;
       case 'system':
         return <SystemModalContent />;
+      case 'usage':
+        return <Usage />;
       case 'about':
         return <AboutModalContent />;
       default:
