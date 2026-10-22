@@ -9,6 +9,9 @@ import { renderHook, act, cleanup } from '@testing-library/react';
 import React, { type ReactNode } from 'react';
 import { PreviewProvider, usePreviewContext } from '@/renderer/pages/conversation/Preview/context/PreviewContext';
 
+// These legacy preview/workspace tests cover WebUI; native profile identity is tested separately.
+vi.mock('@/renderer/utils/platform', () => ({ isElectronDesktop: () => false }));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     application: {

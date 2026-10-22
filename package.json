@@ -1,6 +1,6 @@
 {
   "name": "AionUi",
-  "version": "2026.10.20-patch.4",
+  "version": "2026.10.22-patch.1",
   "description": "Transform your command-line AI agent into a modern, efficient AI Chat interface.",
   "keywords": [],
   "license": "Apache-2.0",
@@ -112,7 +112,7 @@
     "@wecom/aibot-node-sdk": "^1.0.6",
     "@xmldom/xmldom": "^0.8.11",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^12.4.1",
+    "better-sqlite3": "13.0.3",
     "buffer": "^6.0.3",
     "builder-util-runtime": "9.5.1",
     "classnames": "^2.5.1",
@@ -206,7 +206,7 @@
     "builder-util": "26.15.0",
     "cross-env": "^7.0.3",
     "dotenv": "^17.2.1",
-    "electron": "^37.10.3",
+    "electron": "44.9.2",
     "electron-builder": "26.15.2",
     "electron-builder-squirrel-windows": "26.15.2",
     "electron-devtools-installer": "^4.0.0",
@@ -260,7 +260,7 @@
   },
   "aioncoreVersion": "v0.1.58",
   "electronRebuild": {
-    "electronVersion": "^37.3.1"
+    "electronVersion": "44.9.2"
   },
   "patchedDependencies": {
     "7zip-bin@5.2.0": "patches/7zip-bin@5.2.0.patch"

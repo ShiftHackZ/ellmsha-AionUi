@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback } from 'react';
-import type { PreviewTab, PreviewTabPatch } from '../context/PreviewContext';
+import { usePreviewContext, type PreviewTab, type PreviewTabPatch } from '../context/PreviewContext';
 import BrowserViewer from './BrowserViewer';
 import NativeBrowserViewer from './NativeBrowserViewer';
 import { isElectronDesktop } from '@/renderer/utils/platform';
@@ -38,6 +38,7 @@ export interface BrowserTabLayerProps {
  * so they retain real dimensions and need no relayout when shown again.
  */
 const BrowserTabLayer: React.FC<BrowserTabLayerProps> = ({ browserTabs, activeTabId, updateTab }) => {
+  const { browserProfile } = usePreviewContext();
   const handleUrlChange = useCallback(
     (tabId: string, url: string) => {
       // 地址存在 content 里，与其他 tab 类型保持一致 / Address lives in content, like other tab types
@@ -73,6 +74,8 @@ const BrowserTabLayer: React.FC<BrowserTabLayerProps> = ({ browserTabs, activeTa
             }}
           >
             <Viewer
+              profileToken={browserProfile?.token}
+              profileGeneration={browserProfile?.generation}
               url={tab.content}
               tabId={tab.id}
               active={isActive}

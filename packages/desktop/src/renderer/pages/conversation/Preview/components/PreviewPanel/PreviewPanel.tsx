@@ -294,9 +294,7 @@ const PreviewPanel: React.FC = () => {
   // Desktop restoration must mount hidden native tabs before CDP inventory is ready.
   const displayTab =
     activeTab ?? (isElectronDesktop() ? tabs.find((tab) => tab.content_type === 'browser') : undefined);
-  if (!displayTab || (!isOpen && !isElectronDesktop())) return null;
-
-  const { content, content_type, metadata } = displayTab;
+  const { content = '', content_type = 'code', metadata } = displayTab ?? {};
   const isMarkdown = content_type === 'markdown';
   const isHTML = content_type === 'html';
   const isEditable = metadata?.editable !== false; // 默认可编辑 / Default editable
@@ -408,6 +406,9 @@ const PreviewPanel: React.FC = () => {
       }
     }
   }, [metadata?.file_path, messageApi, t]);
+
+  // Hooks must remain unconditional while profile restoration adds/removes all tabs.
+  if (!displayTab || (!isOpen && !isElectronDesktop())) return null;
 
   // 渲染历史下拉菜单 / Render history dropdown
   const renderHistoryDropdown = () => {

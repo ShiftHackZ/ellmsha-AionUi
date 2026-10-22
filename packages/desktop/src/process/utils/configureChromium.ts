@@ -26,6 +26,7 @@ const isolatedUserDataDir = e2eUserDataDir || ellmshaUserDataDir;
 if (isolatedUserDataDir && isolatedUserDataDir.trim() !== '') {
   fs.mkdirSync(isolatedUserDataDir, { recursive: true });
   app.setPath('userData', isolatedUserDataDir);
+  if (e2eUserDataDir) app.setPath('sessionData', isolatedUserDataDir);
 }
 
 // ============ Environment Separation ============
@@ -90,9 +91,8 @@ if (isWebUI || isResetPassword) {
 // page displayed the reserved number as "the current CDP port" and built copy-pasteable MCP
 // config from it, handing users an address that could never connect.
 //
-// Do not move the bridge onto a fixed port to bring that bookkeeping back: the ephemeral
-// port is the only real barrier against same-user local processes, because the token leaks
-// through the unauthenticated discovery endpoint (see the threat model note in cdpBridge.ts).
+// Discovery and WebSocket connections require a fresh project-scoped capability.
+// The ephemeral loopback listener is not a substitute for that authorization.
 //
 // Configuration file: userData/cdp.config.json
 // - enabled: boolean - whether agent browser control is enabled (default: on)

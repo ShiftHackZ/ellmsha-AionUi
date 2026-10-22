@@ -17,6 +17,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const INTEGRATION_ROOT = path.resolve(ROOT, '..');
+const OUTPUT_DIR = process.env.ELLM_SHA_MCP_OUTPUT_DIR || path.join(ROOT, 'out/main');
 
 function resolveChromeDevtoolsRuntime(options = {}) {
   const env = options.env ?? process.env;
@@ -53,32 +54,32 @@ async function main() {
     esbuild.build({
       ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/mcp-discovery/server.ts')],
-      outfile: path.join(ROOT, 'out/main/builtin-mcp-discovery.js'),
+      outfile: path.join(OUTPUT_DIR, 'builtin-mcp-discovery.js'),
     }),
     esbuild.build({
       ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/imageGenServer.ts')],
-      outfile: path.join(ROOT, 'out/main/builtin-mcp-image-gen.js'),
+      outfile: path.join(OUTPUT_DIR, 'builtin-mcp-image-gen.js'),
     }),
     esbuild.build({
       ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/browserServer.ts')],
-      outfile: path.join(ROOT, 'out/main/builtin-mcp-browser.js'),
+      outfile: path.join(OUTPUT_DIR, 'builtin-mcp-browser.js'),
     }),
     esbuild.build({
       ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/chromeDevtoolsServer.ts')],
-      outfile: path.join(ROOT, 'out/main/builtin-mcp-chrome-devtools.js'),
+      outfile: path.join(OUTPUT_DIR, 'builtin-mcp-chrome-devtools.js'),
     }),
     esbuild.build({
       ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/tencentMemoryServer.ts')],
-      outfile: path.join(ROOT, 'out/main/builtin-mcp-tencent-memory.js'),
+      outfile: path.join(OUTPUT_DIR, 'builtin-mcp-tencent-memory.js'),
     }),
     esbuild.build({
       ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/chatHistoryServer.ts')],
-      outfile: path.join(ROOT, 'out/main/builtin-mcp-chat-history.js'),
+      outfile: path.join(OUTPUT_DIR, 'builtin-mcp-chat-history.js'),
     }),
   ]);
 
@@ -86,7 +87,7 @@ async function main() {
   // Copy the pinned, already-bundled upstream engine beside our launcher so
   // runtime startup never invokes npx or touches a user-level npm cache.
   const chromeDevtoolsSource = resolveChromeDevtoolsRuntime();
-  const chromeDevtoolsOutput = path.join(ROOT, 'out/main/chrome-devtools-mcp');
+  const chromeDevtoolsOutput = path.join(OUTPUT_DIR, 'chrome-devtools-mcp');
   fs.rmSync(chromeDevtoolsOutput, { recursive: true, force: true });
   fs.cpSync(chromeDevtoolsSource, chromeDevtoolsOutput, { recursive: true });
 }

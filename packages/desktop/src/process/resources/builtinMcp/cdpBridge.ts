@@ -1,3 +1,9 @@
+import {
+  browserProfileFromToken,
+  getActiveBrowserProfile,
+  validateBrowserToken,
+  browserSession,
+} from '../../services/browser/profiles';
 import { canOpenBrowserUrl, getBrowserPopup } from '../../services/browser/popups';
 /**
  * @license
@@ -13,9 +19,9 @@ import { canOpenBrowserUrl, getBrowserPopup } from '../../services/browser/popup
 
 import { randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { session, webContents, type Debugger, type WebContents } from 'electron';
+import { webContents, type Debugger, type WebContents } from 'electron';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { BROWSER_SESSION_PARTITION, MAX_BROWSER_TABS } from '@/common/config/constants';
+import { MAX_BROWSER_TABS } from '@/common/config/constants';
 import type { BrowserTabCommand, BrowserTabInventory, BrowserTabRegistration } from '@/common/adapter/ipcBridge';
 import {
   attachedToTargetEvent,
@@ -26,7 +32,6 @@ import {
   isAcceptableSessionId,
   sessionIdForTarget,
   targetCreatedEvent,
-  tokensMatch,
   type CdpEvent,
   type CdpRequest,
   type TargetInfo,
@@ -43,7 +48,6 @@ export type CdpBridgeOptions = {
 
 export type CdpBridgeHandle = {
   port: number;
-  token: string;
   registerTab: (registration: BrowserTabRegistration) => { ok: true } | { ok: false; reason: string };
   updateTabInventory: (inventory: BrowserTabInventory) => { ok: true } | { ok: false; reason: string };
   rejectTabCommand: (tabId: string, reason: string) => void;
@@ -52,18 +56,35 @@ export type CdpBridgeHandle = {
 
 type TargetState = {
   tabId: string;
+  profileId: string;
   contents: WebContents;
   dbg: Debugger;
   active: boolean;
+  executionContexts: Map<number, Record<string, unknown>>;
+  runtimeInitialized: boolean;
+  runtimeQueue: Promise<void>;
   onMessage: (event: unknown, method: string, params: unknown, sessionId: string) => void;
   onDestroyed: () => void;
   onFocus: () => void;
 };
 
 type SocketState = {
+  token: string;
+  profileId: string;
+  events: Array<{
+    event: CdpEvent;
+    runtimeTargetId?: string;
+    runtimeEpoch?: number;
+    delivered: Promise<void>;
+    settle: () => void;
+  }>;
+  eventFlush?: Promise<void>;
   discover: boolean;
   autoAttach: boolean;
   manualSessions: Map<string, string>;
+  runtimeSessions: Map<string, string>;
+  runtimeEpochs: Map<string, number>;
+  nextRuntimeEpoch: number;
 };
 
 type StateWaiter = {
@@ -89,7 +110,6 @@ const writeJson = (res: ServerResponse, body: unknown): void => {
 };
 
 export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBridgeHandle> => {
-  const token = randomBytes(24).toString('hex');
   const targets = new Map<string, TargetState>();
   const socketStates = new Map<WebSocket, SocketState>();
   const waiters = new Set<StateWaiter>();
@@ -99,10 +119,78 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
   let expectedTabIds = new Set<string>();
   let pendingFocus: { target: TargetState; requestId: string; acknowledged: boolean } | undefined;
 
-  const targetInfos = (): TargetInfo[] =>
-    [...targets.values()].map((target) =>
-      buildTargetInfo(target.tabId, target.contents.getTitle(), target.contents.getURL(), target.active)
-    );
+  const sendScopedCommand = (command: BrowserTabCommand): void => {
+    const profile = getActiveBrowserProfile();
+    if (!profile) throw new Error('Browser profile is unresolved.');
+    options.sendTabCommand({ ...command, profileId: profile.profileId, generation: profile.generation });
+  };
+  const targetInfos = (profileId?: string): TargetInfo[] =>
+    [...targets.values()]
+      .filter((target) => target.profileId === profileId)
+      .map((target) =>
+        buildTargetInfo(
+          target.tabId,
+          target.contents.getTitle(),
+          target.contents.getURL(),
+          target.active,
+          target.profileId
+        )
+      );
+  const assertVisible = (profileId: string): void => {
+    if (getActiveBrowserProfile()?.profileId !== profileId)
+      throw new Error('This browser profile is not visible. Open its conversation first.');
+  };
+  const authorizedEvent = (ws: WebSocket, state: SocketState, event: CdpEvent, runtimeTargetId?: string): void => {
+    // Bound memory and preserve Chromium event order behind one fresh ownership
+    // read per batch. Never let independently resolving HTTP requests reorder CDP.
+    if (state.events.length >= 1024) {
+      ws.close(1008, 'Browser event queue overflow');
+      return;
+    }
+    let settle!: () => void;
+    const delivered = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    state.events.push({
+      event,
+      runtimeTargetId,
+      runtimeEpoch: runtimeTargetId ? state.runtimeEpochs.get(event.sessionId ?? '') : undefined,
+      delivered,
+      settle,
+    });
+    if (state.eventFlush) return;
+    state.eventFlush = (async () => {
+      while (state.events.length) {
+        const profileId = await validateBrowserToken(state.token);
+        if (socketStates.get(ws) !== state || profileId !== state.profileId)
+          throw new Error('Browser ownership changed.');
+        assertVisible(profileId);
+        const batch = state.events.splice(0);
+        for (const { event, runtimeTargetId, runtimeEpoch, settle } of batch) {
+          if (
+            !runtimeTargetId ||
+            (state.runtimeSessions.get(event.sessionId ?? '') === runtimeTargetId &&
+              state.runtimeEpochs.get(event.sessionId ?? '') === runtimeEpoch)
+          )
+            sendEvent(ws, event);
+          settle();
+        }
+      }
+    })()
+      .catch(() => {
+        for (const queued of state.events) queued.settle();
+        state.events.length = 0;
+        ws.close(1008, 'Browser ownership unavailable');
+      })
+      .finally(() => {
+        state.eventFlush = undefined;
+      });
+  };
+  // Snapshot a finite watermark: a noisy page must not keep command replies
+  // waiting for the event stream to become idle.
+  const waitForQueuedEvents = async (state: SocketState): Promise<void> => {
+    await Promise.all(state.events.map((queued) => queued.delivered));
+  };
 
   const notifyWaiters = (): void => {
     for (const waiter of [...waiters]) {
@@ -157,10 +245,17 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     );
 
   const announceTarget = (target: TargetState): void => {
-    const info = buildTargetInfo(target.tabId, target.contents.getTitle(), target.contents.getURL(), target.active);
+    const info = buildTargetInfo(
+      target.tabId,
+      target.contents.getTitle(),
+      target.contents.getURL(),
+      target.active,
+      target.profileId
+    );
     for (const [ws, state] of socketStates) {
-      if (state.discover) sendEvent(ws, targetCreatedEvent(info));
-      if (state.autoAttach) sendEvent(ws, attachedToTargetEvent(info));
+      if (state.profileId !== target.profileId) continue;
+      if (state.discover) authorizedEvent(ws, state, targetCreatedEvent(info));
+      if (state.autoAttach) authorizedEvent(ws, state, attachedToTargetEvent(info));
     }
   };
 
@@ -188,8 +283,14 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     if (activeTargetId === tabId) activeTargetId = null;
     detachTarget(target);
     for (const [ws, state] of socketStates) {
+      if (state.profileId !== target.profileId) continue;
+      for (const [runtimeSessionId, runtimeTargetId] of state.runtimeSessions)
+        if (runtimeTargetId === tabId) {
+          state.runtimeSessions.delete(runtimeSessionId);
+          state.runtimeEpochs.delete(runtimeSessionId);
+        }
       if (state.autoAttach) {
-        sendEvent(ws, {
+        authorizedEvent(ws, state, {
           method: 'Target.detachedFromTarget',
           params: { sessionId: sessionIdForTarget(tabId), targetId: tabId },
         });
@@ -197,9 +298,9 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       for (const [sessionId, targetId] of [...state.manualSessions]) {
         if (targetId !== tabId) continue;
         state.manualSessions.delete(sessionId);
-        sendEvent(ws, { method: 'Target.detachedFromTarget', params: { sessionId, targetId: tabId } });
+        authorizedEvent(ws, state, { method: 'Target.detachedFromTarget', params: { sessionId, targetId: tabId } });
       }
-      if (state.discover) sendEvent(ws, { method: 'Target.targetDestroyed', params: { targetId: tabId } });
+      if (state.discover) authorizedEvent(ws, state, { method: 'Target.targetDestroyed', params: { targetId: tabId } });
     }
     notifyWaiters();
   };
@@ -216,10 +317,11 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     if (contents.getType() !== 'webview' && !getBrowserPopup(tabId, contents.id)) {
       return { ok: false, reason: 'Only an in-app browser webview may be exposed.' };
     }
-    if (contents.session !== session.fromPartition(BROWSER_SESSION_PARTITION)) {
+    const native = getBrowserPopup(tabId, contents.id);
+    const profileId = native?.profileId ?? getActiveBrowserProfile()?.profileId;
+    if (!profileId || contents.session !== browserSession(profileId)) {
       return { ok: false, reason: 'The webview does not belong to the in-app browser session.' };
     }
-    const native = getBrowserPopup(tabId, contents.id);
     if (native && (registration.mountId !== native.mountId || (active && !native.active))) {
       return { ok: false, reason: 'The native browser attachment is stale or hidden.' };
     }
@@ -256,19 +358,53 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     }
 
     const onMessage = (_event: unknown, method: string, params: unknown, _sessionId: string): void => {
+      if (method.startsWith('Target.') || _sessionId) return;
       const eventParams = params && typeof params === 'object' ? (params as Record<string, unknown>) : {};
+      if (method === 'Runtime.executionContextsCleared') target.executionContexts.clear();
+      else if (method === 'Runtime.executionContextDestroyed') {
+        target.executionContexts.delete(eventParams.executionContextId as number);
+      } else if (method === 'Runtime.executionContextCreated') {
+        const context = eventParams.context as Record<string, unknown> | undefined;
+        if (typeof context?.id === 'number') target.executionContexts.set(context.id, context);
+      }
       for (const [ws, state] of socketStates) {
+        if (state.profileId !== target.profileId) continue;
+        if (method.startsWith('Runtime.')) {
+          for (const [runtimeSessionId, runtimeTargetId] of state.runtimeSessions) {
+            if (runtimeTargetId === tabId)
+              authorizedEvent(
+                ws,
+                state,
+                { method, params: eventParams, sessionId: runtimeSessionId || undefined },
+                tabId
+              );
+          }
+          continue;
+        }
         if (state.autoAttach) {
-          sendEvent(ws, { method, params: eventParams, sessionId: sessionIdForTarget(tabId) });
+          authorizedEvent(ws, state, { method, params: eventParams, sessionId: sessionIdForTarget(tabId) });
         }
         for (const [manualSessionId, targetId] of state.manualSessions) {
-          if (targetId === tabId) sendEvent(ws, { method, params: eventParams, sessionId: manualSessionId });
+          if (targetId === tabId)
+            authorizedEvent(ws, state, { method, params: eventParams, sessionId: manualSessionId });
         }
       }
     };
     const onDestroyed = (): void => removeTarget(tabId, contents);
     const onFocus = (): void => notifyWaiters();
-    const target: TargetState = { tabId, contents, dbg, active, onMessage, onDestroyed, onFocus };
+    const target: TargetState = {
+      tabId,
+      profileId,
+      contents,
+      dbg,
+      active,
+      onMessage,
+      onDestroyed,
+      onFocus,
+      executionContexts: new Map(),
+      runtimeInitialized: false,
+      runtimeQueue: Promise.resolve(),
+    };
     dbg.on('message', onMessage);
     contents.once('destroyed', onDestroyed);
     contents.on('focus', onFocus);
@@ -318,9 +454,13 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     return task;
   };
 
-  const createTarget = (url: string, background: boolean): Promise<string> =>
+  const createTarget = (url: string, background: boolean, scopeToken: string, profileId: string): Promise<string> =>
     runLifecycle(async () => {
+      await validateBrowserToken(scopeToken);
+      assertVisible(profileId);
       await waitForInventory();
+      await validateBrowserToken(scopeToken);
+      assertVisible(profileId);
       if (targets.size >= MAX_BROWSER_TABS) {
         throw new Error(`The in-app browser already has its maximum of ${MAX_BROWSER_TABS} tabs.`);
       }
@@ -330,7 +470,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
         `Timed out waiting for in-app browser tab ${tabId} to be created.`,
         tabId
       );
-      options.sendTabCommand({ action: 'create', tabId, url, activate: !background });
+      sendScopedCommand({ action: 'create', tabId, url, activate: !background });
       await registered;
       return tabId;
     });
@@ -401,7 +541,7 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     // frame changes. Observe that native state until the bounded waiter settles.
     const focusPoll = setInterval(notifyWaiters, 16);
     try {
-      options.sendTabCommand({ action: 'focus', tabId: target.tabId, requestId: request.requestId });
+      sendScopedCommand({ action: 'focus', tabId: target.tabId, requestId: request.requestId });
       await focused;
     } catch (error) {
       rejectTabCommand(target.tabId, error instanceof Error ? error.message : String(error));
@@ -416,16 +556,20 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     }
   };
 
-  const activateTarget = (targetId: string): Promise<void> =>
+  const activateTarget = (targetId: string, scopeToken: string, profileId: string): Promise<void> =>
     runLifecycle(async () => {
+      await validateBrowserToken(scopeToken);
+      assertVisible(profileId);
       await waitForInventory();
-      if (!targets.has(targetId)) throw new Error(`No such in-app browser tab: ${targetId}`);
+      await validateBrowserToken(scopeToken);
+      assertVisible(profileId);
+      if (targets.get(targetId)?.profileId !== profileId) throw new Error(`No such in-app browser tab: ${targetId}`);
       const activated = waitForState(
         () => activeTargetId === targetId,
         `Timed out waiting for in-app browser tab ${targetId} to become visible.`,
         targetId
       );
-      options.sendTabCommand({ action: 'activate', tabId: targetId });
+      sendScopedCommand({ action: 'activate', tabId: targetId });
       await activated;
       const target = targets.get(targetId);
       if (!target) throw new Error(`No such in-app browser tab: ${targetId}`);
@@ -433,21 +577,26 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       await focusTarget(target);
     });
 
-  const closeTarget = (targetId: string): Promise<void> =>
+  const closeTarget = (targetId: string, scopeToken: string, profileId: string): Promise<void> =>
     runLifecycle(async () => {
+      await validateBrowserToken(scopeToken);
+      assertVisible(profileId);
       await waitForInventory();
-      if (!targets.has(targetId)) throw new Error(`No such in-app browser tab: ${targetId}`);
+      await validateBrowserToken(scopeToken);
+      assertVisible(profileId);
+      if (targets.get(targetId)?.profileId !== profileId) throw new Error(`No such in-app browser tab: ${targetId}`);
       const closed = waitForState(
         () => !targets.has(targetId),
         `Timed out waiting for in-app browser tab ${targetId} to close.`,
         targetId
       );
-      options.sendTabCommand({ action: 'close', tabId: targetId });
+      sendScopedCommand({ action: 'close', tabId: targetId });
       await closed;
     });
 
-  const forwardTarget = (): TargetState | undefined =>
-    (activeTargetId ? targets.get(activeTargetId) : undefined) ?? targets.values().next().value;
+  const forwardTarget = (profileId: string): TargetState | undefined =>
+    [...targets.values()].find((target) => target.profileId === profileId && target.active) ??
+    [...targets.values()].find((target) => target.profileId === profileId);
 
   const handleSocketMessage = async (ws: WebSocket, raw: string): Promise<void> => {
     let req: CdpRequest;
@@ -460,8 +609,17 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     const { id, method, params, sessionId } = req;
     if (!method) return;
 
-    const infos = targetInfos();
     const socketState = socketStates.get(ws);
+    if (!socketState) return;
+    const profileId = socketState.profileId;
+    try {
+      await validateBrowserToken(socketState.token);
+      assertVisible(profileId);
+    } catch {
+      sendError(ws, id, 'Browser profile unavailable or ownership changed.', -32000, sessionId);
+      return;
+    }
+    const infos = targetInfos(profileId);
     if (!isAcceptableSessionId(sessionId, infos, socketState?.manualSessions)) {
       sendError(ws, id, `Unknown or stale sessionId: ${sessionId}`, -32000, sessionId);
       return;
@@ -472,6 +630,12 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
     }
     if (socketState && method === 'Target.setAutoAttach' && !sessionId) {
       socketState.autoAttach = params?.autoAttach === true;
+      if (!socketState.autoAttach)
+        for (const runtimeSessionId of socketState.runtimeSessions.keys())
+          if (runtimeSessionId.startsWith('aionui-browser-session:')) {
+            socketState.runtimeSessions.delete(runtimeSessionId);
+            socketState.runtimeEpochs.delete(runtimeSessionId);
+          }
     }
 
     try {
@@ -482,30 +646,36 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       ) {
         await waitForInventory();
       }
-      const decision = decideCdpCommand(req, targetInfos, socketState?.manualSessions);
+      await validateBrowserToken(socketState.token);
+      assertVisible(profileId);
+      const decision = decideCdpCommand(req, () => targetInfos(profileId), socketState.manualSessions, profileId);
       if (decision.kind === 'error') {
         sendError(ws, id, decision.message, -32601, sessionId);
         return;
       }
       if (decision.kind === 'reply' || decision.kind === 'reply-and-emit') {
         if (decision.kind === 'reply-and-emit') {
-          for (const event of decision.emit) sendEvent(ws, event);
+          for (const event of decision.emit) authorizedEvent(ws, socketState, event);
+          await waitForQueuedEvents(socketState);
         }
         ws.send(JSON.stringify({ id, result: decision.payload, sessionId }));
         return;
       }
       if (decision.kind === 'attach-target') {
         if (!socketState) throw new Error('Browser control socket is unavailable.');
-        const info = targetInfos().find((target) => target.targetId === decision.targetId);
+        const info = targetInfos(profileId).find((target) => target.targetId === decision.targetId);
         if (!info) throw new Error(`No such in-app browser tab: ${decision.targetId}`);
         const manualSessionId = `aionui-browser-manual:${randomBytes(12).toString('hex')}`;
         socketState.manualSessions.set(manualSessionId, decision.targetId);
-        sendEvent(ws, attachedToTargetEvent(info, manualSessionId));
+        authorizedEvent(ws, socketState, attachedToTargetEvent(info, manualSessionId));
+        await waitForQueuedEvents(socketState);
         ws.send(JSON.stringify({ id, result: { sessionId: manualSessionId }, sessionId }));
         return;
       }
       if (decision.kind === 'detach-session') {
         socketState?.manualSessions.delete(decision.sessionId);
+        socketState.runtimeSessions.delete(decision.sessionId);
+        socketState.runtimeEpochs.delete(decision.sessionId);
         sendEvent(ws, {
           method: 'Target.detachedFromTarget',
           params: { sessionId: decision.sessionId },
@@ -514,22 +684,22 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
         return;
       }
       if (decision.kind === 'create-target') {
-        const targetId = await createTarget(decision.url, decision.background);
+        const targetId = await createTarget(decision.url, decision.background, socketState.token, profileId);
         ws.send(JSON.stringify({ id, result: { targetId }, sessionId }));
         return;
       }
       if (decision.kind === 'activate-target') {
-        await activateTarget(decision.targetId);
+        await activateTarget(decision.targetId, socketState.token, profileId);
         ws.send(JSON.stringify({ id, result: {}, sessionId }));
         return;
       }
       if (decision.kind === 'close-target') {
-        await closeTarget(decision.targetId);
+        await closeTarget(decision.targetId, socketState.token, profileId);
         ws.send(JSON.stringify({ id, result: { success: true }, sessionId }));
         return;
       }
 
-      const target = decision.targetId ? targets.get(decision.targetId) : forwardTarget();
+      const target = decision.targetId ? targets.get(decision.targetId) : forwardTarget(profileId);
       if (!target || target.contents.isDestroyed()) {
         sendError(
           ws,
@@ -543,6 +713,10 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
         return;
       }
       const dispatch = async (): Promise<unknown> => {
+        await validateBrowserToken(socketState.token);
+        assertVisible(profileId);
+        if (target.profileId !== profileId || targets.get(target.tabId) !== target)
+          throw new Error('Foreign or stale browser target.');
         if (
           method === 'Page.navigate' &&
           getBrowserPopup(target.tabId, target.contents.id) &&
@@ -568,8 +742,68 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
             throw new Error(`Browser tab ${target.tabId} could not receive input focus. No input was sent.`);
           }
         }
+        await validateBrowserToken(socketState.token);
+        assertVisible(profileId);
+        if (targets.get(target.tabId) !== target) throw new Error('Stale browser target.');
+        if (method.startsWith('Input.') && (!hasTargetInputFocus(target) || activeTargetId !== target.tabId))
+          throw new Error('Browser input focus changed. No input was sent.');
         return target.dbg.sendCommand(method, params ?? {});
       };
+      if (method === 'Runtime.enable' || method === 'Runtime.disable') {
+        // Virtual sessions share one Electron debugger. Chromium emits existing
+        // contexts only on the physical domain's first enable, so each new
+        // subscriber needs its own current-context bootstrap (not a global reset).
+        const runtimeSessionId = sessionId ?? '';
+        const operation = target.runtimeQueue.then(async () => {
+          await validateBrowserToken(socketState.token);
+          assertVisible(profileId);
+          if (targets.get(target.tabId) !== target) throw new Error('Stale browser target.');
+          if (method === 'Runtime.disable') {
+            socketState.runtimeSessions.delete(runtimeSessionId);
+            socketState.runtimeEpochs.delete(runtimeSessionId);
+            return;
+          }
+          if (socketState.runtimeSessions.get(runtimeSessionId) === target.tabId) return;
+          const initialEnable = !target.runtimeInitialized;
+          // Preserve Chromium's initial console/error replay as well as contexts.
+          if (initialEnable) {
+            socketState.runtimeSessions.set(runtimeSessionId, target.tabId);
+            socketState.runtimeEpochs.set(runtimeSessionId, ++socketState.nextRuntimeEpoch);
+          }
+          try {
+            await dispatch();
+            target.runtimeInitialized = true;
+            await validateBrowserToken(socketState.token);
+            assertVisible(profileId);
+            if (targets.get(target.tabId) !== target) throw new Error('Stale browser target.');
+            if (!isAcceptableSessionId(sessionId, targetInfos(profileId), socketState.manualSessions))
+              throw new Error('Stale browser session.');
+            socketState.runtimeSessions.set(runtimeSessionId, target.tabId);
+            if (!initialEnable) socketState.runtimeEpochs.set(runtimeSessionId, ++socketState.nextRuntimeEpoch);
+            if (!initialEnable)
+              for (const context of target.executionContexts.values())
+                authorizedEvent(
+                  ws,
+                  socketState,
+                  {
+                    method: 'Runtime.executionContextCreated',
+                    params: { context },
+                    sessionId,
+                  },
+                  target.tabId
+                );
+          } catch (error) {
+            socketState.runtimeSessions.delete(runtimeSessionId);
+            socketState.runtimeEpochs.delete(runtimeSessionId);
+            throw error;
+          }
+          await waitForQueuedEvents(socketState);
+        });
+        target.runtimeQueue = operation.catch(() => {});
+        await operation;
+        ws.send(JSON.stringify({ id, result: {}, sessionId }));
+        return;
+      }
       const result = method.startsWith('Input.') ? await runLifecycle(dispatch) : await dispatch();
       ws.send(JSON.stringify({ id, result: result ?? {}, sessionId }));
     } catch (error) {
@@ -578,37 +812,61 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
   };
 
   let port = 0;
+  const parseScope = (request: IncomingMessage) => {
+    if (request.headers.origin) throw new Error('Cross-origin CDP access denied.');
+    const url = new URL(request.url ?? '/', `http://${HOST}`);
+    const match = /^\/scope\/([^/]+)(\/.*)$/.exec(url.pathname);
+    if (!match) throw new Error('Scoped browser authorization required.');
+    const scopeToken = decodeURIComponent(match[1]);
+    return { token: scopeToken, profileId: browserProfileFromToken(scopeToken).id, path: match[2] };
+  };
   const httpServer: Server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    const url = new URL(req.url ?? '/', `http://${HOST}`);
-    const wsUrl = `ws://${HOST}:${port}${WS_PATH}?token=${token}`;
-
-    if (url.pathname === '/json/version') {
-      writeJson(res, buildVersionPayload(wsUrl, process.versions.chrome ?? '0.0.0.0'));
-      return;
-    }
-    if (url.pathname === '/json/list' || url.pathname === '/json') {
-      writeJson(res, buildListPayload(wsUrl, targetInfos()));
-      return;
-    }
-    res.writeHead(404).end('not found');
+    void (async () => {
+      const scope = parseScope(req);
+      await validateBrowserToken(scope.token);
+      assertVisible(scope.profileId);
+      const wsUrl = `ws://${HOST}:${port}/scope/${encodeURIComponent(scope.token)}${WS_PATH}`;
+      res.setHeader('Cache-Control', 'no-store');
+      if (scope.path === '/json/version')
+        writeJson(res, buildVersionPayload(wsUrl, process.versions.chrome ?? '0.0.0.0'));
+      else if (scope.path === '/json/list' || scope.path === '/json')
+        writeJson(res, buildListPayload(wsUrl, targetInfos(scope.profileId)));
+      else res.writeHead(404).end('not found');
+    })().catch(() => {
+      if (!res.headersSent) res.writeHead(403);
+      res.end('forbidden');
+    });
   });
 
   const wss = new WebSocketServer({ noServer: true });
   httpServer.on('upgrade', (req, socket, head) => {
-    const url = new URL(req.url ?? '/', `http://${HOST}`);
-    if (url.pathname !== WS_PATH || !tokensMatch(token, url.searchParams.get('token') ?? '')) {
+    void (async () => {
+      const scope = parseScope(req);
+      if (scope.path !== WS_PATH) throw new Error('Invalid CDP endpoint');
+      await validateBrowserToken(scope.token);
+      assertVisible(scope.profileId);
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        socketStates.set(ws, {
+          token: scope.token,
+          profileId: scope.profileId,
+          events: [],
+          discover: false,
+          autoAttach: false,
+          manualSessions: new Map(),
+          runtimeSessions: new Map(),
+          runtimeEpochs: new Map(),
+          nextRuntimeEpoch: 0,
+        });
+        ws.on('message', (data) => void handleSocketMessage(ws, data.toString()));
+        const forget = (): void => {
+          socketStates.delete(ws);
+        };
+        ws.on('close', forget);
+        ws.on('error', forget);
+      });
+    })().catch(() => {
       socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
       socket.destroy();
-      return;
-    }
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      socketStates.set(ws, { discover: false, autoAttach: false, manualSessions: new Map() });
-      ws.on('message', (data) => void handleSocketMessage(ws, data.toString()));
-      const forget = (): void => {
-        socketStates.delete(ws);
-      };
-      ws.on('close', forget);
-      ws.on('error', forget);
     });
   });
 
@@ -623,7 +881,6 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
 
   return {
     port,
-    token,
     registerTab,
     updateTabInventory,
     rejectTabCommand,

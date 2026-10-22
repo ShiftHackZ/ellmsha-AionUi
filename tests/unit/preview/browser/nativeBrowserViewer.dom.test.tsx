@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   stateHandlers: new Set<(state: unknown) => void>(),
   command: undefined as ((command: unknown) => void) | undefined,
 }));
+vi.mock('@/renderer/pages/conversation/Preview/context/PreviewContext', () => ({
+  usePreviewContext: () => ({ browserProfile: { token: 'scoped-token' } }),
+}));
 vi.mock('@/common', () => ({
   ipcBridge: {
     application: {
@@ -76,6 +79,7 @@ const state = {
   canGoForward: false,
 };
 const props = {
+  profileToken: 'scoped-token',
   tabId: state.tabId,
   url: state.url,
   active: true,

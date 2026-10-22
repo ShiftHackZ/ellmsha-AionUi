@@ -18,7 +18,7 @@ type Attachment = {
 
 /** Main owns the page; this component owns its toolbar, visible bounds and attachment lease. */
 const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boolean }> = (props) => {
-  const { tabId, url, active } = props;
+  const { tabId, url, active, profileToken, profileGeneration } = props;
   const { t } = useTranslation();
   const area = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
@@ -29,6 +29,7 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
   const lastReportedUrl = useRef(url);
   const [state, setState] = useState<BrowserPopupState>();
   const [failure, setFailure] = useState(false);
+  const [capacityBlocked, setCapacityBlocked] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [address, setAddress] = useState(url);
 
@@ -52,7 +53,12 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
       const owner = attachment.current;
       if (!owner || !(await owner.ready) || !owner.alive || attachment.current !== owner) return;
       try {
-        const result = await ipcBridge.application.browserPopup.invoke({ ...command, mountId: owner.mountId });
+        const result = await ipcBridge.application.browserPopup.invoke({
+          ...command,
+          mountId: owner.mountId,
+          profileToken: latest.current.profileToken,
+          generation: latest.current.profileGeneration,
+        });
         if (!owner.alive || attachment.current !== owner) return;
         if (result.success && result.data) receive(result.data);
         else setFailure(true);
@@ -77,6 +83,7 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
     attachment.current = owner;
     setState(undefined);
     setFailure(false);
+    setCapacityBlocked(false);
     navigation.current.clear();
     lastPropUrl.current = latest.current.url;
     lastReportedUrl.current = latest.current.url;
@@ -84,12 +91,16 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
     const fail = async (reason: string) => {
       if (!isCurrent()) return;
       setFailure(true);
+      setCapacityBlocked(/already has its maximum of \d+ tabs/.test(reason));
       await ipcBridge.application.reportBrowserTabCommandFailure.invoke({ tabId, reason }).catch(() => {});
     };
     const ensure = async (): Promise<boolean> => {
       try {
+        if (!profileToken) throw new Error('Browser profile is unresolved.');
         const result = await ipcBridge.application.browserPopup.invoke({
           action: 'ensure',
+          profileToken,
+          generation: profileGeneration,
           tabId,
           url: latest.current.url,
           requireExisting: latest.current.requireExisting === true,
@@ -156,6 +167,8 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
         .invoke({
           tabId,
           webContentsId: result.data.webContentsId,
+          profileToken,
+          generation: profileGeneration,
           mountId: owner.mountId,
           active: visible,
         })
@@ -198,6 +211,8 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
           await ipcBridge.application.reportBrowserWebContentsId.invoke({
             tabId,
             webContentsId: result.data.webContentsId,
+            profileToken,
+            generation: profileGeneration,
             mountId: owner.mountId,
             active: true,
             focusRequestId: command.requestId,
@@ -220,10 +235,10 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
       unsubscribeState();
       unsubscribeCommand();
       void ipcBridge.application.browserPopup
-        .invoke({ action: 'dispose', tabId, mountId: owner.mountId })
+        .invoke({ action: 'dispose', tabId, mountId: owner.mountId, profileToken, generation: profileGeneration })
         .catch(() => {});
     };
-  }, [tabId, attempt, invoke, receive]);
+  }, [tabId, attempt, invoke, receive, profileToken, profileGeneration]);
 
   useEffect(() => {
     void attachment.current?.sync();
@@ -295,7 +310,7 @@ const NativeBrowserViewer: React.FC<BrowserViewerProps & { requireExisting?: boo
       </div>
       {failure && (
         <div role='status' className='flex items-center gap-8px px-10px py-6px text-t-secondary'>
-          <span>{t('preview.browser.loadFailed')}</span>
+          <span>{capacityBlocked ? t('settings.browserData.capacityRecovery') : t('preview.browser.loadFailed')}</span>
           <Button size='mini' onClick={retry}>
             {t('common.retry')}
           </Button>

@@ -14,6 +14,8 @@ import {
 } from './constants';
 
 export interface BrowserViewerProps {
+  profileToken?: string;
+  profileGeneration?: number;
   /** Desktop live popup adoption must preserve the original native contents. */
   requireExisting?: boolean;
   /** 该 tab 当前地址 / Current address of this tab */

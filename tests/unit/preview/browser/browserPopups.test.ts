@@ -10,9 +10,13 @@ import {
   getBrowserPopup,
   registerBrowserPopupOpener,
   reconcileBrowserTabs,
+  hideForeignBrowserProfiles,
+  closeSuspendedBrowserTabs,
+  countBrowserProfileTabs,
 } from '@/process/services/browser/popups';
 const mocks = vi.hoisted(() => ({
   session: {},
+  profile: 'profile-a',
   events: [] as Array<Record<string, unknown>>,
   views: [] as FakeView[],
 }));
@@ -45,6 +49,12 @@ class FakeView {
     mocks.views.push(this);
   }
 }
+vi.mock('@/process/services/browser/profiles', () => ({
+  browserSession: () => mocks.session,
+  getActiveBrowserProfile: () => ({ profileId: mocks.profile, generation: 1 }),
+  requireBrowserProfile: () => ({ profileId: mocks.profile }),
+  bindBrowserAuthHost: () => undefined,
+}));
 vi.mock('electron', () => ({
   session: { fromPartition: () => mocks.session },
   WebContentsView: function (options: unknown) {
@@ -76,6 +86,7 @@ afterEach(() => {
   for (const view of mocks.views) if (!view.webContents.destroyed) view.webContents.close();
   mocks.views.length = 0;
   mocks.events.length = 0;
+  mocks.profile = 'profile-a';
   vi.useRealTimers();
 });
 describe('native popup tabs', () => {
@@ -90,7 +101,9 @@ describe('native popup tabs', () => {
     const child = decision.createWindow(options);
     const created = mocks.events.find((event) => event.action === 'adopt')!;
     expect(created).toMatchObject({ openerTabId: 'source-tab', url: 'https://fixture.test/post', activate: true });
-    expect(mocks.views[0].options).toBe(options);
+    expect(mocks.views[0].options).toMatchObject({
+      webPreferences: { session: mocks.session, sandbox: true, contextIsolation: true },
+    });
     expect(getBrowserPopup(String(created.tabId), child.id)?.view.webContents).toBe(child);
     expect(child.loadURL).not.toHaveBeenCalled();
   });
@@ -126,7 +139,7 @@ describe('native popup tabs', () => {
     child.close();
     expect(getBrowserPopup(tabId)).toBeUndefined();
     expect(host.contentView.removeChildView).toHaveBeenCalledOnce();
-    expect(mocks.events.at(-1)).toEqual({ action: 'close', tabId });
+    expect(mocks.events.at(-1)).toEqual({ action: 'close', tabId, profileId: 'profile-a', generation: 1 });
   });
   it('keeps independent tabs when opener closes and cancels disposal on immediate remount', () => {
     vi.useFakeTimers();
@@ -289,11 +302,12 @@ describe('ordinary native browser tabs', () => {
     expect(getBrowserPopup('ordinary')?.view.webContents.isDestroyed()).toBe(false);
   });
 
-  it('reclaims obsolete scope capacity without sending close events into the next scope', () => {
+  it('suspends without destroying live pages or exceeding bounded global capacity', () => {
     const { host } = setup();
     for (let i = 0; i < MAX_BROWSER_TABS; i++) ensure(host, `old-${i}`);
     reconcileBrowserTabs(host, { ready: false, tabIds: [] });
-    expect(() => ensure(host, 'new-scope')).not.toThrow();
+    expect(() => ensure(host, 'new-scope')).toThrow('maximum');
+    expect(getBrowserPopup('old-0')).toBeDefined();
     expect(mocks.events.filter((event) => event.action === 'close')).toEqual([]);
   });
 
@@ -317,12 +331,58 @@ describe('ordinary native browser tabs', () => {
     for (let i = 0; i < MAX_BROWSER_TABS; i++) ensure(host, `old-${i}`);
     const old = mocks.views[0].webContents;
     old.close.mockImplementation(() => {});
-    reconcileBrowserTabs(host, { ready: false, tabIds: [] });
+    reconcileBrowserTabs(host, { ready: true, tabIds: Array.from({ length: MAX_BROWSER_TABS }, (_, i) => `old-${i}`) });
+    reconcileBrowserTabs(host, { ready: true, tabIds: [] });
     expect(getBrowserPopup('old-0')).toBeUndefined();
     for (let i = 0; i < MAX_BROWSER_TABS; i++) expect(() => ensure(host, `new-${i}`)).not.toThrow();
     old.destroyed = true;
     old.emit('destroyed');
     expect(getBrowserPopup('new-0')).toBeDefined();
+  });
+
+  it('retains POST popup contents/opener across A → B → A without any new navigation', () => {
+    const { host, handler } = setup();
+    ensure(host, 'ordinary');
+    const child = handler({ url: 'https://fixture.test/post', postBody: { data: [] } }).createWindow({});
+    const popupId = String(mocks.events.find((event) => event.action === 'adopt')!.tabId);
+    reconcileBrowserTabs(host, { ready: true, tabIds: ['ordinary', popupId] });
+    mocks.profile = 'profile-b';
+    hideForeignBrowserProfiles(mocks.profile);
+    reconcileBrowserTabs(host, { ready: true, tabIds: ['b'] });
+    ensure(host, 'b');
+    expect(child.destroyed).toBe(false);
+    expect(getBrowserPopup(popupId)?.active).toBe(false);
+    expect(() => controlBrowserPopup(host, { action: 'reload', tabId: popupId })).toThrow('another profile');
+    mocks.profile = 'profile-a';
+    hideForeignBrowserProfiles(mocks.profile);
+    reconcileBrowserTabs(host, { ready: true, tabIds: ['ordinary', popupId] });
+    controlBrowserPopup(host, {
+      action: 'ensure',
+      tabId: popupId,
+      mountId: 'returned',
+      requireExisting: true,
+      url: 'https://fixture.test/post',
+    });
+    expect(getBrowserPopup(popupId)?.view.webContents).toBe(child);
+    expect(child.loadURL).not.toHaveBeenCalled();
+    expect(child.reload).not.toHaveBeenCalled();
+    expect(child.close).not.toHaveBeenCalled();
+  });
+
+  it('frees suspended-profile capacity only after explicit closure and preserves the active profile', () => {
+    const { host } = setup();
+    for (let i = 0; i < MAX_BROWSER_TABS - 1; i++) ensure(host, `a-${i}`);
+    mocks.profile = 'profile-b';
+    hideForeignBrowserProfiles(mocks.profile);
+    const current = ensure(host, 'b-0')!;
+    expect(() => ensure(host, 'b-1')).toThrow('Close suspended tabs in Settings');
+    expect(countBrowserProfileTabs('profile-a')).toBe(MAX_BROWSER_TABS - 1);
+    const closed = closeSuspendedBrowserTabs();
+    expect(closed.get('profile-a')).toBe(MAX_BROWSER_TABS - 1);
+    expect(closed.has('profile-b')).toBe(false);
+    expect(getBrowserPopup('b-0')?.view.webContents.id).toBe(current.webContentsId);
+    expect(getBrowserPopup('a-0')).toBeUndefined();
+    expect(() => ensure(host, 'b-1')).not.toThrow();
   });
 
   it('retains a popup awaiting adoption during ordinary inventory updates', () => {

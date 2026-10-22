@@ -224,9 +224,15 @@ export function buildSpawnArgs(config: SpawnConfig): string[] {
  * backend's `/api/system/info` matches what Electron main persists in
  * ProcessEnv('aionui.dir').
  */
-export function buildSpawnEnv(dirs?: BackendDirConfig, bootstrapSecret?: string): NodeJS.ProcessEnv {
+export function buildSpawnEnv(
+  dirs?: BackendDirConfig,
+  bootstrapSecret?: string,
+  browserScopeKey?: string
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   delete env.AIONCORE_BOOTSTRAP_SECRET;
+  delete env.AIONUI_BROWSER_SCOPE_KEY;
+  if (browserScopeKey) env.AIONUI_BROWSER_SCOPE_KEY = browserScopeKey;
   if (dirs) {
     env.AIONUI_CACHE_DIR = dirs.cacheDir;
     env.AIONUI_WORK_DIR = dirs.workDir;
@@ -527,7 +533,11 @@ export class BackendLifecycleManager {
   constructor(
     private readonly appMeta: AppMetadata,
     private readonly resolveBackend: BackendBinaryResolver,
-    private readonly runtime: { identityMode: BackendIdentityMode; bootstrapSecret?: string } = {
+    private readonly runtime: {
+      identityMode: BackendIdentityMode;
+      bootstrapSecret?: string;
+      browserScopeKey?: () => string | undefined;
+    } = {
       identityMode: 'local',
     }
   ) {}
@@ -691,7 +701,7 @@ export class BackendLifecycleManager {
     try {
       this.childProcess = spawn(binaryPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: buildSpawnEnv(dirs, this.runtime.bootstrapSecret),
+        env: buildSpawnEnv(dirs, this.runtime.bootstrapSecret, this.runtime.browserScopeKey?.()),
         cwd: dirs?.workDir ?? dbPath,
         detached: process.platform !== 'win32',
       });

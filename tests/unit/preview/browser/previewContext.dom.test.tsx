@@ -27,6 +27,9 @@ const { browserTabCommandHandlers, reportBrowserTabCommandFailureMock, reportBro
   })
 );
 
+// These legacy preview/workspace tests cover WebUI; native profile identity is tested separately.
+vi.mock('@/renderer/utils/platform', () => ({ isElectronDesktop: () => false }));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     fileStream: { contentUpdate: { on: () => () => {} } },

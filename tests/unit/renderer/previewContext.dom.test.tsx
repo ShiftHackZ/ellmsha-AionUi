@@ -8,6 +8,9 @@ import React from 'react';
 import { act, render, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Legacy document/workspace behavior; native project-profile browser coverage is separate.
+vi.mock('@/renderer/utils/platform', () => ({ isElectronDesktop: () => false }));
+
 // PreviewContext pulls ipcBridge (WS-backed emitters + fs IO). Stub the surface
 // it wires on mount so the provider mounts cleanly in jsdom and this test
 // exercises only the scope-reset behavior.

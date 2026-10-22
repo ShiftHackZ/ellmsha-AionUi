@@ -7,6 +7,7 @@
 // configureChromium sets app name (dev isolation) and Chromium flags — must run before
 // ANY module that calls app.getPath('userData'), because Electron caches the path on first call.
 import './process/utils/configureChromium';
+import { getBrowserScopeKey } from './process/services/browser/profiles';
 import { installGpuCrashHandler } from './process/utils/gpuRecovery';
 import { captureBackendStartupFailure, initSentry, scheduleStartupLogReport, setSentryDeviceId } from './sentry';
 
@@ -215,6 +216,7 @@ const backendManager = new BackendLifecycleManager(
   {
     identityMode: isWebUIMode ? 'webui' : 'local',
     bootstrapSecret: backendBootstrapSecret,
+    browserScopeKey: getBrowserScopeKey,
   }
 );
 let disposeCronResumeListener: (() => void) | null = null;
@@ -701,6 +703,8 @@ const handleAppReady = async (): Promise<void> => {
    * Safe this early: it only starts a node http/ws server and touches no app.ready-gated
    * Electron API. The attach target arrives later over IPC from the renderer.
    */
+  const { initializeBrowserProfiles } = await import('./process/services/browser/profiles');
+  initializeBrowserProfiles();
   const { cdpStartupEnabled, setActiveCdpPort } = await import('./process/utils/configureChromium');
   if (cdpStartupEnabled) {
     try {
@@ -721,7 +725,6 @@ const handleAppReady = async (): Promise<void> => {
        */
       setActiveCdpPort(bridge.port);
       process.env.AIONUI_CDP_ACTIVE_PORT = String(bridge.port);
-      process.env.AIONUI_CDP_BRIDGE_TOKEN = bridge.token;
       console.log(`[CDP] In-app browser bridge listening on 127.0.0.1:${bridge.port} (token required)`);
       app.once('will-quit', () => {
         void bridge.close();
@@ -1064,11 +1067,11 @@ const handleAppReady = async (): Promise<void> => {
 };
 
 // ============ Protocol Registration ============
-// Register aionui:// as the default protocol client
-if (process.defaultApp) {
+// Private QA instances must never take over the installed application protocol.
+if (process.env.AIONUI_E2E_TEST !== '1' && process.defaultApp) {
   // Dev mode: need to pass execPath explicitly
   app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [path.resolve(process.argv[1])]);
-} else {
+} else if (process.env.AIONUI_E2E_TEST !== '1') {
   app.setAsDefaultProtocolClient(PROTOCOL_SCHEME);
 }
 

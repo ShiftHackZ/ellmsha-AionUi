@@ -6,33 +6,22 @@
 
 import { ipcBridge } from '@/common';
 import { notifyManualRestartRequired } from '@/renderer/utils/appRestart';
-import { Alert, Button, Message, Modal, Switch } from '@arco-design/web-react';
+import { Alert, Button, Message, Modal, Select, Switch } from '@arco-design/web-react';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR, { mutate } from 'swr';
 import PreferenceRow from './PreferenceRow';
 
-/**
- * 应用内浏览器设置 / In-app browser settings.
- *
- * 这一节值得独立存在，而不是塞进开发者设置：
- * - 登录态是全局共享的（所有 tab、所有项目共用），用户需要一个明确的地方知道
- *   「我的登录信息存在哪、怎么清掉」；
- * - 「允许 Agent 操作浏览器」是安全开关，必须在正式版可见。开发者设置整节在打包版本里
- *   return null，把开关放那儿等于正式版用户根本没有开关可关，而这个能力默认是开着的
- *   —— 那就不叫「可选」了。
- *
- * This section stands on its own rather than living under developer settings:
- * - sign-in state is global (shared across every tab and project), so the user needs
- *   an obvious place to learn where those credentials live and how to remove them;
- * - "let the agent drive the browser" is a security switch and must be visible in
- *   production builds. The whole developer-settings section returns null when packaged,
- *   so putting the switch there would leave production users with no way to turn off a
- *   capability that defaults to on — which would make it not really optional.
- */
+/** Project browser profiles and the independent agent-control switch. */
 const BrowserDataSection: React.FC = () => {
   const { t } = useTranslation();
+  const { data: profiles, mutate: refreshProfiles } = useSWR('browser.profiles', () =>
+    ipcBridge.application.listBrowserProfiles.invoke()
+  );
+  const [selectedProfile, setSelectedProfile] = useState<string>();
+  const selected = profiles?.data?.find((profile) => profile.profileId === selectedProfile) ?? profiles?.data?.[0];
   const [clearing, setClearing] = useState(false);
+  const [closingTabs, setClosingTabs] = useState(false);
   const { data: cdpStatus, isLoading } = useSWR('cdp.status', () => ipcBridge.application.getCdpStatus.invoke());
   const [switchLoading, setSwitchLoading] = useState(false);
 
@@ -85,7 +74,12 @@ const BrowserDataSection: React.FC = () => {
       onOk: async () => {
         setClearing(true);
         try {
-          const result = await ipcBridge.application.clearBrowserData.invoke();
+          if (!selected) throw new Error('Browser profile unavailable.');
+          const result = await ipcBridge.application.clearBrowserData.invoke({ profileToken: selected.token });
+          if (result.success) {
+            localStorage.removeItem(`ellmsha_browser_profile:${selected.profileId}`);
+            await refreshProfiles();
+          }
           if (result.success) {
             Message.success(t('settings.browserData.clearSuccess'));
           } else {
@@ -98,7 +92,28 @@ const BrowserDataSection: React.FC = () => {
         }
       },
     });
-  }, [t]);
+  }, [t, selected, refreshProfiles]);
+
+  const handleCloseSuspended = useCallback(() => {
+    Modal.confirm({
+      title: t('settings.browserData.closeSuspendedTitle'),
+      content: t('settings.browserData.closeSuspendedConfirm'),
+      okButtonProps: { status: 'warning' },
+      onOk: async () => {
+        setClosingTabs(true);
+        try {
+          const result = await ipcBridge.application.closeSuspendedBrowserTabs.invoke();
+          if (!result.success) throw new Error('Browser tabs could not be closed.');
+          Message.success(t('settings.browserData.closeSuspendedSuccess', { count: result.data?.closedTabs ?? 0 }));
+          await refreshProfiles();
+        } catch {
+          Message.error(t('settings.browserData.closeSuspendedFailed'));
+        } finally {
+          setClosingTabs(false);
+        }
+      },
+    });
+  }, [t, refreshProfiles]);
 
   return (
     <div className='px-[12px] md:px-[32px] py-16px bg-2 rd-16px'>
@@ -130,8 +145,28 @@ const BrowserDataSection: React.FC = () => {
         />
       )}
 
+      <Alert type='info' content={t('settings.browserData.profileIsolation')} className='mb-12px' />
+      <PreferenceRow label={t('settings.browserData.profileLabel')}>
+        <Select
+          value={selected?.profileId}
+          onChange={setSelectedProfile}
+          placeholder={t('settings.browserData.profileEmpty')}
+          options={(profiles?.data ?? []).map((profile) => ({
+            value: profile.profileId,
+            label: `${profile.label ?? t('settings.browserData.defaultProfile')} · ${t('settings.browserData.openTabs', { count: profile.openTabCount ?? 0 })}`,
+          }))}
+        />
+      </PreferenceRow>
+      <PreferenceRow
+        label={t('settings.browserData.closeSuspendedLabel')}
+        description={t('settings.browserData.closeSuspendedDesc')}
+      >
+        <Button size='small' loading={closingTabs} onClick={handleCloseSuspended}>
+          {t('settings.browserData.closeSuspendedButton')}
+        </Button>
+      </PreferenceRow>
       <PreferenceRow label={t('settings.browserData.clearLabel')} description={t('settings.browserData.clearDesc')}>
-        <Button size='small' status='danger' loading={clearing} onClick={handleClear}>
+        <Button size='small' status='danger' loading={clearing} disabled={!selected} onClick={handleClear}>
           {t('common.clear')}
         </Button>
       </PreferenceRow>

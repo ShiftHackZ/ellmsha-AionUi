@@ -23,7 +23,7 @@ import { CdpBrowserTabController, createBrowserMcpProxy } from './browserTabMcp'
 import { resolveBridgeToken, resolveBrowserUrl } from './browserServerPort';
 
 const logDiagnostic = (message: string): void => {
-  process.stderr.write(`[builtin-mcp-browser] ${message}\n`);
+  process.stderr.write(`[builtin-mcp-browser] ${message.replace(/\/scope\/[^/\s]+/g, '/scope/[redacted]')}\n`);
 };
 
 const main = async (): Promise<void> => {
@@ -38,13 +38,29 @@ const main = async (): Promise<void> => {
   if (!existsSync(upstreamLauncher)) {
     throw new Error(`Pinned Chrome DevTools MCP launcher is missing from the application bundle: ${upstreamLauncher}`);
   }
+  const discovery = await fetch(`${browserUrl}/json/version`, { signal: AbortSignal.timeout(10_000) });
+  if (!discovery.ok) throw new Error('Scoped browser discovery unavailable.');
+  const { webSocketDebuggerUrl } = (await discovery.json()) as { webSocketDebuggerUrl?: unknown };
+  if (
+    typeof webSocketDebuggerUrl !== 'string' ||
+    !webSocketDebuggerUrl.startsWith(browserUrl.replace('http:', 'ws:') + '/')
+  )
+    throw new Error('Invalid scoped browser endpoint.');
   const upstreamTransport = new StdioClientTransport({
     command: process.execPath,
-    args: [upstreamLauncher, '--browser-url', browserUrl, '--no-usage-statistics', '--experimental-structured-content'],
-    stderr: 'inherit',
+    args: [
+      upstreamLauncher,
+      '--ws-endpoint',
+      webSocketDebuggerUrl,
+      '--no-usage-statistics',
+      '--experimental-structured-content',
+    ],
+    stderr: 'pipe',
   });
+  // Diagnostics can split a capability URL across stream chunks; never forward raw upstream stderr.
+  upstreamTransport.stderr?.on('data', () => logDiagnostic('Browser engine emitted a diagnostic (payload withheld).'));
   const controller = new CdpBrowserTabController(browserUrl);
-  const proxy = createBrowserMcpProxy(upstream, controller);
+  const proxy = createBrowserMcpProxy(upstream, controller, bridgeToken);
   let shutdownPromise: Promise<void> | null = null;
   let exitRequested = false;
 
@@ -75,7 +91,7 @@ const main = async (): Promise<void> => {
     if (!shutdownPromise) exitAfterShutdown(1);
   };
 
-  logDiagnostic(`Connecting browser tools to the in-app bridge at ${browserUrl}`);
+  logDiagnostic('Connecting browser tools to the scoped in-app bridge.');
   try {
     await upstream.connect(upstreamTransport);
     await proxy.connect(new StdioServerTransport());

@@ -5,6 +5,8 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -16,7 +18,10 @@ import { MAX_BROWSER_TABS } from '@/common/config/constants';
 
 const electronMock = vi.hoisted(() => ({
   browserSession: {},
-  popups: new Map<string, { active: boolean; contents: FakeContents; mountId?: string }>(),
+  activeProfile: 'profile-a',
+  revoked: false,
+  validationHook: undefined as undefined | (() => Promise<void>),
+  popups: new Map<string, { active: boolean; contents: FakeContents; mountId?: string; profileId?: string }>(),
   contents: new Map<number, FakeContents>(),
   focusedId: undefined as number | undefined,
   reportedFocusedId: undefined as number | undefined,
@@ -91,6 +96,19 @@ class FakeContents extends EventEmitter {
   }
 }
 
+vi.mock('@process/services/browser/profiles', () => ({
+  browserProfileFromToken: (token: string) => {
+    if (!['scoped-token', 'other-token'].includes(token)) throw new Error('Invalid scope');
+    return { id: token === 'scoped-token' ? 'profile-a' : 'profile-b' };
+  },
+  validateBrowserToken: async (token: string) => {
+    await electronMock.validationHook?.();
+    if (electronMock.revoked || !['scoped-token', 'other-token'].includes(token)) throw new Error('Invalid scope');
+    return token === 'scoped-token' ? 'profile-a' : 'profile-b';
+  },
+  getActiveBrowserProfile: () => ({ profileId: electronMock.activeProfile, generation: 1 }),
+  browserSession: () => electronMock.browserSession,
+}));
 vi.mock('electron', () => ({
   session: { fromPartition: () => electronMock.browserSession },
   webContents: {
@@ -108,7 +126,9 @@ vi.mock('@process/services/browser/popups', () => ({
   canOpenBrowserUrl: (url: string) => url === 'about:blank' || /^https?:\/\//.test(url),
   getBrowserPopup: (tabId: string, contentsId?: number) => {
     const popup = electronMock.popups.get(tabId);
-    return popup && (contentsId === undefined || popup.contents.id === contentsId) ? popup : undefined;
+    return popup && (contentsId === undefined || popup.contents.id === contentsId)
+      ? { ...popup, profileId: popup.profileId ?? 'profile-a' }
+      : undefined;
   },
 }));
 
@@ -123,7 +143,7 @@ const createContents = (id: number, url = 'about:blank', title = 'Tab'): FakeCon
 };
 
 const connect = async (bridge: CdpBridgeHandle): Promise<WebSocket> => {
-  const ws = new WebSocket(`ws://127.0.0.1:${bridge.port}/aionui-cdp?token=${bridge.token}`);
+  const ws = new WebSocket(`ws://127.0.0.1:${bridge.port}/scope/scoped-token/aionui-cdp`);
   await new Promise<void>((resolve, reject) => {
     ws.once('open', resolve);
     ws.once('error', reject);
@@ -185,6 +205,9 @@ const startCdpBridge = async (...args: Parameters<typeof startRawCdpBridge>): Pr
 };
 
 beforeEach(() => {
+  electronMock.activeProfile = 'profile-a';
+  electronMock.revoked = false;
+  electronMock.validationHook = undefined;
   electronMock.contents.clear();
   electronMock.popups.clear();
   electronMock.focusedId = undefined;
@@ -659,7 +682,11 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
       method: 'Target.closeTarget',
       params: { targetId: 'browser-close-race' },
     });
-    await vi.waitFor(() => expect(commands).toEqual([{ action: 'close', tabId: 'browser-close-race' }]));
+    await vi.waitFor(() =>
+      expect(commands).toEqual([
+        { action: 'close', tabId: 'browser-close-race', profileId: 'profile-a', generation: 1 },
+      ])
+    );
 
     bridge.updateTabInventory({ ready: false, tabIds: [] });
 
@@ -738,10 +765,17 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
       params: { url: 'https://github.com/login', background: false },
     });
     const targetId = created.result.targetId;
-    expect(commands[0]).toEqual({ action: 'create', tabId: targetId, url: 'https://github.com/login', activate: true });
+    expect(commands[0]).toEqual({
+      action: 'create',
+      tabId: targetId,
+      url: 'https://github.com/login',
+      activate: true,
+      profileId: 'profile-a',
+      generation: 1,
+    });
 
     await request(ws, { id: 5, method: 'Target.activateTarget', params: { targetId } });
-    expect(commands[1]).toEqual({ action: 'activate', tabId: targetId });
+    expect(commands[1]).toEqual({ action: 'activate', tabId: targetId, profileId: 'profile-a', generation: 1 });
 
     const closed = await request<{ result: { success: boolean } }>(ws, {
       id: 6,
@@ -749,7 +783,7 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
       params: { targetId },
     });
     expect(closed.result.success).toBe(true);
-    expect(commands[2]).toEqual({ action: 'close', tabId: targetId });
+    expect(commands[2]).toEqual({ action: 'close', tabId: targetId, profileId: 'profile-a', generation: 1 });
 
     const stale = await request<{ error: { message: string } }>(ws, {
       id: 7,
@@ -768,14 +802,19 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
     const second = createContents(202, 'https://same.example/', 'Second');
     bridge.registerTab({ tabId: 'browser-first', webContentsId: first.id, active: true });
     bridge.registerTab({ tabId: 'browser-second', webContentsId: second.id, active: false });
-    const controller = new CdpBrowserTabController(`http://127.0.0.1:${bridge.port}`);
+    const controller = new CdpBrowserTabController(`http://127.0.0.1:${bridge.port}/scope/scoped-token`);
     let acknowledged = false;
     try {
       const activation = controller.activate('browser-second').then(() => {
         acknowledged = true;
       });
       await vi.waitFor(() =>
-        expect(sendTabCommand).toHaveBeenCalledExactlyOnceWith({ action: 'activate', tabId: 'browser-second' })
+        expect(sendTabCommand).toHaveBeenCalledExactlyOnceWith({
+          action: 'activate',
+          tabId: 'browser-second',
+          profileId: 'profile-a',
+          generation: 1,
+        })
       );
       expect(acknowledged).toBe(false);
       bridge.registerTab({ tabId: 'browser-second', webContentsId: second.id, active: true });
@@ -841,6 +880,191 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
 
     expect(first.result.targetId).not.toBe(second.result.targetId);
     expect(commands.map((command) => command.action)).toEqual(['create', 'create']);
+  });
+
+  it('bootstraps each Runtime session from current contexts without resetting other subscribers', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const contents = createContents(550, 'https://owned.example/', 'Owned');
+    let physicalEnabled = false;
+    const context = (id: number) => ({
+      id,
+      origin: 'https://owned.example',
+      name: '',
+      auxData: { isDefault: true, frameId: 'frame-owned' },
+    });
+    contents.debugger.sendCommand.mockImplementation(async (method, params) => {
+      if (method === 'Runtime.enable' && !physicalEnabled) {
+        physicalEnabled = true;
+        contents.debugger.emit('message', {}, 'Runtime.executionContextCreated', { context: context(1) }, '');
+        contents.debugger.emit('message', {}, 'Runtime.consoleAPICalled', { type: 'log', args: [] }, '');
+        contents.debugger.emit('message', {}, 'Runtime.exceptionThrown', { exceptionDetails: { text: 'owned' } }, '');
+      }
+      return { method, params };
+    });
+    bridge.registerTab({ tabId: 'browser-runtime', webContentsId: contents.id, active: true });
+    const auto = await connect(bridge);
+    const manual = await connect(bridge);
+    openSockets.push(auto, manual);
+    const autoEvents: Array<{
+      method?: string;
+      params?: { context?: { id: number } };
+      sessionId?: string;
+      id?: number;
+    }> = [];
+    const manualEvents: typeof autoEvents = [];
+    auto.on('message', (raw) => autoEvents.push(JSON.parse(raw.toString())));
+    manual.on('message', (raw) => manualEvents.push(JSON.parse(raw.toString())));
+    await request(auto, { id: 100, method: 'Target.setAutoAttach', params: { autoAttach: true, flatten: true } });
+    const autoId = sessionIdForTarget('browser-runtime');
+    await request(auto, { id: 101, method: 'Runtime.enable', sessionId: autoId });
+    expect(
+      autoEvents.filter((e) => e.method === 'Runtime.executionContextCreated').map((e) => e.params?.context?.id)
+    ).toEqual([1]);
+    expect(autoEvents.some((e) => e.method === 'Runtime.consoleAPICalled')).toBe(true);
+    expect(autoEvents.some((e) => e.method === 'Runtime.exceptionThrown')).toBe(true);
+    expect(manualEvents.filter((e) => e.method?.startsWith('Runtime.'))).toEqual([]);
+    const attached = await request<{ result: { sessionId: string } }>(manual, {
+      id: 102,
+      method: 'Target.attachToTarget',
+      params: { targetId: 'browser-runtime', flatten: true },
+    });
+    const manualId = attached.result.sessionId;
+    await request(manual, { id: 103, method: 'Runtime.enable', sessionId: manualId });
+    const bootstrapIndex = manualEvents.findIndex((e) => e.method === 'Runtime.executionContextCreated');
+    expect(bootstrapIndex).toBeGreaterThanOrEqual(0);
+    expect(bootstrapIndex).toBeLessThan(manualEvents.findIndex((e) => e.id === 103));
+    expect(manualEvents[bootstrapIndex].sessionId).toBe(manualId);
+    expect(autoEvents.filter((e) => e.method === 'Runtime.executionContextCreated')).toHaveLength(1);
+    await request(manual, { id: 104, method: 'Runtime.enable', sessionId: manualId });
+    expect(manualEvents.filter((e) => e.method === 'Runtime.executionContextCreated')).toHaveLength(1);
+    await request(manual, { id: 105, method: 'Runtime.disable', sessionId: manualId });
+    expect(contents.debugger.sendCommand.mock.calls.some(([method]) => method === 'Runtime.disable')).toBe(false);
+    contents.debugger.emit('message', {}, 'Runtime.executionContextDestroyed', { executionContextId: 1 }, '');
+    contents.debugger.emit('message', {}, 'Runtime.executionContextCreated', { context: context(2) }, '');
+    await vi.waitFor(() =>
+      expect(autoEvents.filter((e) => e.method === 'Runtime.executionContextCreated')).toHaveLength(2)
+    );
+    expect(manualEvents.filter((e) => e.method === 'Runtime.executionContextCreated')).toHaveLength(1);
+    await request(manual, { id: 106, method: 'Runtime.enable', sessionId: manualId });
+    expect(
+      manualEvents.filter((e) => e.method === 'Runtime.executionContextCreated').map((e) => e.params?.context?.id)
+    ).toEqual([1, 2]);
+    contents.debugger.emit('message', {}, 'Runtime.executionContextsCleared', {}, '');
+    contents.debugger.emit('message', {}, 'Runtime.executionContextCreated', { context: context(3) }, '');
+    const reconnect = await connect(bridge);
+    openSockets.push(reconnect);
+    const reconnectEvents: typeof autoEvents = [];
+    reconnect.on('message', (raw) => reconnectEvents.push(JSON.parse(raw.toString())));
+    await request(reconnect, { id: 107, method: 'Runtime.enable', sessionId: autoId });
+    expect(
+      reconnectEvents.filter((e) => e.method === 'Runtime.executionContextCreated').map((e) => e.params?.context?.id)
+    ).toEqual([3]);
+  });
+
+  it('discards queued Runtime bootstrap events after manual detachment', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const contents = createContents(551);
+    bridge.registerTab({ tabId: 'browser-detach-runtime', webContentsId: contents.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const attached = await request<{ result: { sessionId: string } }>(ws, {
+      id: 120,
+      method: 'Target.attachToTarget',
+      params: { targetId: 'browser-detach-runtime', flatten: true },
+    });
+    const sessionId = attached.result.sessionId;
+    const messages: Array<{ method?: string; id?: number }> = [];
+    ws.on('message', (raw) => messages.push(JSON.parse(raw.toString())));
+    let release!: () => void;
+    let blocked = false;
+    contents.debugger.sendCommand.mockImplementation(async (method, params) => {
+      if (method === 'Runtime.enable') {
+        electronMock.validationHook = () => {
+          electronMock.validationHook = undefined;
+          blocked = true;
+          return new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        };
+        contents.debugger.emit('message', {}, 'Runtime.executionContextCreated', { context: { id: 1 } }, '');
+      }
+      return { method, params };
+    });
+    const enabling = request(ws, { id: 121, method: 'Runtime.enable', sessionId });
+    await vi.waitFor(() => expect(blocked).toBe(true));
+    await request(ws, { id: 122, method: 'Target.detachFromTarget', params: { sessionId } });
+    release();
+    await enabling;
+    expect(messages.some((m) => m.method === 'Runtime.executionContextCreated')).toBe(false);
+    expect(messages.some((m) => m.method === 'Target.detachedFromTarget')).toBe(true);
+  });
+
+  it('does not revive pre-disable events when the same Runtime session is enabled again', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const contents = createContents(553);
+    bridge.registerTab({ tabId: 'browser-runtime-epoch', webContentsId: contents.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const sessionId = sessionIdForTarget('browser-runtime-epoch');
+    await request(ws, { id: 124, method: 'Runtime.enable', sessionId });
+    const contexts: number[] = [];
+    ws.on('message', (raw) => {
+      const e = JSON.parse(raw.toString());
+      if (e.method === 'Runtime.executionContextCreated') contexts.push(e.params.context.id);
+    });
+    let release!: () => void;
+    let blocked = false;
+    electronMock.validationHook = () => {
+      electronMock.validationHook = undefined;
+      blocked = true;
+      return new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    };
+    contents.debugger.emit('message', {}, 'Runtime.executionContextCreated', { context: { id: 7 } }, '');
+    await vi.waitFor(() => expect(blocked).toBe(true));
+    await request(ws, { id: 125, method: 'Runtime.disable', sessionId });
+    const enabling = request(ws, { id: 126, method: 'Runtime.enable', sessionId });
+    await vi.waitFor(() =>
+      expect(contents.debugger.sendCommand.mock.calls.filter(([method]) => method === 'Runtime.enable')).toHaveLength(2)
+    );
+    release();
+    await enabling;
+    expect(contexts).toEqual([7]);
+  });
+
+  it('acknowledges Runtime bootstrap while a continuous console stream remains active', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const contents = createContents(552);
+    bridge.registerTab({ tabId: 'browser-noisy-runtime', webContentsId: contents.id, active: true });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    electronMock.validationHook = () => new Promise((resolve) => setTimeout(resolve, 2));
+    let timer: ReturnType<typeof setInterval> | undefined;
+    contents.debugger.sendCommand.mockImplementation(async (method, params) => {
+      if (method === 'Runtime.enable') {
+        contents.debugger.emit('message', {}, 'Runtime.executionContextCreated', { context: { id: 1 } }, '');
+        timer = setInterval(
+          () => contents.debugger.emit('message', {}, 'Runtime.consoleAPICalled', { type: 'log', args: [] }, ''),
+          1
+        );
+      }
+      return { method, params };
+    });
+    try {
+      await Promise.race([
+        request(ws, { id: 123, method: 'Runtime.enable', sessionId: sessionIdForTarget('browser-noisy-runtime') }),
+        new Promise((_, reject) => setTimeout(() => reject(Error('No finite bootstrap barrier')), 500)),
+      ]);
+      expect(timer).toBeDefined();
+    } finally {
+      clearInterval(timer);
+      electronMock.validationHook = undefined;
+    }
   });
 
   it('emits discovery and unique manual attachment events before their responses', async () => {
@@ -934,7 +1158,7 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
       },
     });
     openBridges.push(bridge);
-    const controller = new CdpBrowserTabController(`http://127.0.0.1:${bridge.port}`);
+    const controller = new CdpBrowserTabController(`http://127.0.0.1:${bridge.port}/scope/scoped-token`);
 
     const tabId = await controller.open('https://github.com/login', true);
     expect(await controller.list()).toEqual([
@@ -959,16 +1183,21 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
     const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
     openBridges.push(bridge);
     const root = path.resolve(__dirname, '../../../..');
-    execFileSync(process.execPath, ['scripts/build-mcp-servers.js'], { cwd: root, stdio: 'pipe' });
+    const output = mkdtempSync(path.join(tmpdir(), 'ellmsha-browser-mcp-test-'));
+    execFileSync(process.execPath, ['scripts/build-mcp-servers.js'], {
+      cwd: root,
+      stdio: 'pipe',
+      env: { ...process.env, ELLM_SHA_MCP_OUTPUT_DIR: output },
+    });
 
     const client = new Client({ name: 'browser-stdio-regression', version: '1.0.0' });
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: [path.join(root, 'out/main/builtin-mcp-browser.js')],
+      args: [path.join(output, 'builtin-mcp-browser.js')],
       env: {
         ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => !!entry[1])),
         AIONUI_CDP_ACTIVE_PORT: String(bridge.port),
-        AIONUI_CDP_BRIDGE_TOKEN: bridge.token,
+        AIONUI_BROWSER_SCOPE_TOKEN: 'scoped-token',
       },
       stderr: 'pipe',
     });
@@ -1016,6 +1245,50 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
       await client.close();
       expect(Date.now() - closeStartedAt).toBeLessThan(1_500);
       expect(stderr).toContain('Browser proxy stopped cleanly.');
+      expect(stderr).not.toContain('scoped-token');
+      rmSync(output, { recursive: true, force: true });
     }
   }, 30_000);
+});
+
+describe('CDP profile security boundaries', () => {
+  it('authenticates HTTP discovery and never returns a credential from the old public endpoint', async () => {
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    const publicResponse = await fetch(`http://127.0.0.1:${bridge.port}/json/version`);
+    expect(publicResponse.status).toBe(403);
+    expect(await publicResponse.text()).not.toContain('scoped-token');
+    const scoped = await fetch(`http://127.0.0.1:${bridge.port}/scope/scoped-token/json/version`);
+    expect(scoped.status).toBe(200);
+  });
+  it('filters discovery, rejects foreign sessions and browser-wide escapes, and revokes old sockets', async () => {
+    const alpha = createContents(550);
+    const beta = createContents(551);
+    electronMock.popups.set('alpha', { contents: alpha, active: true, profileId: 'profile-a' });
+    electronMock.popups.set('beta', { contents: beta, active: false, profileId: 'profile-b' });
+    const bridge = await startCdpBridge({ sendTabCommand: vi.fn() });
+    openBridges.push(bridge);
+    bridge.registerTab({ tabId: 'alpha', webContentsId: alpha.id, active: true });
+    bridge.registerTab({ tabId: 'beta', webContentsId: beta.id, active: false });
+    const ws = await connect(bridge);
+    openSockets.push(ws);
+    const list = await request<{ result: { targetInfos: Array<{ targetId: string }> } }>(ws, {
+      id: 1,
+      method: 'Target.getTargets',
+    });
+    expect(list.result.targetInfos.map((target) => target.targetId)).toEqual(['alpha']);
+    for (const [index, command] of [
+      { method: 'Runtime.evaluate', sessionId: sessionIdForTarget('beta'), params: { expression: 'document.cookie' } },
+      { method: 'Target.sendMessageToTarget', params: { targetId: 'beta', message: '{}' } },
+      { method: 'Storage.getCookies', params: { browserContextId: 'profile-b' } },
+    ].entries()) {
+      expect(await request(ws, { id: index + 2, ...command })).toHaveProperty('error');
+    }
+    expect(beta.debugger.sendCommand).not.toHaveBeenCalled();
+    electronMock.activeProfile = 'profile-b';
+    expect(await request(ws, { id: 8, method: 'Target.getTargets' })).toHaveProperty('error');
+    electronMock.activeProfile = 'profile-a';
+    electronMock.revoked = true;
+    expect(await request(ws, { id: 9, method: 'Target.getTargets' })).toHaveProperty('error');
+  });
 });

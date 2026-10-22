@@ -45,35 +45,15 @@ export const resolveBrowserUrl = (deps: ResolveBrowserUrlDeps): string | null =>
   const rawPort = env.AIONUI_CDP_ACTIVE_PORT?.trim();
   if (rawPort) {
     const fromEnv = toBrowserUrl(Number(rawPort));
-    if (fromEnv) return fromEnv;
+    const token = resolveBridgeToken(deps);
+    if (fromEnv && token) return `${fromEnv}/scope/${encodeURIComponent(token)}`;
   }
 
   return null;
 };
 
-/**
- * 应用内浏览器 CDP 通道的访问口令。
- *
- * 口令由主进程随机生成后写进 env，顺着进程继承链传到这里。它的作用是**阻止盲连**：
- * 没读过发现段、不带口令的连接一律被通道 403 掉。
- *
- * 但它**不是身份证明** —— HTTP 发现段不鉴权且响应里就带着口令，同机同用户的任意进程
- * 一个 GET 就能取回来（详见 cdpBridge.ts 里的威胁模型说明）。所以这里要求 env 里有口令，
- * 真正的意义是「通道确实起来了」的凭证：缺了就说明桥没起（或 CDP 被关掉了），此时必须
- * 退出，而不是让 MCP 回退去开一个用户看不见的独立 Chrome。
- *
- * Access token for the in-app browser CDP bridge. The main process generates it randomly and
- * writes it into the env, from where it travels down the process inheritance chain. Its job is
- * to **prevent blind connections**: anything connecting without it (i.e. without having read
- * discovery) is refused with a 403.
- *
- * It is **not proof of identity** — HTTP discovery is unauthenticated and its response embeds
- * the token, so any process running as the same user can fetch it with one GET (see the threat
- * model note in cdpBridge.ts). Requiring it here really means "the bridge is up": its absence
- * means there is no bridge (or CDP is switched off), and we must exit rather than let the MCP
- * fall back to spawning a separate Chrome the user cannot see.
- */
+/** Only a Core-issued owner/conversation/project capability may reach the proxy. */
 export const resolveBridgeToken = (deps: ResolveBrowserUrlDeps): string | null => {
-  const raw = deps.env.AIONUI_CDP_BRIDGE_TOKEN?.trim();
+  const raw = deps.env.AIONUI_BROWSER_SCOPE_TOKEN?.trim();
   return raw ? raw : null;
 };

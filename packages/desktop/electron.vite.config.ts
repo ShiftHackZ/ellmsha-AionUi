@@ -100,9 +100,16 @@ export default defineConfig(({ mode }) => {
         {
           name: 'build-pet-panel-native',
           closeBundle() {
-            execFileSync(process.execPath, [resolve(__dirname, 'src/process/pet/native/build.cjs')], {
-              stdio: 'inherit',
-            });
+            execFileSync(
+              process.execPath,
+              [
+                resolve(__dirname, 'src/process/pet/native/build.cjs'),
+                ...(process.env.ELLM_SHA_NATIVE_OUTPUT ? [process.env.ELLM_SHA_NATIVE_OUTPUT] : []),
+              ],
+              {
+                stdio: 'inherit',
+              }
+            );
           },
         },
         // externalizeDepsPlugin replaces our custom getExternalDeps() + pluginExternalizeDynamicImports.

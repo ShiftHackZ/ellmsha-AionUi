@@ -1436,3 +1436,19 @@ describe('BackendLifecycleManager.start peer retry', () => {
     expect(attemptStart).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('desktop browser issuer environment', () => {
+  it('does not inherit issuer material and injects it only when the desktop host supplies it', () => {
+    const previous = process.env.AIONUI_BROWSER_SCOPE_KEY;
+    process.env.AIONUI_BROWSER_SCOPE_KEY = 'ambient-secret';
+    try {
+      expect(buildSpawnEnv().AIONUI_BROWSER_SCOPE_KEY).toBeUndefined();
+      expect(buildSpawnEnv(undefined, undefined, 'explicit-desktop-key').AIONUI_BROWSER_SCOPE_KEY).toBe(
+        'explicit-desktop-key'
+      );
+    } finally {
+      if (previous === undefined) delete process.env.AIONUI_BROWSER_SCOPE_KEY;
+      else process.env.AIONUI_BROWSER_SCOPE_KEY = previous;
+    }
+  });
+});

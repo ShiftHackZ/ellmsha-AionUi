@@ -511,7 +511,20 @@ export interface IRendererLogEntry {
   data?: unknown;
 }
 
+/** Main-owned browser binding. Token is transient and must never enter persistence. */
+export type BrowserProfileContext = {
+  profileId: string;
+  conversationId: string;
+  label: string | null;
+  token: string;
+  generation: number;
+  /** Main-owned live tab count for settings catalogs; no site metadata. */
+  openTabCount?: number;
+};
+
 export type BrowserTabRegistration = {
+  generation?: number;
+  profileToken?: string;
   tabId: string;
   webContentsId: number;
   active: boolean;
@@ -522,16 +535,19 @@ export type BrowserTabRegistration = {
 };
 
 export type BrowserTabInventory = {
+  generation?: number;
+  profileToken?: string;
   ready: boolean;
   tabIds: string[];
 };
 
-export type BrowserTabCommand =
+export type BrowserTabCommand = (
   | { action: 'create'; tabId: string; url: string; activate: boolean }
   | { action: 'adopt'; tabId: string; openerTabId: string; url: string; activate: boolean }
   | { action: 'activate'; tabId: string }
   | { action: 'focus'; tabId: string; requestId: string }
-  | { action: 'close'; tabId: string };
+  | { action: 'close'; tabId: string }
+) & { profileId?: string; generation?: number };
 
 export type BrowserPopupState = {
   tabId: string;
@@ -550,7 +566,7 @@ export type BrowserPopupCommand = (
   | { action: 'sync'; tabId: string; active: boolean; bounds: { x: number; y: number; width: number; height: number } }
   | { action: 'navigate'; tabId: string; url: string }
   | { action: 'back' | 'forward' | 'reload' | 'focus' | 'dispose'; tabId: string }
-) & { mountId?: string };
+) & { mountId?: string; profileToken?: string; generation?: number };
 
 export type BrowserTabCommandFailure = {
   tabId: string;
@@ -597,15 +613,19 @@ export const application = {
   setZoomFactor: bridge.buildProvider<number, { factor: number }>('app.set-zoom-factor'),
   getCdpStatus: bridge.buildProvider<IBridgeResponse<ICdpStatus>, void>('app.get-cdp-status'),
   updateCdpConfig: bridge.buildProvider<IBridgeResponse<ICdpConfig>, Partial<ICdpConfig>>('app.update-cdp-config'),
-  /**
-   * 清空应用内浏览器的登录态与缓存（cookie / localStorage / 缓存）。
-   * 登录态是全局共享的，所以这是唯一的"退出所有网站登录"入口。
-   *
-   * Clear the in-app browser's sign-in state and cache (cookies / localStorage /
-   * caches). Sign-in state is globally shared, so this is the only way to sign out
-   * of every site the agent or user logged into.
-   */
-  clearBrowserData: bridge.buildProvider<IBridgeResponse<void>, void>('app.clear-browser-data'),
+  /** Reset profile tab UI after explicit data clearing or suspended-tab closure. */
+  browserProfileCleared: bridge.buildEmitter<{ profileId: string }>('app.browser-profile-cleared'),
+  listBrowserProfiles: bridge.buildProvider<IBridgeResponse<BrowserProfileContext[]>, void>(
+    'app.list-browser-profiles'
+  ),
+  bindBrowserProfile: bridge.buildProvider<
+    IBridgeResponse<BrowserProfileContext | undefined>,
+    { conversationId: string | null }
+  >('app.bind-browser-profile'),
+  closeSuspendedBrowserTabs: bridge.buildProvider<IBridgeResponse<{ closedTabs: number }>, void>(
+    'app.close-suspended-browser-tabs'
+  ),
+  clearBrowserData: bridge.buildProvider<IBridgeResponse<void>, { profileToken: string }>('app.clear-browser-data'),
   /** Register or refresh one stable in-app browser tab target. */
   reportBrowserWebContentsId: bridge.buildProvider<IBridgeResponse<void>, BrowserTabRegistration>(
     'app.report-browser-webcontents-id'

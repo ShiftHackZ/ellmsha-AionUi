@@ -5,10 +5,26 @@
  */
 
 import type { BrowserWindow } from 'electron';
-import { app, session, webContents } from 'electron';
-import { controlBrowserPopup, reconcileBrowserTabs, registerBrowserPopupOpener } from '../services/browser/popups';
+import { app, webContents } from 'electron';
+import {
+  hideBrowserTabs,
+  hideForeignBrowserProfiles,
+  closeSuspendedBrowserTabs,
+  countBrowserProfileTabs,
+  closeBrowserProfile,
+  controlBrowserPopup,
+  reconcileBrowserTabs,
+  registerBrowserPopupOpener,
+} from '../services/browser/popups';
 import { ipcBridge } from '@/common';
-import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
+import {
+  setBrowserProfileClearing,
+  listBrowserProfiles,
+  bindBrowserProfile,
+  browserSession,
+  requireBrowserProfile,
+  validateBrowserToken,
+} from '../services/browser/profiles';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { getZoomFactor, setZoomFactor } from '@process/utils/zoom';
 import { getCdpStatus, updateCdpConfig } from '@process/utils/configureChromium';
@@ -195,38 +211,61 @@ export function initApplicationBridge(): void {
     }
   });
 
-  /**
-   * 清空应用内浏览器的登录态与缓存。
-   *
-   * 登录态是全局共享的（所有 tab、所有项目共用一个 partition），所以这里是唯一
-   * 的"退出全部网站"入口。已打开的浏览器 tab 需要刷新后才会体现，这在设置项的
-   * 说明文案里告诉用户。
-   *
-   * Clear the in-app browser's sign-in state and cache. Sign-in state is globally
-   * shared (one partition across all tabs and projects), so this is the only way
-   * to sign out everywhere. Already-open browser tabs reflect it after a reload,
-   * which the settings copy tells the user.
-   */
-  ipcBridge.application.clearBrowserData.provider(async () => {
+  ipcBridge.application.listBrowserProfiles.provider(async () => ({
+    success: true,
+    data: (await listBrowserProfiles()).map((profile) => ({
+      ...profile,
+      openTabCount: countBrowserProfileTabs(profile.profileId),
+    })),
+  }));
+
+  ipcBridge.application.bindBrowserProfile.provider(async ({ conversationId }) => {
     try {
-      const browserSession = session.fromPartition(BROWSER_SESSION_PARTITION);
-      // clearStorageData 只清 cookie 和各类 storage，不含 HTTP 缓存和认证缓存 ——
-      // 而设置里的文案承诺了「清理缓存」，所以三个都要清。
-      //
-      // clearStorageData covers cookies and storages but neither the HTTP cache nor
-      // the HTTP auth cache, and the settings copy promises the cache is cleared.
-      await browserSession.clearStorageData();
-      await browserSession.clearCache();
-      await browserSession.clearAuthCache();
+      // Hide the old native pages before asynchronous ownership resolution.
+      if (mainWindowRef && !mainWindowRef.isDestroyed()) hideBrowserTabs(mainWindowRef);
+      const data = await bindBrowserProfile(conversationId);
+      if (data) hideForeignBrowserProfiles(data.profileId);
+      return { success: true, data };
+    } catch {
+      return { success: false, msg: 'Browser project binding unavailable.' };
+    }
+  });
+
+  ipcBridge.application.closeSuspendedBrowserTabs.provider(async () => {
+    const closed = closeSuspendedBrowserTabs();
+    for (const profileId of closed.keys()) ipcBridge.application.browserProfileCleared.emit({ profileId });
+    return { success: true, data: { closedTabs: [...closed.values()].reduce((sum, count) => sum + count, 0) } };
+  });
+
+  ipcBridge.application.clearBrowserData.provider(async ({ profileToken }) => {
+    let clearingProfile: string | undefined;
+    try {
+      const profileId = await validateBrowserToken(profileToken);
+      clearingProfile = profileId;
+      setBrowserProfileClearing(profileId, true);
+      closeBrowserProfile(profileId);
+      const owned = browserSession(profileId);
+      await owned.closeAllConnections();
+      await owned.clearStorageData();
+      await owned.clearCache();
+      await owned.clearAuthCache();
+      await owned.closeAllConnections();
+      ipcBridge.application.browserProfileCleared.emit({ profileId });
       return { success: true };
-    } catch (e) {
-      return { success: false, msg: e instanceof Error ? e.message : String(e) };
+    } catch {
+      return { success: false, msg: 'Browser data could not be cleared.' };
+    } finally {
+      if (clearingProfile) setBrowserProfileClearing(clearingProfile, false);
     }
   });
 
   ipcBridge.application.browserPopup.provider(async (command) => {
     try {
       if (!mainWindowRef || mainWindowRef.isDestroyed()) return { success: false, msg: 'Browser host unavailable.' };
+      if (!command.profileToken) throw new Error('Browser identity unavailable.');
+      if (command.generation !== requireBrowserProfile(command.profileToken).generation)
+        throw new Error('Stale browser generation.');
+      await validateBrowserToken(command.profileToken);
       return { success: true, data: controlBrowserPopup(mainWindowRef, command) };
     } catch (error) {
       return { success: false, msg: error instanceof Error ? error.message : String(error) };
@@ -235,6 +274,10 @@ export function initApplicationBridge(): void {
 
   ipcBridge.application.reportBrowserWebContentsId.provider(async (registration) => {
     try {
+      if (!registration.profileToken) throw new Error('Browser identity unavailable.');
+      await validateBrowserToken(registration.profileToken);
+      if (registration.generation !== requireBrowserProfile(registration.profileToken).generation)
+        throw new Error('Stale browser registration.');
       const contents = webContents.fromId(registration.webContentsId);
       if (contents && mainWindowRef) registerBrowserPopupOpener(mainWindowRef, registration.tabId, contents);
       const handle = getCdpBridgeHandle();
@@ -249,6 +292,12 @@ export function initApplicationBridge(): void {
 
   ipcBridge.application.reportBrowserTabInventory.provider(async (inventory) => {
     try {
+      {
+        if (!inventory.profileToken) throw new Error('Browser identity unavailable.');
+        await validateBrowserToken(inventory.profileToken);
+        if (inventory.generation !== requireBrowserProfile(inventory.profileToken).generation)
+          throw new Error('Stale browser inventory.');
+      }
       if (mainWindowRef && !mainWindowRef.isDestroyed()) reconcileBrowserTabs(mainWindowRef, inventory);
       const handle = getCdpBridgeHandle();
       if (!handle) return { success: false, msg: 'Agent browser control is not enabled.' };

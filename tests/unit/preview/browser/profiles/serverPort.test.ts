@@ -9,11 +9,15 @@ import { resolveBridgeToken, resolveBrowserUrl } from '@/process/resources/built
 
 describe('resolveBrowserUrl', () => {
   it('builds the URL from the port inherited down the process tree', () => {
-    expect(resolveBrowserUrl({ env: { AIONUI_CDP_ACTIVE_PORT: '9230' } })).toBe('http://127.0.0.1:9230');
+    expect(
+      resolveBrowserUrl({ env: { AIONUI_CDP_ACTIVE_PORT: '9230', AIONUI_BROWSER_SCOPE_TOKEN: 'scoped-token' } })
+    ).toBe('http://127.0.0.1:9230/scope/scoped-token');
   });
 
   it('pins the host to loopback so the agent can never be aimed at a remote debugger', () => {
-    expect(resolveBrowserUrl({ env: { AIONUI_CDP_ACTIVE_PORT: '9230' } })).toMatch(/^http:\/\/127\.0\.0\.1:/);
+    expect(
+      resolveBrowserUrl({ env: { AIONUI_CDP_ACTIVE_PORT: '9230', AIONUI_BROWSER_SCOPE_TOKEN: 'scoped-token' } })
+    ).toMatch(/^http:\/\/127\.0\.0\.1:/);
   });
 
   it('rejects malformed or out-of-range ports', () => {
@@ -46,7 +50,7 @@ describe('resolveBrowserUrl', () => {
 
 describe('resolveBridgeToken', () => {
   it('returns the token inherited from the process tree', () => {
-    expect(resolveBridgeToken({ env: { AIONUI_CDP_BRIDGE_TOKEN: 'abc123' } })).toBe('abc123');
+    expect(resolveBridgeToken({ env: { AIONUI_BROWSER_SCOPE_TOKEN: 'abc123' } })).toBe('abc123');
   });
 
   it('returns null when absent, so the caller refuses to start rather than connecting unauthenticated', () => {
@@ -54,10 +58,16 @@ describe('resolveBridgeToken', () => {
   });
 
   it('treats a whitespace-only token as absent', () => {
-    expect(resolveBridgeToken({ env: { AIONUI_CDP_BRIDGE_TOKEN: '   ' } })).toBeNull();
+    expect(resolveBridgeToken({ env: { AIONUI_BROWSER_SCOPE_TOKEN: '   ' } })).toBeNull();
   });
 
   it('trims surrounding whitespace picked up from env plumbing', () => {
-    expect(resolveBridgeToken({ env: { AIONUI_CDP_BRIDGE_TOKEN: ' tok \n' } })).toBe('tok');
+    expect(resolveBridgeToken({ env: { AIONUI_BROWSER_SCOPE_TOKEN: ' tok \n' } })).toBe('tok');
   });
+});
+
+it('rejects the deprecated global bridge credential even when a port exists', () => {
+  expect(
+    resolveBrowserUrl({ env: { AIONUI_CDP_ACTIVE_PORT: '9230', AIONUI_CDP_BRIDGE_TOKEN: 'old-master' } })
+  ).toBeNull();
 });

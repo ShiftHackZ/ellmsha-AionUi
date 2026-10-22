@@ -181,7 +181,16 @@ const addTargetSchema = (tool: Tool): Tool => {
   return { ...tool, inputSchema: { ...tool.inputSchema, properties } };
 };
 
-export const createBrowserMcpProxy = (upstream: Client, controller: BrowserTabController): Server => {
+export const createBrowserMcpProxy = (
+  upstream: Client,
+  controller: BrowserTabController,
+  privateToken?: string
+): Server => {
+  const redact = (text: string): string =>
+    (privateToken ? text.replaceAll(privateToken, '[redacted]') : text).replace(
+      /\/scope\/[^/\s]+/g,
+      '/scope/[redacted]'
+    );
   let selectedTabId: string | undefined;
   let legacySelection = false;
   let targetSupport: Promise<boolean> | undefined;
@@ -296,6 +305,10 @@ export const createBrowserMcpProxy = (upstream: Client, controller: BrowserTabCo
             signal: extra.signal,
           }
         );
+        if (response.isError) {
+          // Also sanitize structured errors: credentials must never reach model-visible diagnostics.
+          Object.assign(response, JSON.parse(redact(JSON.stringify(response))));
+        }
         const target = (
           response.structuredContent as { target?: { id?: string; url?: string; closed?: boolean } } | undefined
         )?.target;
@@ -332,7 +345,15 @@ export const createBrowserMcpProxy = (upstream: Client, controller: BrowserTabCo
           uncertainOutcome = true;
         }
         return {
-          content: [{ type: 'text' as const, text: error instanceof Error ? error.message : String(error) }],
+          content: [
+            {
+              type: 'text' as const,
+              text: (error instanceof Error ? error.message : String(error)).replace(
+                /\/scope\/[^/\s]+/g,
+                '/scope/[redacted]'
+              ),
+            },
+          ],
           isError: true,
         };
       }
@@ -362,7 +383,7 @@ export class CdpBrowserTabController implements BrowserTabController {
     if (this.socket?.readyState === WebSocket.OPEN) return this.socket;
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
-      const response = await fetch(new URL('/json/version', this.browserUrl), { signal: AbortSignal.timeout(10_000) });
+      const response = await fetch(`${this.browserUrl}/json/version`, { signal: AbortSignal.timeout(10_000) });
       if (!response.ok) throw new Error(`Browser discovery failed with HTTP ${response.status}.`);
       const payload = (await response.json()) as { webSocketDebuggerUrl?: unknown };
       if (typeof payload.webSocketDebuggerUrl !== 'string') {

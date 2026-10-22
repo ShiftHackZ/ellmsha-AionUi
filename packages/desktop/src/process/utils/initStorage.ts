@@ -341,8 +341,9 @@ const ensureAssistantDirs = async (): Promise<void> => {
 };
 
 const getBuiltinMcpBaseDir = (): string => {
-  const mainModuleDir =
-    typeof require !== 'undefined' && require.main?.filename ? path.dirname(require.main.filename) : __dirname;
+  // This compiled module owns the resource location. Electron's default-app
+  // bootstrap may be require.main, so its directory is not an app resource root.
+  const mainModuleDir = __dirname;
   const baseDir = path.basename(mainModuleDir) === 'chunks' ? path.dirname(mainModuleDir) : mainModuleDir;
   // In packaged mode the main bundle lives inside app.asar, but external node
   // processes cannot read files from ASAR archives. Redirect to the unpacked copy.

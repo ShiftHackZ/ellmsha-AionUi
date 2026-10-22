@@ -49,14 +49,20 @@ export type CdpDecision =
   | { kind: 'close-target'; targetId: string }
   | { kind: 'error'; message: string };
 
-export const buildTargetInfo = (targetId: string, title: string, url: string, active = false): TargetInfo => ({
+export const buildTargetInfo = (
+  targetId: string,
+  title: string,
+  url: string,
+  active = false,
+  browserContextId = BROWSER_CONTEXT_ID
+): TargetInfo => ({
   targetId,
   type: 'page',
   title,
   url: url || 'about:blank',
   attached: true,
   canAccessOpener: false,
-  browserContextId: BROWSER_CONTEXT_ID,
+  browserContextId,
   aionuiActive: active,
 });
 
@@ -136,10 +142,13 @@ const requireTarget = (
 export const decideCdpCommand = (
   req: CdpRequest,
   getTargetInfos: () => TargetInfo[],
-  manualSessions?: ReadonlyMap<string, string>
+  manualSessions?: ReadonlyMap<string, string>,
+  browserContextId = BROWSER_CONTEXT_ID
 ): CdpDecision => {
   const method = req.method ?? '';
   const targets = getTargetInfos();
+  if (req.params?.browserContextId !== undefined && req.params.browserContextId !== browserContextId)
+    return { kind: 'error', message: 'Foreign browser context is not permitted.' };
 
   switch (method) {
     case 'Target.setDiscoverTargets': {
@@ -163,7 +172,7 @@ export const decideCdpCommand = (
     }
 
     case 'Target.getBrowserContexts':
-      return { kind: 'reply', payload: { browserContextIds: [BROWSER_CONTEXT_ID] } };
+      return { kind: 'reply', payload: { browserContextIds: [browserContextId] } };
 
     case 'Target.attachToTarget': {
       const target = requireTarget(req, targets, manualSessions);
@@ -197,12 +206,47 @@ export const decideCdpCommand = (
 
     case 'Target.createBrowserContext':
     case 'Target.disposeBrowserContext':
-      return { kind: 'error', message: 'AionUi in-app browser uses one shared authenticated browser context.' };
+      return { kind: 'error', message: 'Browser profiles are managed by the application.' };
+
+    case 'Browser.getVersion':
+      return {
+        kind: 'reply',
+        payload: {
+          protocolVersion: '1.3',
+          product: `Chrome/${process.versions.chrome ?? '0'}`,
+          revision: '',
+          userAgent: 'eLLMsha scoped browser',
+          jsVersion: process.versions.v8 ?? '',
+        },
+      };
+
+    case 'Browser.getWindowForTarget': {
+      const target = requireTarget(req, targets, manualSessions);
+      return 'kind' in target ? target : { kind: 'reply', payload: { windowId: 1, bounds: { windowState: 'normal' } } };
+    }
+
+    case 'Browser.setDownloadBehavior':
+      return req.params?.behavior === 'deny'
+        ? { kind: 'reply', payload: {} }
+        : { kind: 'error', message: 'Browser download policy is managed by the application.' };
 
     case 'Browser.close':
       return { kind: 'error', message: 'Browser.close is not permitted against the AionUi in-app browser.' };
 
     default:
+      // Never forward browser-wide or nested Target control to Electron.
+      if (
+        /^(Target|Browser|Storage|SystemInfo|Tethering)\./.test(method) ||
+        req.params?.targetId !== undefined ||
+        req.params?.browserContextId !== undefined
+      )
+        return { kind: 'error', message: 'Browser-wide CDP command is not permitted.' };
+      if (
+        !/^(Page|Runtime|DOM|DOMSnapshot|CSS|Accessibility|Network|Input|Emulation|Log|Performance|Profiler|Debugger|HeapProfiler|IO|Fetch|Overlay|Security|Audits|WebAuthn)\./.test(
+          method
+        )
+      )
+        return { kind: 'error', message: 'Unsupported page CDP domain.' };
       // Page-level commands carry the stable session id. Browser-level commands
       // have no target and are routed by the bridge to its deterministic fallback.
       return { kind: 'forward', targetId: targetIdFromSession(req.sessionId, targets, manualSessions) };

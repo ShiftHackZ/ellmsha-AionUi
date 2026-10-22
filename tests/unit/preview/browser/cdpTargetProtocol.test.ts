@@ -167,3 +167,30 @@ describe('cdpTargetProtocol — discovery and token details', () => {
     expect(tokensMatch('abc123', 'abc124')).toBe(false);
   });
 });
+
+describe('scoped CDP security', () => {
+  it('rejects browser context overrides and nested target control', () => {
+    for (const method of [
+      'Target.sendMessageToTarget',
+      'Target.exposeDevToolsProtocol',
+      'Storage.getCookies',
+      'Browser.grantPermissions',
+    ]) {
+      expect(decideCdpCommand({ method, params: {} }, targets).kind).toBe('error');
+    }
+    expect(
+      decideCdpCommand(
+        { method: 'Target.createTarget', params: { browserContextId: 'foreign' } },
+        targets,
+        undefined,
+        'owned'
+      ).kind
+    ).toBe('error');
+  });
+  it('reports only the socket profile as browser context', () => {
+    expect(decideCdpCommand({ method: 'Target.getBrowserContexts' }, targets, undefined, 'owned')).toEqual({
+      kind: 'reply',
+      payload: { browserContextIds: ['owned'] },
+    });
+  });
+});

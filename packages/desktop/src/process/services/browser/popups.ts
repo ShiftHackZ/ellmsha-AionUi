@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { session, WebContentsView, type BrowserWindow, type WebContents, type WebPreferences } from 'electron';
+import { clearBrowserHistory, readBrowserHistory, saveBrowserHistory } from './history';
+import { bindBrowserAuthHost, browserSession, getActiveBrowserProfile, requireBrowserProfile } from './profiles';
+import { WebContentsView, type BrowserWindow, type WebContents, type WebPreferences } from 'electron';
 import { ipcBridge } from '@/common';
 import type { BrowserPopupCommand, BrowserPopupState, BrowserTabInventory } from '@/common/adapter/ipcBridge';
-import { BROWSER_SESSION_PARTITION, MAX_BROWSER_TABS } from '@/common/config/constants';
+import { MAX_BROWSER_TABS } from '@/common/config/constants';
 
 type NativeTab = {
   tabId: string;
+  profileId: string;
   view: WebContentsView;
   window: BrowserWindow;
   active: boolean;
@@ -18,10 +21,10 @@ type NativeTab = {
   onHostClosed?: () => void;
   disposal?: ReturnType<typeof setTimeout>;
 };
-const openers = new Map<number, { tabId: string; window: BrowserWindow }>();
+const openers = new Map<number, { tabId: string; window: BrowserWindow; profileId: string }>();
 // Ordinary tabs and not-yet-adopted popups share ownership and capacity.
 const tabs = new Map<string, NativeTab>();
-const inventories = new WeakMap<BrowserWindow, Set<string>>();
+const inventories = new WeakMap<BrowserWindow, Map<string, Set<string>>>();
 const ID_PATTERN = /^[a-zA-Z0-9._:-]{1,200}$/;
 const validId = (value: unknown): value is string => typeof value === 'string' && ID_PATTERN.test(value);
 export const canOpenBrowserUrl = (url: string): boolean => {
@@ -33,8 +36,8 @@ export const canOpenBrowserUrl = (url: string): boolean => {
     return false;
   }
 };
-const browserPreferences = (): WebPreferences => ({
-  session: session.fromPartition(BROWSER_SESSION_PARTITION),
+const browserPreferences = (profileId: string): WebPreferences => ({
+  session: browserSession(profileId),
   nodeIntegration: false,
   nodeIntegrationInSubFrames: false,
   contextIsolation: true,
@@ -56,10 +59,11 @@ export function getBrowserPopup(tabId: string, contentsId?: number) {
 }
 
 export function registerBrowserPopupOpener(window: BrowserWindow, tabId: string, contents: WebContents): void {
-  if (contents.session !== session.fromPartition(BROWSER_SESSION_PARTITION)) return;
   const native = getBrowserPopup(tabId, contents.id);
+  const profileId = native?.profileId ?? getActiveBrowserProfile()?.profileId;
+  if (!profileId || contents.session !== browserSession(profileId)) return;
   if (native ? native.window !== window : contents.hostWebContents !== window.webContents) return;
-  openers.set(contents.id, { tabId, window });
+  openers.set(contents.id, { tabId, window, profileId });
 }
 
 const popupState = (tabId: string): BrowserPopupState => {
@@ -84,6 +88,7 @@ const emitState = (tabId: string, tab: NativeTab): void => {
   if (getBrowserPopup(tabId) === tab) ipcBridge.application.browserPopupState.emit(popupState(tabId));
 };
 const closeTab = (tab: NativeTab): void => {
+  saveBrowserHistory(tab.profileId, tab.tabId, tab.view.webContents);
   if (tab.onHostClosed) tab.window.removeListener('closed', tab.onHostClosed);
   if (tab.disposal) clearTimeout(tab.disposal);
   tab.disposal = undefined;
@@ -99,6 +104,8 @@ const closeTab = (tab: NativeTab): void => {
 export function reconcileBrowserTabs(window: BrowserWindow, inventory: BrowserTabInventory): void {
   if (!inventory || typeof inventory.ready !== 'boolean' || !Array.isArray(inventory.tabIds))
     throw new Error('Invalid browser tab inventory.');
+  const profile = requireBrowserProfile(inventory.profileToken);
+  if (inventory.generation !== profile.generation) throw new Error('Stale browser inventory generation.');
   const retained = new Set(inventory.tabIds);
   if (
     retained.size !== inventory.tabIds.length ||
@@ -106,27 +113,44 @@ export function reconcileBrowserTabs(window: BrowserWindow, inventory: BrowserTa
     [...retained].some((id) => !validId(id))
   )
     throw new Error('Invalid browser tab inventory.');
-  const previous = inventories.get(window);
-  for (const [id, tab] of tabs) {
-    // A popup may be awaiting its adoption event; an ordinary inventory update
-    // must not destroy it before the renderer has ever acknowledged that ID.
-    if (tab.window === window && (!inventory.ready || (previous?.has(id) && !retained.has(id)))) closeTab(tab);
+  let profiles = inventories.get(window);
+  if (!profiles) {
+    profiles = new Map();
+    inventories.set(window, profiles);
   }
-  inventories.set(window, retained);
+  const previous = profiles.get(profile.profileId);
+  for (const [id, tab] of tabs) {
+    if (tab.window !== window) continue;
+    if (!inventory.ready || tab.profileId !== profile.profileId) {
+      // Suspension is not a navigation. Keep POST bodies, opener and form state live.
+      tab.active = false;
+      tab.view.setVisible(false);
+    } else if (previous?.has(id) && !retained.has(id)) closeTab(tab);
+  }
+  if (inventory.ready) profiles.set(profile.profileId, retained);
 }
 
 const reserveCapacity = (): void => {
   // Removed viewers may still have a deferred StrictMode cleanup pending.
   for (const tab of tabs.values()) if (tab.disposal) closeTab(tab);
   if (tabs.size >= MAX_BROWSER_TABS)
-    throw new Error(`The in-app browser already has its maximum of ${MAX_BROWSER_TABS} tabs.`);
+    throw new Error(
+      `The in-app browser already has its maximum of ${MAX_BROWSER_TABS} tabs. Close suspended tabs in Settings > System > In-app browser to free space.`
+    );
 };
 
-const attachView = (window: BrowserWindow, tabId: string, view: WebContentsView, url: string): NativeTab => {
+const attachView = (
+  window: BrowserWindow,
+  tabId: string,
+  view: WebContentsView,
+  url: string,
+  profileId: string
+): NativeTab => {
+  bindBrowserAuthHost(profileId, window);
   const child = view.webContents;
-  const tab: NativeTab = { tabId, view, window, active: false, pendingUrl: url, notifyClose: true };
+  const tab: NativeTab = { tabId, profileId, view, window, active: false, pendingUrl: url, notifyClose: true };
   tabs.set(tabId, tab);
-  openers.set(child.id, { tabId, window });
+  openers.set(child.id, { tabId, window, profileId });
   // Browser pages own their styling; transparent documents get a normal opaque canvas.
   view.setBackgroundColor('#ffffff');
   view.setVisible(false);
@@ -138,6 +162,11 @@ const attachView = (window: BrowserWindow, tabId: string, view: WebContentsView,
   child.on('will-redirect', guard);
   configureBrowserPopups(child, window);
   const update = () => emitState(tabId, tab);
+  const remember = () => saveBrowserHistory(profileId, tabId, child);
+  child.on('did-stop-loading', remember);
+  child.on('did-navigate-in-page', remember);
+  window.on('close', remember);
+  child.once('destroyed', () => window.removeListener('close', remember));
   const navigated = () => {
     tab.pendingUrl = undefined;
     tab.pendingExplicitNavigation = false;
@@ -179,7 +208,13 @@ const attachView = (window: BrowserWindow, tabId: string, view: WebContentsView,
     const owned = tabs.get(tabId) === tab;
     if (owned) tabs.delete(tabId);
     if (!window.isDestroyed()) window.contentView.removeChildView(view);
-    if (owned && tab.notifyClose) ipcBridge.application.browserTabCommand.emit({ action: 'close', tabId });
+    if (owned && tab.notifyClose)
+      ipcBridge.application.browserTabCommand.emit({
+        action: 'close',
+        tabId,
+        profileId: tab.profileId,
+        generation: getActiveBrowserProfile()?.generation,
+      });
   });
   return tab;
 };
@@ -200,7 +235,16 @@ const navigate = (tabId: string, tab: NativeTab, url: string): void => {
 export function configureBrowserPopups(contents: WebContents, window: BrowserWindow): void {
   contents.setWindowOpenHandler(({ url, disposition }) => {
     const opener = openers.get(contents.id);
-    if (!opener || opener.window !== window || window.isDestroyed() || !canOpenBrowserUrl(url))
+    const nativeParent = opener && getBrowserPopup(opener.tabId, contents.id);
+    const parent = nativeParent ?? opener;
+    if (
+      !parent ||
+      parent.profileId !== getActiveBrowserProfile()?.profileId ||
+      !opener ||
+      opener.window !== window ||
+      window.isDestroyed() ||
+      !canOpenBrowserUrl(url)
+    )
       return { action: 'deny' };
     try {
       reserveCapacity();
@@ -210,14 +254,22 @@ export function configureBrowserPopups(contents: WebContents, window: BrowserWin
     return {
       action: 'allow',
       outlivesOpener: true,
-      overrideBrowserWindowOptions: { webPreferences: browserPreferences() },
+      overrideBrowserWindowOptions: { webPreferences: browserPreferences(parent.profileId) },
       createWindow: (options) => {
+        if (
+          getActiveBrowserProfile()?.profileId !== parent.profileId ||
+          openers.get(contents.id) !== opener ||
+          (nativeParent !== undefined && getBrowserPopup(parent.tabId) !== nativeParent)
+        )
+          throw new Error('Stale browser opener.');
         reserveCapacity();
-        const view = new WebContentsView(options);
+        const view = new WebContentsView({ ...options, webPreferences: browserPreferences(parent.profileId) });
         const tabId = `browser-popup-${randomUUID()}`;
-        attachView(window, tabId, view, url);
+        attachView(window, tabId, view, url, parent.profileId);
         ipcBridge.application.browserTabCommand.emit({
           action: 'adopt',
+          profileId: parent.profileId,
+          generation: getActiveBrowserProfile()?.generation,
           tabId,
           openerTabId: opener.tabId,
           url,
@@ -237,7 +289,10 @@ export function controlBrowserPopup(
 ): BrowserPopupState | undefined {
   if (window.isDestroyed() || !command || !validId(command.tabId)) throw new Error('Invalid browser host or tab id.');
   if (command.mountId !== undefined && !validId(command.mountId)) throw new Error('Invalid browser viewer attachment.');
+  const profile = requireBrowserProfile(command.profileToken);
+  if (command.generation !== profile.generation) throw new Error('Stale browser command generation.');
   let tab = getBrowserPopup(command.tabId);
+  if (tab && tab.profileId !== profile.profileId) throw new Error('Browser tab belongs to another profile.');
   if (command.action === 'ensure') {
     if (!validId(command.mountId) || typeof command.requireExisting !== 'boolean' || !canOpenBrowserUrl(command.url))
       throw new Error('Invalid browser tab request.');
@@ -248,10 +303,17 @@ export function controlBrowserPopup(
       tab = attachView(
         window,
         command.tabId,
-        new WebContentsView({ webPreferences: browserPreferences() }),
-        command.url
+        new WebContentsView({ webPreferences: browserPreferences(profile.profileId) }),
+        command.url,
+        profile.profileId
       );
-      navigate(command.tabId, tab, command.url);
+      const history = readBrowserHistory(profile.profileId, command.tabId);
+      if (history) {
+        const restored = tab;
+        void tab.view.webContents.navigationHistory.restore(history).catch(() => {
+          if (getBrowserPopup(command.tabId) === restored) navigate(command.tabId, restored, command.url);
+        });
+      } else navigate(command.tabId, tab, command.url);
     }
     if (tab.disposal) clearTimeout(tab.disposal);
     tab.disposal = undefined;
@@ -274,7 +336,7 @@ export function controlBrowserPopup(
     tab.active = false;
     // A layout remount may cross multiple IPC turns. Inventory, not that timing,
     // decides whether an acknowledged page still belongs to the current scope.
-    if (!inventories.get(window)?.has(command.tabId)) {
+    if (!inventories.get(window)?.get(tab.profileId)?.has(command.tabId)) {
       const owned = tab;
       tab.disposal = setTimeout(() => closeTab(owned), 0);
     }
@@ -317,6 +379,44 @@ export function controlBrowserPopup(
 
 export function bindBrowserPopups(window: BrowserWindow): void {
   window.webContents.on('did-attach-webview', (_event, guest) => {
-    if (guest.session === session.fromPartition(BROWSER_SESSION_PARTITION)) configureBrowserPopups(guest, window);
+    const profile = getActiveBrowserProfile();
+    if (profile && guest.session === browserSession(profile.profileId)) configureBrowserPopups(guest, window);
   });
+}
+
+/** Close live pages before clearing their data, preventing repopulation races. */
+export function closeBrowserProfile(profileId: string): void {
+  for (const tab of tabs.values()) if (tab.profileId === profileId) closeTab(tab);
+  clearBrowserHistory(profileId);
+}
+
+/** Hide during async identity resolution without destroying same-profile forms/history. */
+export function hideBrowserTabs(window: BrowserWindow): void {
+  for (const tab of tabs.values())
+    if (tab.window === window) {
+      tab.active = false;
+      tab.view.setVisible(false);
+    }
+}
+export function hideForeignBrowserProfiles(profileId: string): void {
+  for (const tab of tabs.values())
+    if (tab.profileId !== profileId) {
+      tab.active = false;
+      tab.view.setVisible(false);
+    }
+}
+
+/** Explicit local resource recovery only; never clear sign-ins or evict live pages automatically. */
+export function closeSuspendedBrowserTabs(): Map<string, number> {
+  const visible = getActiveBrowserProfile()?.profileId;
+  const closed = new Map<string, number>();
+  for (const tab of tabs.values()) {
+    if (tab.profileId === visible) continue;
+    closed.set(tab.profileId, (closed.get(tab.profileId) ?? 0) + 1);
+    closeTab(tab);
+  }
+  return closed;
+}
+export function countBrowserProfileTabs(profileId: string): number {
+  return [...tabs.values()].filter((tab) => tab.profileId === profileId).length;
 }

@@ -14,6 +14,9 @@ import { BROWSER_BLANK_URL, BROWSER_TAB_FALLBACK_TITLE, MAX_BROWSER_TABS } from 
 import { isBrowserMcpActivity, isBrowserMcpSettled } from '../browser/agentActivity';
 import { maybeNotifyFirstAgentBrowserUse } from '../browser/firstUseNotice';
 import type { PreviewScopeKey } from './previewScope';
+import type { BrowserProfileContext } from '@/common/adapter/ipcBridge';
+import { isElectronDesktop } from '@/renderer/utils/platform';
+import { useCurrentConversation } from '../../explorer/currentConversationStore';
 
 /** DOM 片段数据结构 / DOM snippet data structure */
 export interface DomSnippet {
@@ -88,6 +91,7 @@ export type PreviewTabPatch = {
 };
 
 export interface PreviewContextValue {
+  browserProfile?: BrowserProfileContext;
   // 预览面板状态 / Preview panel state
   isOpen: boolean;
   tabs: PreviewTab[]; // 所有打开的 tabs
@@ -280,10 +284,26 @@ const browserTabIds = (tabs: PreviewTab[]): string[] =>
   tabs.filter((tab) => tab.content_type === 'browser').map((tab) => tab.id);
 
 export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const conversationId = useCurrentConversation();
+  const [browserProfile, setBrowserProfile] = useState<BrowserProfileContext>();
+  const browserProfileRef = useRef<BrowserProfileContext | undefined>(undefined);
+  const browserTabsProfileId = useRef<string | undefined>(undefined);
+  const [profileRevision, setProfileRevision] = useState(0);
+  useEffect(() => {
+    if (!isElectronDesktop()) return;
+    return ipcBridge.conversation.listChanged.on((event) => {
+      if (event.conversation_id === conversationId) setProfileRevision((value) => value + 1);
+    });
+  }, [conversationId]);
+
   const pendingPopupTabs = useRef(new Set<string>());
   const [initialScope] = useState(loadInitialScopeState);
   const [isOpen, setIsOpen] = useState(initialScope.state.isOpen);
-  const [tabs, setTabs] = useState<PreviewTab[]>(initialScope.state.tabs);
+  const [tabs, setTabs] = useState<PreviewTab[]>(() =>
+    isElectronDesktop()
+      ? initialScope.state.tabs.filter((tab) => tab.content_type !== 'browser')
+      : initialScope.state.tabs
+  );
   useEffect(() => {
     for (const tab of tabs) pendingPopupTabs.current.delete(tab.id);
   }, [tabs]);
@@ -306,6 +326,94 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const sendBoxHandler = useRef<((text: string) => void) | null>(null);
   const [domSnippets, setDomSnippets] = useState<DomSnippet[]>([]);
 
+  useEffect(() => {
+    if (!isElectronDesktop()) return;
+    let alive = true;
+    const previous = browserProfileRef.current;
+    if (previous) {
+      try {
+        localStorage.setItem(
+          `ellmsha_browser_profile:${previous.profileId}`,
+          JSON.stringify({
+            tabs: sanitizeTabsForPersistence(tabsRef.current.filter((tab) => tab.content_type === 'browser')),
+            activeTabId: activeTabIdRef.current,
+          })
+        );
+      } catch {
+        /* Private storage may be unavailable. */
+      }
+    }
+    browserProfileRef.current = undefined;
+    setBrowserProfile(undefined);
+    void ipcBridge.application.bindBrowserProfile
+      .invoke({ conversationId })
+      .then((result) => {
+        if (!alive || !result.success || !result.data) return;
+        const context = result.data;
+        browserProfileRef.current = context;
+        browserTabsProfileId.current = context.profileId;
+        setBrowserProfile(context);
+        let restored: PersistedScopeState = EMPTY_SCOPE_STATE;
+        try {
+          const raw = localStorage.getItem(`ellmsha_browser_profile:${context.profileId}`);
+          if (raw) {
+            const value = JSON.parse(raw) as PersistedScopeState;
+            if (Array.isArray(value.tabs))
+              restored = {
+                isOpen: true,
+                tabs: value.tabs
+                  .filter(
+                    (tab) =>
+                      tab.content_type === 'browser' && typeof tab.id === 'string' && typeof tab.content === 'string'
+                  )
+                  .slice(0, MAX_BROWSER_TABS),
+                activeTabId: value.activeTabId,
+              };
+          }
+        } catch {
+          /* Corrupt profile UI state never falls back to legacy shared tabs. */
+        }
+        setTabs((current) => [...current.filter((tab) => tab.content_type !== 'browser'), ...restored.tabs]);
+        if (restored.tabs.some((tab) => tab.id === restored.activeTabId)) {
+          setActiveTabId(restored.activeTabId);
+          setIsOpen(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [conversationId, profileRevision]);
+
+  useEffect(() => {
+    const profile = browserProfileRef.current;
+    if (!isElectronDesktop() || !profile) return;
+    try {
+      localStorage.setItem(
+        `ellmsha_browser_profile:${profile.profileId}`,
+        JSON.stringify({
+          tabs: sanitizeTabsForPersistence(tabs.filter((tab) => tab.content_type === 'browser')),
+          activeTabId,
+        })
+      );
+    } catch {
+      /* Browsing continues without UI persistence. */
+    }
+  }, [tabs, activeTabId]);
+
+  useEffect(() => {
+    if (!isElectronDesktop()) return;
+    return ipcBridge.application.browserProfileCleared.on(({ profileId }) => {
+      localStorage.removeItem(`ellmsha_browser_profile:${profileId}`);
+      if (browserTabsProfileId.current !== profileId) return;
+      pendingPopupTabs.current.clear();
+      setTabs((current) => current.filter((tab) => tab.content_type !== 'browser'));
+      setActiveTabId((current) =>
+        tabsRef.current.some((tab) => tab.id === current && tab.content_type === 'browser') ? null : current
+      );
+    });
+  }, []);
+
   // Persist the active scope's preview state (open tabs + active tab + visibility)
   // to `aionui_preview:<scope>`, debounced. Keeps activeTabIdRef in sync eagerly.
   useEffect(() => {
@@ -320,14 +428,21 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     void ipcBridge.application.reportBrowserTabInventory.invoke({
-      ready: browserInventoryReadyRef.current,
+      profileToken: browserProfileRef.current?.token,
+      generation: browserProfileRef.current?.generation,
+      ready: isElectronDesktop() ? !!browserProfileRef.current : browserInventoryReadyRef.current,
       tabIds: browserTabIds(tabs),
     });
-  }, [tabs]);
+  }, [tabs, browserProfile]);
 
   useEffect(
     () => () => {
-      void ipcBridge.application.reportBrowserTabInventory.invoke({ ready: false, tabIds: [] });
+      void ipcBridge.application.reportBrowserTabInventory.invoke({
+        ready: false,
+        tabIds: [],
+        profileToken: browserProfileRef.current?.token,
+        generation: browserProfileRef.current?.generation,
+      });
     },
     []
   );
@@ -573,7 +688,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const closePreview = useCallback(() => {
     pendingPopupTabs.current.clear();
     setIsOpen(false);
-    setTabs([]);
+    setTabs((current) => (isElectronDesktop() ? current.filter((tab) => tab.content_type === 'browser') : []));
     setActiveTabId(null);
     setDomSnippets([]);
   }, []);
@@ -588,7 +703,13 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const prev = currentScopeRef.current;
       if (prev === scopeKey) return;
       pendingPopupTabs.current.clear();
-      void ipcBridge.application.reportBrowserTabInventory.invoke({ ready: false, tabIds: [] });
+      if (!isElectronDesktop())
+        void ipcBridge.application.reportBrowserTabInventory.invoke({
+          ready: false,
+          tabIds: [],
+          profileToken: browserProfileRef.current?.token,
+          generation: browserProfileRef.current?.generation,
+        });
       if (prev != null) persistScopeState(prev, { isOpen, tabs, activeTabId });
       currentScopeRef.current = scopeKey;
       browserInventoryReadyRef.current = scopeKey !== null;
@@ -600,14 +721,23 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       const loaded = scopeKey != null ? loadScopeState(scopeKey) : EMPTY_SCOPE_STATE;
-      setTabs(loaded.tabs);
+      setTabs(
+        isElectronDesktop()
+          ? [
+              ...loaded.tabs.filter((tab) => tab.content_type !== 'browser'),
+              ...tabsRef.current.filter((tab) => tab.content_type === 'browser'),
+            ]
+          : loaded.tabs
+      );
       setActiveTabId(loaded.activeTabId);
       activeTabIdRef.current = loaded.activeTabId;
       setIsOpen(loaded.isOpen);
       setDomSnippets([]);
       void ipcBridge.application.reportBrowserTabInventory.invoke({
-        ready: browserInventoryReadyRef.current,
-        tabIds: browserTabIds(loaded.tabs),
+        profileToken: browserProfileRef.current?.token,
+        generation: browserProfileRef.current?.generation,
+        ready: isElectronDesktop() ? !!browserProfileRef.current : browserInventoryReadyRef.current,
+        tabIds: browserTabIds(isElectronDesktop() ? tabsRef.current : loaded.tabs),
       });
     },
     [isOpen, tabs, activeTabId]
@@ -647,6 +777,12 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     return ipcBridge.application.browserTabCommand.on((command) => {
+      if (
+        isElectronDesktop() &&
+        (command.profileId !== browserProfileRef.current?.profileId ||
+          command.generation !== browserProfileRef.current?.generation)
+      )
+        return;
       // The mounted WebviewHost owns native frame focus and its acknowledgement.
       if (command.action === 'focus') return;
       if (command.action === 'adopt') {
@@ -1126,6 +1262,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       findPreviewTab,
       closePreviewByIdentity,
       closePreviewIfScopeChanged,
+      browserProfile: browserProfile?.conversationId === conversationId ? browserProfile : undefined,
       addToSendBox,
       setSendBoxHandler,
       domSnippets,
@@ -1150,6 +1287,8 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     findPreviewTab,
     closePreviewByIdentity,
     closePreviewIfScopeChanged,
+    browserProfile,
+    conversationId,
     addToSendBox,
     setSendBoxHandler,
     domSnippets,
