@@ -128,14 +128,25 @@ function rebuildWithElectronRebuild(options) {
   const targetArch = normalizeArch(arch);
   const env = buildEnvironment(platform, targetArch, electronVersion);
 
-  const bunxCmd = getBunxCommand();
-  const rebuildCmd = `${bunxCmd} electron-rebuild --only ${modules.join(',')} --force --arch ${targetArch} --electron-version ${electronVersion}`;
-
-  execSync(rebuildCmd, {
-    stdio: 'inherit',
-    cwd,
-    env,
-  });
+  // Resolve the locked modern package; bunx electron-rebuild downloads a different,
+  // deprecated package whose node-gyp cannot run with Python 3.12.
+  const cli = path.join(path.dirname(require.resolve('@electron/rebuild')), 'cli.js');
+  execFileSync(
+    process.execPath,
+    [
+      cli,
+      '--only',
+      modules.join(','),
+      '--force',
+      '--arch',
+      targetArch,
+      '--version',
+      electronVersion,
+      '--module-dir',
+      cwd,
+    ],
+    { stdio: 'inherit', cwd, env }
+  );
 }
 
 /**
@@ -167,7 +178,6 @@ function canCrossCompileFromSource(buildArch, targetArch, platform) {
  * @param {string} options.platform - Platform name
  * @param {string} options.arch - Target architecture
  * @param {string} options.electronVersion - Electron version
- * @param {string} [options.projectRoot] - Project root for fallback rebuild
  * @param {boolean} [options.forceRebuild] - Force rebuild from source (skip prebuild-install)
  * @param {string} [options.buildArch] - Build machine architecture (for cross-compilation detection)
  */
@@ -178,7 +188,6 @@ function rebuildSingleModule(options) {
     platform,
     arch,
     electronVersion,
-    projectRoot = path.resolve(__dirname, '..'),
     forceRebuild = false,
     buildArch = process.arch,
   } = options;
@@ -287,37 +296,13 @@ function rebuildSingleModule(options) {
   }
 
   try {
-    env.npm_config_build_from_source = 'true';
-    const rebuildArgs = [
-      '--yes',
-      'electron-rebuild',
-      '--only',
-      moduleName,
-      '--force',
-      `--platform=${platform}`,
-      `--arch=${targetArch}`,
-    ];
-
-    const fullCmd = cmdPrefix
-      ? `${cmdPrefix} ${bunxCmd} ${rebuildArgs.join(' ')}`
-      : `${bunxCmd} ${rebuildArgs.join(' ')}`;
-    console.log(`     Running: ${fullCmd}`);
-
-    if (useShell) {
-      execSync(fullCmd, {
-        cwd: projectRoot,
-        env,
-        stdio: 'inherit',
-        shell: true,
-      });
-    } else {
-      execFileSync(bunxCmd, rebuildArgs, {
-        cwd: projectRoot,
-        env,
-        stdio: 'inherit',
-        shell: true,
-      });
-    }
+    rebuildWithElectronRebuild({
+      platform,
+      arch: targetArch,
+      electronVersion,
+      cwd: moduleRoot,
+      modules: [moduleName],
+    });
     return true;
   } catch (error) {
     console.error(`❌ Failed to rebuild ${moduleName}:`, error.message);
