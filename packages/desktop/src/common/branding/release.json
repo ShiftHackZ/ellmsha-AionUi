@@ -1,13 +1,13 @@
 {
   "version": "2026.10.22",
-  "patch": 3,
+  "patch": 4,
   "components": [
     {
       "name": "AionUI",
       "url": "https://github.com/iOfficeAI/AionUi",
       "upstream": "v2.1.47-final",
       "commit": "42be46dbf5a7d45042d0a691dea590f76cba8e24",
-      "patch": 19
+      "patch": 20
     },
     {
       "name": "AionCore",
