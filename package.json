@@ -1,6 +1,6 @@
 {
   "name": "AionUi",
-  "version": "2026.10.22-patch.1",
+  "version": "2026.10.22-patch.2",
   "description": "Transform your command-line AI agent into a modern, efficient AI Chat interface.",
   "keywords": [],
   "license": "Apache-2.0",
@@ -217,6 +217,7 @@
     "jest-diff": "^30.0.4",
     "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",
+    "node-gyp": "12.4.0",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
     "patch-package": "^8.0.0",
