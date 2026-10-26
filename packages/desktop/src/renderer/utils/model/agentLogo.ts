@@ -35,7 +35,11 @@ export type AgentLogoMap = Record<string, string>;
 export const AGENT_LOGOS_SWR_KEY = 'agents.logos';
 
 function collectManagedAgentLogoKeys(agent: ManagedAgent): string[] {
-  const keys = [agent.backend, agent.agent_type, agent.id, agent.custom_agent_id];
+  // This agent shares the native harness; its branding must not replace Ollama's.
+  const keys =
+    agent.id === 'copilot-ide'
+      ? [agent.id, agent.custom_agent_id]
+      : [agent.backend, agent.agent_type, agent.id, agent.custom_agent_id];
   return keys
     .filter((key): key is string => typeof key === 'string' && key.trim().length > 0)
     .map((key) => key.trim().toLowerCase())

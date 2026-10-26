@@ -1,3 +1,8 @@
+import {
+  registerCopilotBridge,
+  initializeCopilotProvider,
+  disposeCopilotProvider,
+} from './process/services/copilot/provider';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -205,6 +210,7 @@ let appReadyDone = false;
 
 let mainWindow: BrowserWindow;
 registerMemoryIdentityBridge(() => mainWindow);
+registerCopilotBridge(() => mainWindow);
 const backendManager = new BackendLifecycleManager(
   {
     version: app.getVersion(),
@@ -253,6 +259,7 @@ ipcMain.handle('backend:recover-corrupted-database', async () => {
     getFailure: () => backendStartupFailureInfo,
     stopBackend: async () => {
       await backendManager.stop();
+      await disposeCopilotProvider();
       await stopEmbeddingJob();
       await stopNativeMemory();
     },
@@ -407,6 +414,9 @@ function markBackendReady(backendPort: number, source: string): void {
   console.log(`[AionUi] ${source} ready (port=${backendPort})`);
   exposeBackendPort(backendPort);
   registerCronResumeBridge(backendPort);
+  if (!isWebUIMode && !isResetPasswordMode) {
+    void initializeCopilotProvider().catch(() => console.warn('[CopilotIDE] Provider restoration failed'));
+  }
   backendStartedOk = true;
   backendStartupFailed = false;
   backendStartupFailureInfo = null;
@@ -1154,6 +1164,7 @@ installQuitCleanup({
   // transitively (no separate frontend workerTaskManager remains).
   stopBackend: async () => {
     await backendManager.stop();
+    await disposeCopilotProvider();
     await stopEmbeddingJob();
     await stopNativeMemory();
   },

@@ -15,7 +15,7 @@ import {
 } from '@/common/adapter/ipcBridge';
 import { AION_ADD_BUTTON_CLASS } from '@/renderer/components/base/TalkToButlerButton';
 import { formatManagedAgentDiagnosticMessage, type ManagedAgent } from '@/renderer/utils/model/agentTypes';
-import EnvVarEditor, { type EnvVarRow } from './EnvVarEditor';
+import EnvVarEditor, { type EnvVarRow } from '../EnvVarEditor';
 import { uuid } from '@/common/utils';
 
 type AgentRepairPanelProps = {

@@ -31,6 +31,8 @@ export const useAionrsModelSelection = ({
   onSelectModel,
 }: UseAionrsModelSelectionOptions): AionrsModelSelection => {
   const { data: conversation } = useRouterConversation(conversationId);
+  const copilotOnly =
+    conversation?.extra && 'agent_id' in conversation.extra && conversation.extra.agent_id === 'copilot-ide';
   const locked = Boolean(getRoutingSnapshot(conversation?.extra));
   const [current_model, setCurrentModel] = useState<TProviderWithModel | undefined>(initialModel);
 
@@ -42,13 +44,18 @@ export const useAionrsModelSelection = ({
 
   // AionCore does not support Google Auth — filter it out
   const providers = useMemo(
-    () => allProviders.filter((p) => !p.platform?.toLowerCase().includes('gemini-with-google-auth')),
-    [allProviders]
+    () =>
+      allProviders.filter(
+        (p) =>
+          !p.platform?.toLowerCase().includes('gemini-with-google-auth') &&
+          (!copilotOnly || p.id === 'ellmsha-copilot-ide')
+      ),
+    [allProviders, copilotOnly]
   );
 
   const handleSelectModel = useCallback(
     async (provider: IProvider, modelName: string) => {
-      if (locked) return;
+      if (locked || (copilotOnly && provider.id !== 'ellmsha-copilot-ide')) return;
       const selected = {
         ...(provider as unknown as TProviderWithModel),
         use_model: modelName,
@@ -58,7 +65,7 @@ export const useAionrsModelSelection = ({
         setCurrentModel(selected);
       }
     },
-    [locked, onSelectModel]
+    [locked, copilotOnly, onSelectModel]
   );
 
   const getDisplayModelName = useCallback(

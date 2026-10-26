@@ -1,0 +1,23 @@
+{
+  "name": "ellmsha-copilot-ide-probe",
+  "displayName": "eLLMsha Copilot IDE",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "ellmsha",
+  "main": "./extension.cjs",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ellmsha.copilot.signIn",
+        "title": "eLLMsha: Connect GitHub Copilot"
+      }
+    ]
+  },
+  "activationEvents": [
+    "onCommand:ellmsha.copilot.signIn",
+    "onStartupFinished"
+  ],
+  "engines": {
+    "vscode": "^1.144.0"
+  }
+}

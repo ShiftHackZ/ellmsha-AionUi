@@ -1,3 +1,12 @@
+export type CopilotIdeStatus = {
+  enabled: boolean;
+  running: boolean;
+  starting: boolean;
+  busy: boolean;
+  models: string[];
+  runtimeAvailable: boolean;
+};
+export type CopilotIdeAction = 'status' | 'enable' | 'disable' | 'login' | 'refresh' | 'stop';
 export type ProjectIndexCatalog = {
   project_id: string | null;
   name: string;
@@ -36,6 +45,7 @@ export interface WebUIStatus {
 }
 
 export interface ElectronBridgeAPI {
+  copilotIde?: (action: CopilotIdeAction) => Promise<CopilotIdeStatus>;
   emit: (name: string, data: unknown) => Promise<unknown> | void;
   on: (callback: (event: { value: string }) => void) => void;
   // 获取拖拽文件/目录的绝对路径 / Get absolute path for dragged file/directory

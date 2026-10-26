@@ -47,14 +47,17 @@ export type GuidModelSelectionResult = {
  * transient in-page selection.
  * @param agentKey - current provider-based agent (currently only 'aionrs')
  */
-export const useGuidModelSelection = (agentKey: ProviderAgentKey = 'aionrs'): GuidModelSelectionResult => {
+export const useGuidModelSelection = (
+  agentKey: ProviderAgentKey = 'aionrs',
+  providerId?: string
+): GuidModelSelectionResult => {
   const { isGoogleAuth } = useGoogleAuthModels();
   const { data: modelConfig } = useProvidersQuery();
 
   const modelList = useMemo(() => {
     const allProviders: IProvider[] = (modelConfig || []).filter((platform) => !!platform.models.length);
-    return allProviders.filter(hasAvailableModels);
-  }, [modelConfig]);
+    return allProviders.filter(hasAvailableModels).filter((provider) => !providerId || provider.id === providerId);
+  }, [modelConfig, providerId]);
 
   const formatGeminiModelLabel = useCallback((_provider: { platform?: string } | undefined, modelName?: string) => {
     if (!modelName) return '';
@@ -75,6 +78,10 @@ export const useGuidModelSelection = (agentKey: ProviderAgentKey = 'aionrs'): Gu
   const resetCurrentModel = useCallback(
     async (options?: { persistPreference?: boolean }) => {
       if (!modelList || modelList.length === 0) {
+        if (providerId) {
+          selectedModelKeyRef.current = null;
+          _setCurrentModel(undefined);
+        }
         return;
       }
 
@@ -93,13 +100,17 @@ export const useGuidModelSelection = (agentKey: ProviderAgentKey = 'aionrs'): Gu
         options
       );
     },
-    [modelList, setCurrentModel]
+    [modelList, setCurrentModel, providerId]
   );
 
   // Set default model when modelList or agent changes
   useEffect(() => {
     const setDefaultModel = async () => {
       if (!modelList || modelList.length === 0) {
+        if (providerId) {
+          selectedModelKeyRef.current = null;
+          _setCurrentModel(undefined);
+        }
         return;
       }
       const currentKey = selectedModelKeyRef.current || buildModelKey(current_model?.id, current_model?.use_model);
@@ -115,7 +126,7 @@ export const useGuidModelSelection = (agentKey: ProviderAgentKey = 'aionrs'): Gu
     setDefaultModel().catch((error) => {
       console.error('Failed to set default model:', error);
     });
-  }, [agentKey, current_model?.id, current_model?.use_model, modelList, resetCurrentModel]);
+  }, [agentKey, current_model?.id, current_model?.use_model, modelList, resetCurrentModel, providerId]);
   return {
     modelList,
     isGoogleAuth,

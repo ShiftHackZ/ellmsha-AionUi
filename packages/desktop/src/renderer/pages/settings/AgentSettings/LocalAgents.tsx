@@ -5,7 +5,6 @@
  */
 
 import { ipcBridge } from '@/common';
-import { assistantRuntimeKey } from '@/common/types/agent/assistantTypes';
 import { parseError } from '@/common/utils';
 import { formatManagedAgentDiagnosticMessage, type ManagedAgent } from '@/renderer/utils/model/agentTypes';
 import AionModal from '@/renderer/components/base/AionModal';
@@ -40,9 +39,6 @@ const LocalAgents: React.FC = () => {
   const [agentFilter, setAgentFilter] = useState<AgentAvailabilityFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const { assistants } = useAssistantsForAgents();
-  const nativeAssistant = assistants.find(
-    (assistant) => assistant.source === 'generated' && assistantRuntimeKey(assistant) === 'aionrs' && assistant.enabled
-  );
 
   // Management view: includes user-disabled custom agents so they stay
   // listed (greyed) with a working re-enable toggle. `refreshCatalog`
@@ -53,7 +49,10 @@ const LocalAgents: React.FC = () => {
   // Hide deprecated runtime backends (nanobot / openclaw-gateway / remote / gemini)
   // — they are no longer offered as agents and shouldn't appear on the detection page.
   const officialAgents = allAgents.filter(
-    (a) => a.agent_source !== 'custom' && !isDeprecatedRuntimeAgentType(a.agent_type)
+    (a) =>
+      a.agent_source !== 'custom' &&
+      !isDeprecatedRuntimeAgentType(a.agent_type) &&
+      (a.id !== 'copilot-ide' || Boolean(window.electronAPI?.copilotIde))
   );
 
   const customAgents: ManagedAgent[] = allAgents.filter((a) => a.agent_source === 'custom');
@@ -73,7 +72,10 @@ const LocalAgents: React.FC = () => {
       };
       try {
         if (editingAgent) {
-          await ipcBridge.acpConversation.updateCustomAgent.invoke({ id: editingAgent.id, ...body });
+          await ipcBridge.acpConversation.updateCustomAgent.invoke({
+            id: editingAgent.id,
+            ...body,
+          });
         } else {
           await ipcBridge.acpConversation.createCustomAgent.invoke(body);
         }
@@ -138,28 +140,25 @@ const LocalAgents: React.FC = () => {
 
   const sortedOfficialAgents = useMemo(
     () =>
-      officialAgents.toSorted((left, right) => {
-        const leftIsAionrs = left.agent_type === 'aionrs' || left.backend === 'aionrs';
-        const rightIsAionrs = right.agent_type === 'aionrs' || right.backend === 'aionrs';
-        if (leftIsAionrs !== rightIsAionrs) {
-          return leftIsAionrs ? -1 : 1;
-        }
-        // Strategic partner: pin Kimi right after the builtin aionrs agent.
-        const leftIsKimi = left.backend === 'kimi';
-        const rightIsKimi = right.backend === 'kimi';
-        if (leftIsKimi !== rightIsKimi) {
-          return leftIsKimi ? -1 : 1;
-        }
-        return left.name.localeCompare(right.name);
-      }),
-    [officialAgents]
+      officialAgents.toSorted((left, right) =>
+        (left.name_i18n?.[i18n.language] || left.name).localeCompare(
+          right.name_i18n?.[i18n.language] || right.name,
+          i18n.language,
+          { sensitivity: 'base', numeric: true }
+        )
+      ),
+    [officialAgents, i18n.language]
   );
   const officialFilterStats = getAgentAvailabilityFilterStats(sortedOfficialAgents);
   const visibleOfficialAgents = filterAgentsByAvailability(
     sortedOfficialAgents.filter(matchesAgentSearch),
     agentFilter
   );
-  const visibleCustomAgents = customAgents.filter(matchesAgentSearch);
+  const visibleCustomAgents = customAgents
+    .filter(matchesAgentSearch)
+    .toSorted((left, right) =>
+      left.name.localeCompare(right.name, i18n.language, { sensitivity: 'base', numeric: true })
+    );
 
   const openCustomAgentEditor = useCallback(() => {
     setEditingAgent(null);
@@ -168,6 +167,10 @@ const LocalAgents: React.FC = () => {
 
   const openAgentConfig = useCallback(
     (agentId: string) => {
+      if (agentId === 'copilot-ide') {
+        navigate('/settings/agent/copilot-ide');
+        return;
+      }
       navigate(agentId === 'auto-router' ? '/settings/agent/auto-router' : `/settings/agent/${agentId}/repair`);
     },
     [navigate]
@@ -181,7 +184,9 @@ const LocalAgents: React.FC = () => {
     async (agentId: string) => {
       try {
         setTestingAgentId(agentId);
-        const result = await ipcBridge.acpConversation.checkManagedAgentHealthById.invoke({ id: agentId });
+        const result = await ipcBridge.acpConversation.checkManagedAgentHealthById.invoke({
+          id: agentId,
+        });
         await refreshCatalog();
         switch (result.status) {
           case 'online':
@@ -239,13 +244,17 @@ const LocalAgents: React.FC = () => {
               <AionSearchInput
                 className='shrink-0 w-[200px] hidden md:flex'
                 data-testid='input-search-agents'
-                placeholder={t('settings.agentManagement.searchPlaceholder', { defaultValue: 'Search agents...' })}
+                placeholder={t('settings.agentManagement.searchPlaceholder', {
+                  defaultValue: 'Search agents...',
+                })}
                 value={searchQuery}
                 onChange={setSearchQuery}
               />
             )}
             <TalkToButlerButton
-              label={t('settings.agentManagement.addCustomAgent', { defaultValue: 'Add custom Agent' })}
+              label={t('settings.agentManagement.addCustomAgent', {
+                defaultValue: 'Add custom Agent',
+              })}
               chatLabel={t('settings.talkToButler.addViaChat', { defaultValue: 'Add via chat' })}
               onManual={openCustomAgentEditor}
               manualLabel={t('settings.talkToButler.addManually', { defaultValue: 'Add manually' })}
@@ -277,25 +286,6 @@ const LocalAgents: React.FC = () => {
         onTabChange={(key) => setAgentFilter(key as AgentAvailabilityFilter)}
       />
 
-      {(!normalizedSearchQuery || 'ollama local api'.includes(normalizedSearchQuery)) && (
-        <div
-          className='rounded-12px border border-border-2 bg-2 p-16px flex flex-col gap-8px'
-          data-testid='ollama-agent-setup'
-        >
-          <Typography.Text className='font-medium'>Ollama</Typography.Text>
-          <Typography.Text type='secondary'>{t('settings.ollama.description')}</Typography.Text>
-          <div className='flex gap-8px'>
-            <Button onClick={() => navigate('/settings/model?provider=Ollama')}>{t('settings.ollama.setup')}</Button>
-            <Button
-              disabled={!nativeAssistant}
-              onClick={() => navigate('/guid', { state: { selectedAssistantId: nativeAssistant?.id } })}
-            >
-              {t('settings.ollama.startChat')}
-            </Button>
-          </div>
-        </div>
-      )}
-
       {isRefreshing ? (
         <div className='text-11px text-t-tertiary'>{t('settings.agentManagement.refreshingStatuses')}</div>
       ) : null}
@@ -317,7 +307,9 @@ const LocalAgents: React.FC = () => {
           {visibleOfficialAgents.length === 0 && (
             <Typography.Text type='secondary' className='block py-16px text-center text-12px'>
               {normalizedSearchQuery
-                ? t('settings.agentManagement.noSearchResults', { defaultValue: 'No matching agents.' })
+                ? t('settings.agentManagement.noSearchResults', {
+                    defaultValue: 'No matching agents.',
+                  })
                 : t('settings.agentManagement.localAgentsEmpty')}
             </Typography.Text>
           )}
@@ -395,7 +387,9 @@ const LocalAgents: React.FC = () => {
           {visibleCustomAgents.length === 0 ? (
             <Typography.Text type='secondary' className='block py-12px text-center text-12px'>
               {normalizedSearchQuery
-                ? t('settings.agentManagement.noSearchResults', { defaultValue: 'No matching agents.' })
+                ? t('settings.agentManagement.noSearchResults', {
+                    defaultValue: 'No matching agents.',
+                  })
                 : t('settings.agentManagement.customEmpty')}
             </Typography.Text>
           ) : null}

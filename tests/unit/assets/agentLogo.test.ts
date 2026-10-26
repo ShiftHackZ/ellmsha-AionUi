@@ -120,6 +120,25 @@ describe('agentLogo', () => {
   });
 
   describe('fetchAgentLogos', () => {
+    it('keeps Copilot IDE branding separate from the shared native harness', async () => {
+      const native = { id: 'native', agent_type: 'aionrs', icon: '/api/assets/logos/brand/aion.svg' };
+      const copilot = {
+        id: 'copilot-ide',
+        agent_type: 'aionrs',
+        backend: 'aionrs',
+        icon: '/api/assets/logos/tools/copilot.svg',
+      };
+      for (const rows of [
+        [native, copilot],
+        [copilot, native],
+      ]) {
+        bridgeMocks.getManagedAgents.mockResolvedValue(rows);
+        const logos = await fetchAgentLogos();
+        expect(logos.aionrs).toBe(native.icon);
+        expect(logos['copilot-ide']).toBe(copilot.icon);
+      }
+    });
+
     it('builds the logo catalog from /api/agents/management rows', async () => {
       bridgeMocks.getManagedAgents.mockResolvedValue([
         {

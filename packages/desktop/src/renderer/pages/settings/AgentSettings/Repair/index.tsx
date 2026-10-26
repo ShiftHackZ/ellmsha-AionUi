@@ -13,7 +13,11 @@ import { ipcBridge } from '@/common';
 import { useManagedAgents } from '@/renderer/hooks/agent/useManagedAgents';
 import { formatManagedAgentDiagnosticMessage } from '@/renderer/utils/model/agentTypes';
 import AgentRepairPanel from './AgentRepairPanel';
-import { BoundAssistantList, getBoundAssistants, useAssistantsForAgents } from './BoundAssistants';
+import { BoundAssistantList, getBoundAssistants, useAssistantsForAgents } from '../BoundAssistants';
+
+const OllamaModels = React.lazy(
+  () => import('@/renderer/components/settings/SettingsModal/contents/ModelModalContent')
+);
 
 const OPEN_ASSISTANT_EDITOR_INTENT_KEY = 'guid.openAssistantEditorIntent';
 
@@ -28,10 +32,14 @@ const AgentRepairPage: React.FC = () => {
   const agent = agents.find((a) => a.id === id);
 
   useEffect(() => {
+    if (id === 'copilot-ide') {
+      navigate('/settings/agent/copilot-ide', { replace: true });
+      return;
+    }
     if (!isRefreshing && !agent) {
       navigate('/settings/agent', { replace: true });
     }
-  }, [isRefreshing, agent, navigate]);
+  }, [isRefreshing, agent, navigate, id]);
 
   const handleTestConnection = useCallback(async () => {
     if (!agent) return;
@@ -99,6 +107,7 @@ const AgentRepairPage: React.FC = () => {
   };
 
   const boundAssistants = getBoundAssistants(agent, assistants);
+  const nativeAssistant = boundAssistants.find((assistant) => assistant.source === 'generated' && assistant.enabled);
 
   return (
     <div data-testid='agent-repair-page' className='flex h-full min-h-0 flex-col overflow-hidden bg-transparent'>
@@ -133,7 +142,21 @@ const AgentRepairPage: React.FC = () => {
 
       <div data-testid='agent-repair-body' className='relative min-h-0 flex-1 overflow-auto px-18px py-18px pb-24px'>
         <div className='mx-auto w-full max-w-760px'>
-          <AgentRepairPanel agent={agent} onSaved={handleSaved} />
+          {agent.agent_type === 'aionrs' ? (
+            <div className='flex flex-col gap-12px' data-testid='ollama-agent-setup'>
+              <React.Suspense fallback={null}>
+                <OllamaModels platformFilter='Ollama' />
+              </React.Suspense>
+              <Button
+                disabled={!nativeAssistant}
+                onClick={() => navigate('/guid', { state: { selectedAssistantId: nativeAssistant?.id } })}
+              >
+                {t('settings.ollama.startChat')}
+              </Button>
+            </div>
+          ) : (
+            <AgentRepairPanel agent={agent} onSaved={handleSaved} />
+          )}
 
           {/* Which assistants depend on this agent — clicking one jumps to its
               detail/editor so the user can see and adjust the binding. */}

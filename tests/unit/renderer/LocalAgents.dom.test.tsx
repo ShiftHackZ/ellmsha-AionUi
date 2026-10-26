@@ -89,8 +89,12 @@ vi.mock('@renderer/utils/platform', async () => {
 
 // Keep the test focused on LocalAgents' own logic — stub heavy children.
 vi.mock('@/renderer/components/base/AionModal', () => ({ default: () => null }));
-vi.mock('@renderer/pages/settings/AgentSettings/InlineAgentEditor', () => ({ default: () => null }));
-vi.mock('@renderer/pages/settings/AgentSettings/AgentHubModal', () => ({ AgentHubModal: () => null }));
+vi.mock('@renderer/pages/settings/AgentSettings/InlineAgentEditor', () => ({
+  default: () => null,
+}));
+vi.mock('@renderer/pages/settings/AgentSettings/AgentHubModal', () => ({
+  AgentHubModal: () => null,
+}));
 
 import LocalAgents from '@renderer/pages/settings/AgentSettings/LocalAgents';
 import AgentModalContent from '@renderer/components/settings/SettingsModal/contents/AgentModalContent';
@@ -161,7 +165,9 @@ describe('LocalAgents', () => {
     fireEvent.click(screen.getAllByText('settings.agentManagement.testConnection')[0]);
 
     await waitFor(() => {
-      expect(ipcBridge.acpConversation.checkManagedAgentHealthById.invoke).toHaveBeenCalledWith({ id: 'aionrs' });
+      expect(ipcBridge.acpConversation.checkManagedAgentHealthById.invoke).toHaveBeenCalledWith({
+        id: 'aionrs',
+      });
     });
     await waitFor(() => {
       expect(refreshCatalog).toHaveBeenCalled();
@@ -210,9 +216,30 @@ describe('LocalAgents', () => {
     fireEvent.change(screen.getByTestId('input-search-agents'), { target: { value: 'oll' } });
     expect(screen.getByText('Aion CLI')).toBeInTheDocument();
     expect(screen.queryByText('Claude Code')).not.toBeInTheDocument();
-    expect(screen.getByTestId('ollama-agent-setup')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('settings.ollama.setup'));
-    expect(navigate).toHaveBeenCalledWith('/settings/model?provider=Ollama');
+    expect(screen.queryByTestId('ollama-agent-setup')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('agent-row-aionrs'));
+    expect(navigate).toHaveBeenCalledWith('/settings/agent/aionrs/repair');
+  });
+
+  it('opens Copilot IDE details from a normal agent row, with no setup controls in the list', () => {
+    const previous = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { copilotIde: vi.fn() },
+    });
+    try {
+      useManagedAgents.mockReturnValue({
+        agents: [...makeAgents(), { ...makeAgents()[0], id: 'copilot-ide', name: 'Copilot IDE', enabled: false }],
+        refreshCatalog: vi.fn(),
+      });
+      render(<LocalAgents />);
+      expect(screen.queryByTestId('copilot-ide-setup')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('ollama-agent-setup')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('agent-row-copilot-ide'));
+      expect(navigate).toHaveBeenCalledWith('/settings/agent/copilot-ide');
+    } finally {
+      Object.defineProperty(window, 'electronAPI', { configurable: true, value: previous });
+    }
   });
 
   it('shows the empty state when no detected agents are present', () => {
@@ -357,7 +384,7 @@ describe('LocalAgents', () => {
     expect(getBoundAssistants(aionrsAgent, assistants)).toEqual([]);
   });
 
-  it('pins Kimi right after the aionrs agent in the official list', () => {
+  it('sorts official agents alphabetically without pinning Kimi', () => {
     useManagedAgents.mockReturnValue({
       agents: [
         ...makeAgents(),
@@ -379,13 +406,12 @@ describe('LocalAgents', () => {
 
     render(<LocalAgents />);
 
-    // Alphabetically Claude Code < Kimi, so this order proves the pin rule:
-    // aionrs stays first, Kimi jumps ahead of the localeCompare ordering.
+    // Existing native and partner agents follow the same alphabetical order.
     const aion = screen.getByText('Aion CLI');
     const kimi = screen.getByText('Kimi');
     const claude = screen.getByText('Claude Code');
     expect(kimi.compareDocumentPosition(aion) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-    expect(claude.compareDocumentPosition(kimi) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(kimi.compareDocumentPosition(claude) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
   it('renders agent management as a single diagnostics page without local/remote tabs', () => {

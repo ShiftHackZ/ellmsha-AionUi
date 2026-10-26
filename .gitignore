@@ -223,3 +223,7 @@ graphify-out/
 
 # Generated native Tencent runtime (never user data)
 resources/tencent-memory/
+
+# Generated optional Code OSS runtime (source, licenses and auth extension only)
+/resources/copilot-ide/*
+!/resources/copilot-ide/README.md

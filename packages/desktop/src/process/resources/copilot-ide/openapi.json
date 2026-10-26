@@ -1,0 +1,705 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "eLLMsha embedded Copilot IDE local bridge",
+    "version": "1.0.0",
+    "description": "Loopback-only OpenAI-compatible transport. Random local Bearer credentials are unrelated to GitHub OAuth tokens. No CORS access. Cancellation follows client disconnect; no tool executes inside this bridge."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:{port}",
+      "description": "Ephemeral application-owned loopback port.",
+      "variables": {
+        "port": {
+          "default": "0",
+          "description": "Port returned only to the owning application."
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "localBearer": []
+    }
+  ],
+  "paths": {
+    "/v1/models": {
+      "get": {
+        "operationId": "listCopilotModels",
+        "summary": "List tool-capable models",
+        "description": "Outer endpoint reads the saved catalog without spawning Code OSS. Explicit desktop Refresh obtains a live catalog.",
+        "responses": {
+          "200": {
+            "description": "Model catalog.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, unsupported content or malformed tool history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid local Bearer credential or browser Origin present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown endpoint or unavailable selected model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Runtime or upstream Copilot failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "operationId": "createCopilotCompletion",
+        "summary": "Request model output through public vscode.lm",
+        "description": "Starts the runtime lazily if needed. Complete text/tool history is supplied by eLLMsha. Unsupported multimodal content fails explicitly.",
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON, at most 8 MiB.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Non-streaming completion or SSE sequence of Chunk objects followed by [DONE]. A late streaming error uses the Error schema in an SSE data frame.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Completion"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE data frames containing Chunk or Error JSON, terminated by data: [DONE]."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, unsupported content or malformed tool history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid local Bearer credential or browser Origin present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown endpoint or unavailable selected model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Runtime or upstream Copilot failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "localBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Random 256-bit local process credential, never a GitHub OAuth token."
+      }
+    },
+    "schemas": {
+      "TextPart": {
+        "type": "object",
+        "description": "A text-only input content part.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Content discriminator.",
+            "const": "text"
+          },
+          "text": {
+            "type": "string",
+            "description": "Text supplied to the model."
+          }
+        },
+        "required": ["type", "text"],
+        "additionalProperties": false
+      },
+      "FunctionCall": {
+        "type": "object",
+        "description": "One model-requested function call. The bridge never executes it.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Provider tool-call identifier used to correlate its result."
+          },
+          "type": {
+            "type": "string",
+            "description": "Tool discriminator.",
+            "const": "function"
+          },
+          "function": {
+            "type": "object",
+            "description": "Function invocation.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Function name matching the available tool definition."
+              },
+              "arguments": {
+                "type": "string",
+                "description": "JSON-encoded function arguments; must decode to an object."
+              }
+            },
+            "required": ["name", "arguments"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "function"],
+        "additionalProperties": false
+      },
+      "Message": {
+        "type": "object",
+        "description": "Ordered conversation message. Tool results must match preceding assistant tool calls.",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Message role; system/developer are preserved as labeled first User messages because public vscode.lm has no System role.",
+            "enum": ["system", "developer", "user", "assistant", "tool"]
+          },
+          "content": {
+            "description": "Text, text-only parts, or null for a tool-only assistant message. Images are unsupported.",
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Message text."
+              },
+              {
+                "type": "array",
+                "description": "Text content parts.",
+                "items": {
+                  "$ref": "#/components/schemas/TextPart"
+                }
+              },
+              {
+                "type": "null",
+                "description": "No text content."
+              }
+            ]
+          },
+          "tool_calls": {
+            "type": "array",
+            "description": "Function calls, valid on assistant messages.",
+            "items": {
+              "$ref": "#/components/schemas/FunctionCall"
+            }
+          },
+          "tool_call_id": {
+            "type": "string",
+            "description": "Required on a tool result; must match a preceding function call."
+          }
+        },
+        "required": ["role"],
+        "additionalProperties": false
+      },
+      "Tool": {
+        "type": "object",
+        "description": "An eLLMsha-owned function tool, exposed to the model but executed only by the native engine.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Tool discriminator.",
+            "const": "function"
+          },
+          "function": {
+            "type": "object",
+            "description": "Function definition.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Function name using letters, digits, underscores or hyphens."
+              },
+              "description": {
+                "type": "string",
+                "description": "Tool instructions."
+              },
+              "parameters": {
+                "type": "object",
+                "description": "User/tool-owned JSON Schema for arguments. Schema properties are intentionally dynamic and validated by the tool owner.",
+                "additionalProperties": true
+              }
+            },
+            "required": ["name", "parameters"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["type", "function"],
+        "additionalProperties": false
+      },
+      "ToolChoice": {
+        "description": "Automatic, no tools, a required tool call, or one explicitly named required function. Copilot Required mode accepts exactly one available function.",
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Tool-selection policy.",
+            "enum": ["auto", "none", "required"]
+          },
+          {
+            "type": "object",
+            "description": "Require this named function.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Tool discriminator.",
+                "const": "function"
+              },
+              "function": {
+                "type": "object",
+                "description": "Function selector.",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Exact name of an available tool."
+                  }
+                },
+                "required": ["name"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["type", "function"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Request": {
+        "type": "object",
+        "description": "OpenAI Chat Completions request subset accepted by the Copilot IDE bridge. Maximum JSON body size: 8 MiB; request deadlines are bounded.",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Exact model ID from the authenticated Copilot catalog. No default fallback."
+          },
+          "messages": {
+            "type": "array",
+            "description": "Ordered complete conversation history.",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "minItems": 1
+          },
+          "tools": {
+            "type": "array",
+            "description": "Available function definitions.",
+            "items": {
+              "$ref": "#/components/schemas/Tool"
+            }
+          },
+          "tool_choice": {
+            "$ref": "#/components/schemas/ToolChoice"
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "Emit SSE deltas when true; otherwise return a completion object."
+          },
+          "max_tokens": {
+            "type": "integer",
+            "description": "Maximum generated tokens, forwarded as public modelOptions.max_tokens.",
+            "minimum": 1
+          },
+          "max_completion_tokens": {
+            "type": "integer",
+            "description": "Alias of max_tokens; takes precedence when both are supplied.",
+            "minimum": 1
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature forwarded through the public model options."
+          }
+        },
+        "required": ["model", "messages"],
+        "additionalProperties": false
+      },
+      "Usage": {
+        "type": "object",
+        "description": "Actual upstream usage counters when Copilot emits a valid usage data part. Missing counters are omitted rather than fabricated.",
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "description": "Input token count, including cached input.",
+            "minimum": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "description": "Generated output token count.",
+            "minimum": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "description": "Total input and output tokens reported upstream.",
+            "minimum": 0
+          },
+          "prompt_tokens_details": {
+            "type": "object",
+            "description": "Optional input token details.",
+            "properties": {
+              "cached_tokens": {
+                "type": "integer",
+                "description": "Cached input already included in prompt_tokens.",
+                "minimum": 0
+              }
+            },
+            "required": ["cached_tokens"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["prompt_tokens", "completion_tokens", "total_tokens"],
+        "additionalProperties": false
+      },
+      "Assistant": {
+        "type": "object",
+        "description": "Assistant completion message.",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Completion role.",
+            "const": "assistant"
+          },
+          "content": {
+            "type": "string",
+            "description": "Generated text; empty for a tool-only reply."
+          },
+          "tool_calls": {
+            "type": "array",
+            "description": "Requested function invocations.",
+            "items": {
+              "$ref": "#/components/schemas/FunctionCall"
+            }
+          }
+        },
+        "required": ["role", "content"],
+        "additionalProperties": false
+      },
+      "Completion": {
+        "type": "object",
+        "description": "Non-streaming completion result.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique completion identifier."
+          },
+          "object": {
+            "type": "string",
+            "description": "Result discriminator.",
+            "const": "chat.completion"
+          },
+          "created": {
+            "type": "integer",
+            "description": "Creation time as Unix seconds."
+          },
+          "model": {
+            "type": "string",
+            "description": "Exact selected model ID."
+          },
+          "choices": {
+            "type": "array",
+            "description": "Single generated choice.",
+            "items": {
+              "type": "object",
+              "description": "One assistant choice.",
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "description": "Choice index.",
+                  "const": 0
+                },
+                "message": {
+                  "$ref": "#/components/schemas/Assistant"
+                },
+                "finish_reason": {
+                  "type": "string",
+                  "description": "Tool calls requested or a normal end of stream.",
+                  "enum": ["tool_calls", "stop"]
+                }
+              },
+              "required": ["index", "message", "finish_reason"],
+              "additionalProperties": false
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          }
+        },
+        "required": ["id", "object", "created", "model", "choices"],
+        "additionalProperties": false
+      },
+      "ToolDelta": {
+        "type": "object",
+        "description": "One complete function call carried as a streaming delta.",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "Index of this tool call in the response.",
+            "minimum": 0
+          },
+          "id": {
+            "type": "string",
+            "description": "Provider tool-call identifier used to correlate its result."
+          },
+          "type": {
+            "type": "string",
+            "description": "Tool discriminator.",
+            "const": "function"
+          },
+          "function": {
+            "type": "object",
+            "description": "Function invocation.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Function name matching the available tool definition."
+              },
+              "arguments": {
+                "type": "string",
+                "description": "JSON-encoded function arguments; must decode to an object."
+              }
+            },
+            "required": ["name", "arguments"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["index", "id", "type", "function"],
+        "additionalProperties": false
+      },
+      "Delta": {
+        "type": "object",
+        "description": "Incremental response data; terminal chunks contain an empty object.",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Assistant role on the initial chunk.",
+            "const": "assistant"
+          },
+          "content": {
+            "type": "string",
+            "description": "Incremental generated text."
+          },
+          "tool_calls": {
+            "type": "array",
+            "description": "Incremental function invocations.",
+            "items": {
+              "$ref": "#/components/schemas/ToolDelta"
+            }
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "Chunk": {
+        "type": "object",
+        "description": "JSON carried in each SSE data frame; an optional usage frame has empty choices. Stream ends with literal data: [DONE].",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Completion identifier shared by its frames."
+          },
+          "object": {
+            "type": "string",
+            "description": "Frame discriminator.",
+            "const": "chat.completion.chunk"
+          },
+          "created": {
+            "type": "integer",
+            "description": "Unix seconds."
+          },
+          "model": {
+            "type": "string",
+            "description": "Exact model ID."
+          },
+          "choices": {
+            "type": "array",
+            "description": "Incremental choice or empty for a usage-only frame.",
+            "items": {
+              "type": "object",
+              "description": "Incremental choice.",
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "description": "Choice index.",
+                  "const": 0
+                },
+                "delta": {
+                  "$ref": "#/components/schemas/Delta"
+                },
+                "finish_reason": {
+                  "description": "Null while generating; tool_calls or stop at completion.",
+                  "type": ["string", "null"],
+                  "enum": [null, "tool_calls", "stop"]
+                }
+              },
+              "required": ["index", "delta", "finish_reason"],
+              "additionalProperties": false
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          }
+        },
+        "required": ["id", "object", "created", "model", "choices"],
+        "additionalProperties": false
+      },
+      "Catalog": {
+        "type": "object",
+        "description": "Cached or freshly discovered tool-capable Copilot model catalog.",
+        "properties": {
+          "object": {
+            "type": "string",
+            "description": "Catalog discriminator.",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "description": "Model entries; internal utility/auto entries may also be returned by Copilot.",
+            "items": {
+              "type": "object",
+              "description": "Model entry.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Copilot model ID."
+                },
+                "object": {
+                  "type": "string",
+                  "description": "Entry discriminator.",
+                  "const": "model"
+                },
+                "owned_by": {
+                  "type": "string",
+                  "description": "Provider owner.",
+                  "const": "github-copilot"
+                },
+                "context_window": {
+                  "type": "integer",
+                  "description": "Maximum model input tokens reported by vscode.lm.",
+                  "minimum": 0
+                }
+              },
+              "required": ["id", "object", "owned_by"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["object", "data"],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "description": "Sanitized failure; never contains raw provider authentication messages, credentials or prompts.",
+        "properties": {
+          "error": {
+            "type": "object",
+            "description": "Failure details.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Error category.",
+                "const": "copilot_ide_error"
+              },
+              "code": {
+                "type": "string",
+                "description": "Machine-readable failure, for example unauthorized, copilot_disabled, model_unavailable, copilot_start_timeout or unsupported_message_content."
+              },
+              "message": {
+                "type": "string",
+                "description": "Sanitized message equal to the error code."
+              }
+            },
+            "required": ["type", "code", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["error"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

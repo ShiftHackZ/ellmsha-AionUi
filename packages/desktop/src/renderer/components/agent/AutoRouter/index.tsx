@@ -1,3 +1,4 @@
+import { ArrowLeft } from '@icon-park/react';
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Message, Spin } from '@arco-design/web-react';
 import { useTranslation } from 'react-i18next';
@@ -105,78 +106,91 @@ const AutoRouterSettings: React.FC = () => {
   const catalog = useRouterOptions(value && activeRouterConfig(value), Boolean(value));
   const issue = value ? routerReadinessError(activeRouterConfig(value)) : undefined;
   return (
-    <div className='h-full overflow-y-auto p-20px text-t-primary' data-testid='router-settings-page'>
-      <div className='mx-auto flex max-w-960px flex-col gap-16px'>
-        <div className='flex items-center justify-between gap-12px'>
-          <Button disabled={saving} onClick={() => navigate('/settings/agent')}>
-            {t('common.back')}
-          </Button>
-          <h2 className='m-0 text-20px'>{t('settings.autoRouter.title')}</h2>
-        </div>
-        <p className='m-0 text-t-secondary'>{t('settings.autoRouter.description')}</p>
-        {query.error || catalog.error ? (
-          <Alert type='error' content={parseError(query.error || catalog.error)} />
-        ) : null}
-        {catalog.loading && value && <Spin size={16} />}
-        {!value ? (
-          <Spin />
-        ) : (
-          <>
-            <fieldset disabled={saving} inert={saving} aria-busy={saving} className='m-0 min-w-0 border-0 p-0'>
-              <RouterConfigFields
-                key={editorRevision}
-                value={value}
-                onChange={(next) => {
-                  if (saving) return;
-                  setValue(next);
-                  setDirty(true);
-                }}
-                options={catalog.options}
-                onIncompleteChange={setIncomplete}
-              />
-            </fieldset>
-            {incomplete && <Alert type='warning' content={t('settings.autoRouter.graph.errors.incompleteClasses')} />}
-            {issue && <Alert type='warning' content={t(`settings.autoRouter.graph.errors.${issue}`)} />}
-            <div className='flex items-center flex-wrap gap-12px'>
-              <Button
-                type='primary'
-                data-testid='router-save'
-                loading={saving}
-                disabled={Boolean(issue || incomplete || saving || !dirty || query.error)}
-                onClick={async () => {
-                  setSaving(true);
-                  try {
-                    await query.save(cloneRouterSettings(value));
+    <div
+      className='flex h-full min-h-0 flex-col overflow-hidden bg-transparent text-t-primary'
+      data-testid='router-settings-page'
+    >
+      <div className='sticky top-0 z-10 flex h-48px flex-shrink-0 items-center gap-10px border-b border-border-2 bg-bg-0 px-18px'>
+        <Button
+          type='text'
+          icon={<ArrowLeft size={16} />}
+          disabled={saving}
+          onClick={() => navigate('/settings/agent')}
+          className='!rounded-8px !px-6px !text-t-primary'
+        >
+          {t('common.goBack')}
+        </Button>
+        <div className='truncate text-14px font-600 text-t-primary'>{t('settings.autoRouter.title')}</div>
+      </div>
+      <div className='min-h-0 flex-1 overflow-auto px-18px py-18px pb-24px'>
+        <div className='mx-auto flex w-full max-w-960px flex-col gap-16px'>
+          <p className='m-0 text-t-secondary'>{t('settings.autoRouter.description')}</p>
+          {query.error || catalog.error ? (
+            <Alert type='error' content={parseError(query.error || catalog.error)} />
+          ) : null}
+          {catalog.loading && value && <Spin size={16} />}
+          {!value ? (
+            <Spin />
+          ) : (
+            <>
+              <fieldset disabled={saving} inert={saving} aria-busy={saving} className='m-0 min-w-0 border-0 p-0'>
+                <RouterConfigFields
+                  key={editorRevision}
+                  value={value}
+                  onChange={(next) => {
+                    if (saving) return;
+                    setValue(next);
+                    setDirty(true);
+                  }}
+                  options={catalog.options}
+                  onIncompleteChange={setIncomplete}
+                />
+              </fieldset>
+              {incomplete && <Alert type='warning' content={t('settings.autoRouter.graph.errors.incompleteClasses')} />}
+              {issue && <Alert type='warning' content={t(`settings.autoRouter.graph.errors.${issue}`)} />}
+              <div className='flex items-center flex-wrap gap-12px'>
+                <Button
+                  type='primary'
+                  data-testid='router-save'
+                  className='!rounded-8px'
+                  loading={saving}
+                  disabled={Boolean(issue || incomplete || saving || !dirty || query.error)}
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await query.save(cloneRouterSettings(value));
+                      setDirty(false);
+                      Message.success(t('settings.autoRouter.saved'));
+                    } catch (error) {
+                      Message.error(parseError(error));
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  {t('common.save')}
+                </Button>
+                <Button
+                  className='!rounded-8px'
+                  disabled={saving}
+                  onClick={() => {
+                    if (query.data) setValue(cloneRouterSettings(query.data));
                     setDirty(false);
-                    Message.success(t('settings.autoRouter.saved'));
-                  } catch (error) {
-                    Message.error(parseError(error));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-              >
-                {t('common.save')}
-              </Button>
-              <Button
-                disabled={saving}
-                onClick={() => {
-                  if (query.data) setValue(cloneRouterSettings(query.data));
-                  setDirty(false);
-                  setIncomplete(false);
-                  setEditorRevision((revision) => revision + 1);
-                }}
-              >
-                {t('common.cancel')}
-              </Button>
-              {dirty && (
-                <span role='status' className='text-12px text-t-secondary'>
-                  {t('settings.autoRouter.graph.dirty')}
-                </span>
-              )}
-            </div>
-          </>
-        )}
+                    setIncomplete(false);
+                    setEditorRevision((revision) => revision + 1);
+                  }}
+                >
+                  {t('common.cancel')}
+                </Button>
+                {dirty && (
+                  <span role='status' className='text-12px text-t-secondary'>
+                    {t('settings.autoRouter.graph.dirty')}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

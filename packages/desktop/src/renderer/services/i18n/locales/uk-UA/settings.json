@@ -1731,5 +1731,18 @@
       "provider_item_json_chars": "Provider items JSON · characters"
     },
     "chatCoverage": "Облік ведеться з цієї версії. Пропущені адаптером лічильники та стара історія не відновлюються. Контекст — останній запит, а не сума токенів."
+  },
+  "copilotIde": {
+    "description": "Copilot через вбудований Code OSS. Запускається за потреби, зберігає вхід GitHub і засинає після п’яти хвилин простою.",
+    "running": "Runtime працює",
+    "sleeping": "Runtime спить",
+    "missing": "Збірка не містить вбудованого Code OSS.",
+    "enable": "Увімкнути",
+    "disable": "Вимкнути",
+    "login": "Увійти й перевірити",
+    "refresh": "Оновити моделі",
+    "stop": "Зупинити runtime",
+    "failed": "Помилка Copilot IDE",
+    "modelsHint": "Після входу оновіть моделі. Оберіть Copilot IDE у моделях вбудованого агента. Інструменти, пам’ять і дозволи контролює eLLMsha."
   }
 }

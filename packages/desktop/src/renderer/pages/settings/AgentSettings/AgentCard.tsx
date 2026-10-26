@@ -105,8 +105,7 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
   const logos = useAgentLogos();
   const { agent, boundAssistants, onTestConnection, onConfigure, isTesting } = props;
 
-  const isCustom = props.type === 'custom';
-  const isDisabled = isCustom && agent.enabled === false;
+  const isDisabled = agent.enabled === false;
   const diagnostics = formatManagedAgentDiagnosticMessage(t, agent);
   const displayStatus = resolveDisplayStatus(agent.status, agent.last_check_error_code);
 
@@ -152,7 +151,7 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
               color={statusColor(displayStatus)}
               className='flex-shrink-0'
             >
-              {t(statusLabelKey(displayStatus))}
+              {t(isDisabled ? 'settings.assistantFilter.disabled' : statusLabelKey(displayStatus))}
             </Tag>
             {diagnostics && (
               <Tooltip content={diagnostics}>

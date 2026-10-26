@@ -26,6 +26,11 @@ function resolveResourcesDir(electronPlatformName, appOutDir, packager) {
 }
 
 function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) {
+  const copilotRoot = path.join(resourcesDir, 'copilot-ide', 'runtime');
+  if (fs.existsSync(path.join(copilotRoot, 'product.json'))) {
+    const minimist = path.join(copilotRoot, 'node_modules', 'minimist', 'package.json');
+    if (!fs.existsSync(minimist)) throw new Error('Packaged Code OSS is missing its root runtime dependencies');
+  }
   const result = verifyBundledAioncoreResources({
     resourcesDir,
     electronPlatformName,

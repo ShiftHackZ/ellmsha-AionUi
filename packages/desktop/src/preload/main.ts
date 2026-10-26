@@ -1,3 +1,4 @@
+import type { CopilotIdeAction } from '@/common/types/platform/electron';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -54,6 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getMemoryEmbedding: () => ipcRenderer.invoke('ellmsha:memory:embedding-status'),
   probeMemoryEmbedding: (input: unknown) => ipcRenderer.invoke('ellmsha:memory:embedding-probe', input),
   applyMemoryEmbedding: (input: unknown) => ipcRenderer.invoke('ellmsha:memory:embedding-apply', input),
+  copilotIde: (action: CopilotIdeAction) => ipcRenderer.invoke('ellmsha:copilot-ide', action),
   getMemoryPanelUrl: () => ipcRenderer.invoke('ellmsha:memory:panel-url'),
   getLocalMemoryKey: () => ipcRenderer.invoke('ellmsha:memory:local-key'),
   verifyMemoryKey: (key: string) => ipcRenderer.invoke('ellmsha:memory:verify-key', key),

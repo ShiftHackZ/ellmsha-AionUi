@@ -1754,5 +1754,18 @@
       "provider_item_json_chars": "Provider items JSON · characters"
     },
     "chatCoverage": "Tracking starts with this version. Missing adapter counters and older history cannot be reconstructed. Context describes the latest request, not lifetime spend."
+  },
+  "copilotIde": {
+    "description": "Copilot through embedded Code OSS. Starts on demand, keeps GitHub sign-in, and sleeps after five idle minutes.",
+    "running": "Runtime running",
+    "sleeping": "Runtime asleep",
+    "missing": "This build does not include the embedded Code OSS runtime.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "login": "Sign in and verify",
+    "refresh": "Refresh models",
+    "stop": "Stop runtime",
+    "failed": "Copilot IDE operation failed",
+    "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
   }
 }

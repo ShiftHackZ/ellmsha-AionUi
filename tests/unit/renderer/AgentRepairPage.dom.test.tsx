@@ -44,7 +44,7 @@ vi.mock('@/common', () => ({
 
 // The panel's own behavior is covered by AgentRepairPanel.dom.test.tsx — here
 // we only assert whether the page keeps it mounted.
-vi.mock('@renderer/pages/settings/AgentSettings/AgentRepairPanel', () => ({
+vi.mock('@renderer/pages/settings/AgentSettings/Repair/AgentRepairPanel', () => ({
   default: () => <div data-testid='agent-repair-panel-stub' />,
 }));
 vi.mock('@renderer/pages/settings/AgentSettings/BoundAssistants', () => ({
@@ -53,7 +53,7 @@ vi.mock('@renderer/pages/settings/AgentSettings/BoundAssistants', () => ({
   useAssistantsForAgents: () => ({ assistants: [] }),
 }));
 
-import AgentRepairPage from '@renderer/pages/settings/AgentSettings/AgentRepairPage';
+import AgentRepairPage from '@renderer/pages/settings/AgentSettings/Repair';
 
 const agent = {
   id: 'agent-1',

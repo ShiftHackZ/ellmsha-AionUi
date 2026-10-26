@@ -105,6 +105,27 @@ files:
     to: static
 
 extraResources:
+  - from: packages/desktop/src/process/resources/copilot-ide
+    to: copilot-ide/extension
+    filter:
+      - '*.cjs'
+      - 'package.json'
+  - from: resources/copilot-ide
+    to: copilot-ide/runtime
+    filter:
+      - '**/*'
+      - '!README.md'
+      # Upstream path-completion fixtures contain a deliberately invalid .asar.
+      - '!extensions/**/test/**'
+      # Source builds leave compiler shims whose dev-only target is absent.
+      - '!extensions/node_modules/.bin/tsc'
+      - '!extensions/node_modules/.bin/tsserver'
+  # Electron Builder always excludes node_modules at a matcher's root.
+  # Map its contents explicitly so Code OSS keeps its own Electron ABI modules.
+  - from: resources/copilot-ide/node_modules
+    to: copilot-ide/runtime/node_modules
+    filter:
+      - '**/*'
   - from: ../LICENSE
     to: licenses/ellmsha/LICENSE
   - from: ../LICENSING.md
@@ -187,6 +208,9 @@ mac:
   gatekeeperAssess: false
   entitlements: entitlements.plist
   entitlementsInherit: entitlements.plist
+  # These data formats are sealed by the enclosing bundle, not executable code.
+  signIgnore:
+    - '\.(pak|png|jpe?g|ttf|woff2?|wasm|ico|icns|zip|asar)$'
 
 dmg:
   # Use UDZO format which is more reliable on CI

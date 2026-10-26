@@ -9,7 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Message } from '@arco-design/web-react';
-import AgentRepairPanel from '@/renderer/pages/settings/AgentSettings/AgentRepairPanel';
+import AgentRepairPanel from '@/renderer/pages/settings/AgentSettings/Repair/AgentRepairPanel';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
 import { acpConversation, systemSettings } from '@/common/adapter/ipcBridge';
 
