@@ -1075,7 +1075,8 @@
     "modelSwitched": "모델 전환 성공",
     "tokenLocked": "설정을 변경하기 전에 Channel을 닫고 모든 승인된 사용자를 삭제하세요",
     "tokenValid": "Token이 유효합니다",
-    "name": "어시스턴트"
+    "name": "어시스턴트",
+    "projectSessionsHint": "Telegram에서 /new 또는 New Session을 사용해 프로젝트나 임시 채팅을 선택하세요."
   },
   "lark": {
     "appId": "App ID",

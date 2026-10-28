@@ -1073,7 +1073,8 @@
     "autoFollowCliModel": "CLI calisirken modeli otomatik olarak takip et",
     "agentSwitched": "Asistan basariyla degistirildi",
     "modelSwitched": "Model basariyla degistirildi",
-    "name": "Asistan"
+    "name": "Asistan",
+    "projectSessionsHint": "Telegram’da proje veya geçici sohbet seçmek için /new ya da New Session kullanın."
   },
   "lark": {
     "appId": "App ID",

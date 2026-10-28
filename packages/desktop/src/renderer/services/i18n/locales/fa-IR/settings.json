@@ -1085,7 +1085,8 @@
     "autoFollowCliModel": "به‌صورت خودکار از مدل هنگام اجرای CLI پیروی کنید",
     "agentSwitched": "ایجنت با موفقیت تغییر کرد",
     "modelSwitched": "مدل با موفقیت تغییر کرد",
-    "name": "دستیار"
+    "name": "دستیار",
+    "projectSessionsHint": "در تلگرام با /new یا New Session یک پروژه یا گفت‌وگوی موقت انتخاب کنید."
   },
   "lark": {
     "appId": "شناسه برنامه",

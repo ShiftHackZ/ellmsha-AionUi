@@ -5,6 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import i18next from 'i18next';
+import config from '@/common/config/i18n-config.json';
 import { normalizeLanguageCode, DEFAULT_LANGUAGE } from '@/common/config/i18n';
 
 describe('i18n', () => {
@@ -45,5 +47,22 @@ describe('i18n', () => {
       expect(normalizeLanguageCode('it')).toBe(DEFAULT_LANGUAGE);
       expect(normalizeLanguageCode('')).toBe(DEFAULT_LANGUAGE);
     });
+  });
+});
+
+// Resolve through the actual engine: a flat assistant.* key can be shadowed by
+// the existing nested assistant object even when the key inventory accepts it.
+describe('channel project-session hint translations', () => {
+  const modules = import.meta.glob<{ default: { assistant: { projectSessionsHint: string } } }>(
+    '../../../packages/desktop/src/renderer/services/i18n/locales/*/settings.json',
+    { eager: true }
+  );
+  it.each(config.supportedLanguages)('resolves the hint for %s', async (locale) => {
+    const settings =
+      modules[`../../../packages/desktop/src/renderer/services/i18n/locales/${locale}/settings.json`].default;
+    const instance = i18next.createInstance();
+    await instance.init({ lng: locale, resources: { [locale]: { translation: { settings } } } });
+    expect(instance.t('settings.assistant.projectSessionsHint')).toBe(settings.assistant.projectSessionsHint);
+    expect(instance.t('settings.assistant.projectSessionsHint')).not.toBe('settings.assistant.projectSessionsHint');
   });
 });

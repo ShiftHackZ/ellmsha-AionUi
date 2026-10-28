@@ -1075,7 +1075,8 @@
     "modelSwitched": "モデルの切り替えに成功しました",
     "tokenLocked": "設定を変更する前に、Channel を閉じてすべての承認済みユーザーを削除してください",
     "tokenValid": "Token が有効です",
-    "name": "アシスタント"
+    "name": "アシスタント",
+    "projectSessionsHint": "Telegramで /new または New Session を使い、プロジェクトまたは一時チャットを選択します。"
   },
   "lark": {
     "appId": "App ID",

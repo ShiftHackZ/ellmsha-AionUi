@@ -1085,7 +1085,8 @@
     "autoFollowCliModel": "Suivre automatiquement le modèle quand le CLI est en cours d'exécution",
     "agentSwitched": "Agent changé avec succès",
     "modelSwitched": "Modèle changé avec succès",
-    "name": "Assistant"
+    "name": "Assistant",
+    "projectSessionsHint": "Dans Telegram, utilisez /new ou New Session pour choisir un projet ou une conversation temporaire."
   },
   "lark": {
     "appId": "ID d'application",

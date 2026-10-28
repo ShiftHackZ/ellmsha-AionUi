@@ -1399,6 +1399,7 @@ export type I18nKey =
   | 'settings.assistant.platform'
   | 'settings.assistant.pluginDisabled'
   | 'settings.assistant.pluginEnabled'
+  | 'settings.assistant.projectSessionsHint'
   | 'settings.assistant.reject'
   | 'settings.assistant.rejectFailed'
   | 'settings.assistant.revokeAccess'
