@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IExtensionInfo } from '@/common/adapter/ipcBridge';
 import liveCatalog from '../../fixtures/api/extensions-sd07-live.json';
 import PluginsContent from '@/renderer/pages/settings/PluginsSettings/PluginsContent';
+import PluginsSettings from '@/renderer/pages/settings/PluginsSettings';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 
 type MockButtonProps = Omit<React.ComponentProps<'button'>, 'type'> & {
   loading?: boolean;
@@ -27,6 +29,8 @@ const bridge = vi.hoisted(() => ({
   linear: vi.fn(),
   linearList: vi.fn(),
   clockify: vi.fn(),
+  notion: vi.fn(),
+  notionDisconnect: vi.fn(),
   enable: vi.fn(),
   disable: vi.fn(),
   install: vi.fn(),
@@ -35,7 +39,9 @@ const bridge = vi.hoisted(() => ({
   systemInfo: vi.fn(),
   computerUsePermissions: vi.fn(),
 }));
-const translate = vi.hoisted(() => (key: string) => key);
+const translate = vi.hoisted(
+  () => (key: string, options?: { count?: number }) => (options?.count === undefined ? key : `${key}:${options.count}`)
+);
 
 vi.mock('@/common', () => ({
   ipcBridge: {
@@ -48,6 +54,8 @@ vi.mock('@/common', () => ({
       migrateLegacyLinearConnection: { invoke: bridge.linear },
       getLinearConnections: { invoke: bridge.linearList },
       getClockifyConnections: { invoke: bridge.clockify },
+      getNotionConnections: { invoke: bridge.notion },
+      disconnectNotionConnection: { invoke: bridge.notionDisconnect },
       enableExtension: { invoke: bridge.enable },
       disableExtension: { invoke: bridge.disable },
       installPlugin: { invoke: bridge.install },
@@ -55,6 +63,10 @@ vi.mock('@/common', () => ({
       uninstallPlugin: { invoke: bridge.uninstall },
     },
   },
+}));
+
+vi.mock('@/renderer/pages/settings/components/SettingsPageWrapper', () => ({
+  default: ({ children }: React.PropsWithChildren) => <main>{children}</main>,
 }));
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: translate }) }));
@@ -72,6 +84,9 @@ vi.mock('@icon-park/react', () => ({
   CodeBrackets: () => <span data-icon='code' />,
   Computer: () => <span data-icon='computer' />,
   Login: () => null,
+  Link: () => null,
+  Refresh: () => null,
+  Unlink: () => null,
   Phone: () => <span data-icon='mobile' />,
   Puzzle: () => <span data-icon='plugin' />,
   Right: () => null,
@@ -135,6 +150,7 @@ beforeEach(() => {
   bridge.linear.mockResolvedValue({ connections: [] });
   bridge.linearList.mockResolvedValue({ connections: [] });
   bridge.clockify.mockResolvedValue({ connections: [] });
+  bridge.notion.mockResolvedValue({ connections: [] });
   bridge.enable.mockResolvedValue(undefined);
   bridge.disable.mockResolvedValue(undefined);
   bridge.install.mockResolvedValue({
@@ -291,6 +307,9 @@ describe('PluginsContent live catalog compatibility', () => {
     render(<PluginsContent />);
     await screen.findByText('Clockify');
 
+    expect(screen.queryByPlaceholderText('settings.pluginGitUrlPlaceholder')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'settings.pluginInstall' }));
+    expect(screen.queryByPlaceholderText('settings.pluginsSearchPlaceholder')).not.toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText('settings.pluginGitUrlPlaceholder'), {
       target: { value: 'https://github.com/trailofbits/skills.git' },
     });
@@ -410,5 +429,105 @@ describe('PluginsContent live catalog compatibility', () => {
     expect(screen.getByRole('button', { name: 'settings.linearConnectAnotherAccount' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'settings.linearReconnect' })).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'settings.linearDisconnect' })).toHaveLength(2);
+  });
+});
+
+const LocationPreview = () => {
+  const location = useLocation();
+  return (
+    <output data-testid='route-location'>
+      {location.pathname}
+      {location.search}
+    </output>
+  );
+};
+const renderPluginPage = (url = '/settings/plugins') =>
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path='/settings/plugins' element={<PluginsSettings />} />
+        <Route path='/settings/plugins/:pluginName' element={<PluginsSettings />} />
+      </Routes>
+      <LocationPreview />
+    </MemoryRouter>
+  );
+
+describe('Plugins settings page navigation', () => {
+  it('opens Git installation from the page-header action and returns to the catalog', async () => {
+    renderPluginPage();
+    await screen.findByText('Clockify');
+    expect(screen.queryByPlaceholderText('settings.pluginGitUrlPlaceholder')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'settings.pluginInstall' }));
+    expect(await screen.findByPlaceholderText('settings.pluginGitUrlPlaceholder')).toBeInTheDocument();
+    expect(screen.getByTestId('route-location')).toHaveTextContent('/settings/plugins?view=install');
+    expect(screen.queryByText('Clockify')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('settings.pluginsSearchPlaceholder')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'settings.pluginDetailBack' }));
+    expect(await screen.findByText('Clockify')).toBeInTheDocument();
+    expect(screen.getByTestId('route-location')).toHaveTextContent('/settings/plugins');
+    expect(screen.queryByPlaceholderText('settings.pluginGitUrlPlaceholder')).not.toBeInTheDocument();
+  });
+
+  it('shows only connected Notion identities and updates the catalog after a disconnect', async () => {
+    bridge.list.mockResolvedValue([
+      { name: 'notion', display_name: 'Notion', version: '1.0.0', source: 'builtin', enabled: true },
+    ]);
+    const accounts = ['a', 'b', 'c'].map((id) => ({
+      id,
+      namespace: `notion-${id}`,
+      label: `Account ${id}`,
+      status: id === 'c' ? 'reconnect_required' : 'connected',
+      capabilities: { search: true, read: true, write: true },
+      created_at: 1,
+      updated_at: 1,
+    }));
+    bridge.notion.mockResolvedValue({ connections: accounts });
+    renderPluginPage('/settings/plugins');
+    expect(await screen.findByText('settings.pluginAccountCount:2')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Notion'));
+    await screen.findByText('Account a');
+    const disconnected = { ...accounts[0], status: 'disconnected' };
+    bridge.notionDisconnect.mockResolvedValue(disconnected);
+    bridge.notion.mockResolvedValue({ connections: [disconnected, ...accounts.slice(1)] });
+    fireEvent.click(screen.getAllByRole('button', { name: 'settings.notion.disconnect' })[0]);
+    await waitFor(() => expect(bridge.notionDisconnect).toHaveBeenCalledWith({ connection_id: 'a' }));
+    // Wait for the mutation's authoritative refresh before navigating back.
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'settings.notion.disconnect' })[0]).toBeDisabled()
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'settings.pluginDetailBack' }));
+    expect(await screen.findByText('settings.pluginAccountCount:1')).toBeInTheDocument();
+  });
+
+  it('does not invent a Notion count when its account list fails to load', async () => {
+    bridge.list.mockResolvedValue([
+      { name: 'notion', display_name: 'Notion', version: '1.0.0', source: 'builtin', enabled: true },
+    ]);
+    bridge.notion.mockRejectedValue(new Error('unavailable'));
+    renderPluginPage('/settings/plugins');
+    expect(await screen.findByText('Notion')).toBeInTheDocument();
+    expect(screen.queryByText(/settings.pluginAccountCount:/)).not.toBeInTheDocument();
+  });
+
+  it('uses the shared plugin detail chrome for Notion and shows its account icon header', async () => {
+    bridge.list.mockResolvedValue([
+      {
+        name: 'notion',
+        display_name: 'Notion',
+        description: 'Notion workspace connections',
+        version: '1.0.0',
+        source: 'builtin',
+        enabled: true,
+        package_format: 'native',
+      },
+    ]);
+    renderPluginPage('/settings/plugins/notion');
+    expect(await screen.findByText('settings.notion.accounts')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'settings.plugins' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'settings.pluginDetailBack' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('plugin-brand-logo-notion')).toHaveLength(2);
+    expect(screen.getByText('settings.notion.connectTitle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'settings.notion.connect' })).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('settings.pluginGitUrlPlaceholder')).not.toBeInTheDocument();
   });
 });

@@ -5,8 +5,9 @@ import { Button, Input, Message, Popconfirm, Select, Spin, Tag } from '@arco-des
 import { Link, Refresh, Unlink } from '@icon-park/react';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ClockifyAccountMutationController, type ClockifyAccountMutation } from './clockifyAccountMutationController';
+import { PluginAccountMutationController, type PluginAccountMutation } from './pluginAccountMutationController';
 import { clockifyConnectError } from './pluginViewModel';
+import PluginAccountCard from './PluginAccountCard';
 import PluginIcon from './PluginIcon';
 
 type ClockifyAccountsProps = {
@@ -32,8 +33,8 @@ const ClockifyAccounts: React.FC<ClockifyAccountsProps> = ({
   const [apiKey, setApiKey] = useState('');
   const [realm, setRealm] = useState<ClockifyRealm>('global');
   const [reconnectId, setReconnectId] = useState<string>();
-  const [pending, setPending] = useState<ClockifyAccountMutation>();
-  const mutationController = useRef(new ClockifyAccountMutationController()).current;
+  const [pending, setPending] = useState<PluginAccountMutation>();
+  const mutationController = useRef(new PluginAccountMutationController()).current;
   const valueRef = useRef(value);
   valueRef.current = value;
 
@@ -216,36 +217,24 @@ const ClockifyAccounts: React.FC<ClockifyAccountsProps> = ({
       ) : (
         <div className='flex flex-col gap-12px'>
           {value.connections.map((connection) => (
-            <div
+            <PluginAccountCard
               key={connection.id}
-              className='border border-border-2 bg-base rd-12px px-14px py-10px flex flex-col gap-12px'
-            >
-              <div className='flex items-start justify-between gap-12px'>
-                <div className='flex min-w-0 items-start gap-12px'>
-                  <PluginIcon name='clockify' account />
-                  <div className='min-w-0'>
-                    <div className='flex items-center gap-8px flex-wrap'>
-                      <span className='text-14px font-600 text-t-primary'>{connection.label}</span>
-                      <Tag
-                        color={
-                          connection.status === 'connected' ? 'green' : connection.status === 'error' ? 'red' : 'gray'
-                        }
-                      >
-                        {t(`settings.clockifyStatus.${connection.status}`)}
-                      </Tag>
-                      <Tag>{t(`settings.clockifyRegion.${connection.realm}`)}</Tag>
-                    </div>
-                    {connection.identity && (
-                      <div className='text-13px text-t-secondary mt-6px'>
-                        {connection.identity.account_email ?? connection.identity.account_name}
-                      </div>
-                    )}
-                    {connection.last_error && (
-                      <div className='text-12px text-status-error mt-6px break-words'>{connection.last_error}</div>
-                    )}
-                  </div>
-                </div>
-                <div className='flex gap-8px shrink-0'>
+              provider='clockify'
+              title={connection.label}
+              subtitle={connection.identity?.account_email ?? connection.identity?.account_name}
+              error={connection.last_error}
+              status={
+                <>
+                  <Tag
+                    color={connection.status === 'connected' ? 'green' : connection.status === 'error' ? 'red' : 'gray'}
+                  >
+                    {t(`settings.clockifyStatus.${connection.status}`)}
+                  </Tag>
+                  <Tag>{t(`settings.clockifyRegion.${connection.realm}`)}</Tag>
+                </>
+              }
+              actions={
+                <>
                   <Button
                     size='small'
                     icon={<Refresh theme='outline' size={14} fill='currentColor' />}
@@ -266,8 +255,9 @@ const ClockifyAccounts: React.FC<ClockifyAccountsProps> = ({
                       {t('settings.clockifyDisconnect')}
                     </Button>
                   </Popconfirm>
-                </div>
-              </div>
+                </>
+              }
+            >
               {connection.workspaces.length > 0 && (
                 <div className='flex gap-6px flex-wrap'>
                   {connection.workspaces.map((workspace) => (
@@ -275,7 +265,7 @@ const ClockifyAccounts: React.FC<ClockifyAccountsProps> = ({
                   ))}
                 </div>
               )}
-            </div>
+            </PluginAccountCard>
           ))}
         </div>
       )}

@@ -46,6 +46,7 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
     'plugins/mobile/aion-extension.json',
     'plugins/computer-use/aion-extension.json',
     'plugins/clockify/aion-extension.json',
+    'plugins/notion/aion-extension.json',
   ];
   const missingIntegrations = integrationResources.filter(
     (relativePath) => !fs.existsSync(path.join(resourcesDir, relativePath))

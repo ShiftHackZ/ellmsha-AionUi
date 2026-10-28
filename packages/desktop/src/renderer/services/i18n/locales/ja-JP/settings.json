@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1746,5 +1747,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "Notion アカウント",
+    "description": "安全なブラウザーログインで Notion アカウントとワークスペースを接続します。",
+    "connect": "アカウントを接続",
+    "reconnect": "再接続",
+    "disconnect": "切断",
+    "disconnectConfirm": "このアカウントを切断しますか？ローカルの認証情報が削除され、エージェントはこのアカウントのツールを使用できなくなります。",
+    "enableFirst": "アカウントを接続するには Notion を有効にしてください。",
+    "authorizing": "ブラウザーで Notion へのログインを完了してください。数分かかる場合があります。",
+    "loadFailed": "Notion アカウントを読み込めませんでした。",
+    "connectionFailed": "Notion に接続できませんでした。再試行し、ブラウザーで認証を完了してください。",
+    "empty": "接続済みの Notion アカウントはありません。",
+    "selectionHelp": "各アカウントは独立したワークスペースと認証情報を使用します。複数のアカウントが該当する場合、エージェントが使用するアカウントを確認します。",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "未接続",
+      "connecting": "接続中",
+      "reconnect_required": "再接続が必要",
+      "error": "エラー"
+    },
+    "connectTitle": "Notion アカウントを接続",
+    "connectHelp": "ブラウザーでログインしてください。認証後にアカウントとワークスペースの情報が表示されます。"
   }
 }

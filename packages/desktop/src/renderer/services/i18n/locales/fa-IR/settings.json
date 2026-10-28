@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1744,5 +1745,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "حساب‌های Notion",
+    "description": "حساب‌ها و فضاهای کاری Notion را با ورود امن در مرورگر متصل کنید.",
+    "connect": "اتصال حساب",
+    "reconnect": "اتصال مجدد",
+    "disconnect": "قطع اتصال",
+    "disconnectConfirm": "اتصال این حساب قطع شود؟ مجوز محلی حذف می‌شود و ابزارهای آن دیگر در دسترس عامل‌ها نخواهد بود.",
+    "enableFirst": "برای اتصال حساب، Notion را فعال کنید.",
+    "authorizing": "ورود به Notion را در مرورگر تکمیل کنید. ممکن است چند دقیقه طول بکشد.",
+    "loadFailed": "بارگیری حساب‌های Notion ممکن نشد.",
+    "connectionFailed": "اتصال به Notion ممکن نشد. دوباره تلاش کنید و مجوز را در مرورگر تکمیل کنید.",
+    "empty": "هیچ حساب Notion متصل نیست.",
+    "selectionHelp": "هر حساب فضای کاری و اطلاعات ورود مستقل دارد. اگر چند حساب با درخواست مطابقت داشته باشند، عامل می‌پرسد از کدام استفاده کند.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "قطع‌شده",
+      "connecting": "در حال اتصال",
+      "reconnect_required": "نیازمند اتصال مجدد",
+      "error": "خطا"
+    },
+    "connectTitle": "اتصال حساب Notion",
+    "connectHelp": "از طریق مرورگر وارد شوید. پس از تأیید، اطلاعات حساب و فضای کاری نمایش داده می‌شود."
   }
 }

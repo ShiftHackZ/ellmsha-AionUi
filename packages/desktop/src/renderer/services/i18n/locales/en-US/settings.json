@@ -93,6 +93,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1768,5 +1769,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "Notion accounts",
+    "description": "Connect Notion accounts and workspaces using secure browser sign-in.",
+    "connect": "Connect account",
+    "reconnect": "Reconnect",
+    "disconnect": "Disconnect",
+    "disconnectConfirm": "Disconnect this account? Remove local authorization and stop exposing its tools to agents.",
+    "enableFirst": "Enable Notion to connect an account.",
+    "authorizing": "Complete Notion sign-in in your browser. This can take a few minutes.",
+    "loadFailed": "Could not load Notion accounts.",
+    "connectionFailed": "Could not connect to Notion. Try again and complete browser authorization.",
+    "empty": "No Notion accounts connected.",
+    "selectionHelp": "Each account has its own workspace and credentials. When several accounts match a request, the agent asks which one to use.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Disconnected",
+      "connecting": "Connecting",
+      "reconnect_required": "Reconnect required",
+      "error": "Error"
+    },
+    "connectTitle": "Connect Notion account",
+    "connectHelp": "Sign in through your browser. Account and workspace details are filled in after verification."
   }
 }

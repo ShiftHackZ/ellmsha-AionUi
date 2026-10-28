@@ -5,6 +5,7 @@ import type {
   IExtensionInfo,
   LinearConnection,
   LinearConnections,
+  NotionConnections,
 } from '@/common/adapter/ipcBridge';
 import { AION_ADD_BUTTON_CLASS } from '@/renderer/components/base/TalkToButlerButton';
 import { Button, Empty, Input, Message, Popconfirm, Spin, Switch, Tag } from '@arco-design/web-react';
@@ -19,11 +20,13 @@ import {
 } from './pluginViewModel';
 import type { PluginCatalogItem } from './pluginViewModel';
 import ClockifyAccounts from './ClockifyAccounts';
+import NotionAccounts from './NotionAccounts';
 import ComputerUseSetup from './ComputerUseSetup';
 import PluginIcon from './PluginIcon';
 
 const EMPTY_LINEAR: LinearConnections = { connections: [] };
 const EMPTY_CLOCKIFY: ClockifyConnections = { connections: [] };
+const EMPTY_NOTION: NotionConnections = { connections: [] };
 
 const linearConnectError = (error: unknown, fallback: string): string => {
   if (isBackendHttpError(error) && error.code === 'LINEAR_AUTH_FAILED' && error.backendMessage) {
@@ -34,19 +37,33 @@ const linearConnectError = (error: unknown, fallback: string): string => {
 
 type PluginsContentProps = {
   selectedPluginName?: string;
+  installView?: boolean;
+  onInstallViewChange?: (open: boolean) => void;
   onSelectedPluginChange?: (pluginName?: string) => void;
 };
 
-const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onSelectedPluginChange }) => {
+const PluginsContent: React.FC<PluginsContentProps> = ({
+  selectedPluginName,
+  onSelectedPluginChange,
+  installView,
+  onInstallViewChange,
+}) => {
   const { t } = useTranslation();
   const webUiBrowserMode = isWebUiBrowserMode();
   const canManagePluginPackages = !webUiBrowserMode;
   const [localSelection, setLocalSelection] = useState<string>();
+  const [localInstallView, setLocalInstallView] = useState(false);
+  const showingInstall = installView ?? localInstallView;
+  const changeInstallView = (open: boolean) => {
+    if (onInstallViewChange) onInstallViewChange(open);
+    else setLocalInstallView(open);
+  };
   const [extensions, setExtensions] = useState<PluginCatalogItem[]>([]);
   const [linear, setLinear] = useState<LinearConnections>(EMPTY_LINEAR);
   const [linearLoadError, setLinearLoadError] = useState(false);
   const [linearRetrying, setLinearRetrying] = useState(false);
   const [clockify, setClockify] = useState<ClockifyConnections>(EMPTY_CLOCKIFY);
+  const [notion, setNotion] = useState<NotionConnections>(EMPTY_NOTION);
   const [clockifyLoadError, setClockifyLoadError] = useState(false);
   const [clockifyRetrying, setClockifyRetrying] = useState(false);
   const [search, setSearch] = useState('');
@@ -63,6 +80,7 @@ const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onS
 
   const selectPlugin = useCallback(
     (pluginName?: string) => {
+      setLocalInstallView(false);
       if (onSelectedPluginChange) onSelectedPluginChange(pluginName);
       else setLocalSelection(pluginName);
     },
@@ -78,10 +96,11 @@ const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onS
     const linearConnections = webUiBrowserMode
       ? ipcBridge.extensions.getLinearConnections.invoke()
       : ipcBridge.extensions.migrateLegacyLinearConnection.invoke();
-    const [extensionsResult, linearResult, clockifyResult] = await Promise.allSettled([
+    const [extensionsResult, linearResult, clockifyResult, notionResult] = await Promise.allSettled([
       ipcBridge.extensions.getLoadedExtensions.invoke(),
       linearConnections,
       ipcBridge.extensions.getClockifyConnections.invoke(),
+      ipcBridge.extensions.getNotionConnections.invoke(),
     ]);
     if (extensionsResult.status === 'fulfilled') {
       setExtensions(normalizePluginCatalog(extensionsResult.value ?? []));
@@ -104,7 +123,8 @@ const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onS
       console.error('[PluginsContent] Failed to load Clockify connections:', clockifyResult.reason);
       setClockifyLoadError(true);
     }
-    if ([extensionsResult, linearResult, clockifyResult].some((result) => result.status === 'rejected')) {
+    setNotion(notionResult.status === 'fulfilled' ? (notionResult.value ?? EMPTY_NOTION) : EMPTY_NOTION);
+    if ([extensionsResult, linearResult, clockifyResult, notionResult].some((result) => result.status === 'rejected')) {
       Message.error(t('settings.pluginsLoadError'));
     }
     setLoading(false);
@@ -650,6 +670,8 @@ const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onS
               setClockifyLoadError(false);
             }}
           />
+        ) : selectedPlugin.name === 'notion' ? (
+          <NotionAccounts enabled={selectedPlugin.enabled} onChange={setNotion} />
         ) : selectedPlugin.name === 'computer-use' ? (
           <ComputerUseSetup webUiBrowserMode={webUiBrowserMode} />
         ) : (
@@ -666,9 +688,22 @@ const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onS
     );
   }
 
-  return (
-    <div className='flex flex-col gap-16px pb-20px'>
-      {canManagePluginPackages && (
+  if (showingInstall && canManagePluginPackages) {
+    return (
+      <div className='flex flex-col gap-16px pb-20px'>
+        <div className='flex items-center gap-8px text-13px text-t-secondary'>
+          <Button
+            type='text'
+            className='!px-0'
+            icon={<ArrowLeft />}
+            disabled={busy['install-plugin']}
+            onClick={() => changeInstallView(false)}
+          >
+            {t('settings.pluginDetailBack')}
+          </Button>
+          <span>/</span>
+          <span className='text-t-primary'>{t('settings.pluginInstallGit')}</span>
+        </div>
         <section className='bg-2 border border-border-2 rd-16px p-16px flex flex-col gap-12px'>
           <div>
             <div className='text-16px font-600 text-t-primary'>{t('settings.pluginInstallGit')}</div>
@@ -703,6 +738,18 @@ const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onS
             </Button>
           </div>
         </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className='flex flex-col gap-16px pb-20px'>
+      {canManagePluginPackages && !onInstallViewChange && (
+        <div className='flex justify-end'>
+          <Button type='primary' size='small' className={AION_ADD_BUTTON_CLASS} onClick={() => changeInstallView(true)}>
+            {t('settings.pluginInstall')}
+          </Button>
+        </div>
       )}
 
       <Input
@@ -758,15 +805,22 @@ const PluginsContent: React.FC<PluginsContentProps> = ({ selectedPluginName, onS
                     </span>
                     {extension.name === 'linear' && linear.connections.length > 0 && (
                       <Tag>
-                        {t('settings.linearAccountCount', {
+                        {t('settings.pluginAccountCount', {
                           count: linear.connections.filter((connection) => connection.status === 'connected').length,
                         })}
                       </Tag>
                     )}
                     {extension.name === 'clockify' && clockify.connections.length > 0 && (
                       <Tag>
-                        {t('settings.clockifyAccountCount', {
+                        {t('settings.pluginAccountCount', {
                           count: clockify.connections.filter((connection) => connection.status === 'connected').length,
+                        })}
+                      </Tag>
+                    )}
+                    {extension.name === 'notion' && notion.connections.length > 0 && (
+                      <Tag>
+                        {t('settings.pluginAccountCount', {
+                          count: notion.connections.filter((connection) => connection.status === 'connected').length,
                         })}
                       </Tag>
                     )}

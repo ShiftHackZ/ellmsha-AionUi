@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1744,5 +1745,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "Notion-Konten",
+    "description": "Notion-Konten und Arbeitsbereiche über eine sichere Browser-Anmeldung verbinden.",
+    "connect": "Konto verbinden",
+    "reconnect": "Erneut verbinden",
+    "disconnect": "Trennen",
+    "disconnectConfirm": "Dieses Konto trennen? Die lokale Autorisierung wird entfernt und seine Werkzeuge sind für Agenten nicht mehr verfügbar.",
+    "enableFirst": "Notion aktivieren, um ein Konto zu verbinden.",
+    "authorizing": "Schließe die Notion-Anmeldung im Browser ab. Dies kann einige Minuten dauern.",
+    "loadFailed": "Notion-Konten konnten nicht geladen werden.",
+    "connectionFailed": "Verbindung mit Notion fehlgeschlagen. Erneut versuchen und die Browser-Autorisierung abschließen.",
+    "empty": "Keine Notion-Konten verbunden.",
+    "selectionHelp": "Jedes Konto hat einen eigenen Arbeitsbereich und eigene Zugangsdaten. Wenn mehrere Konten passen, fragt der Agent nach dem gewünschten Konto.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Getrennt",
+      "connecting": "Verbindungsaufbau",
+      "reconnect_required": "Erneute Verbindung erforderlich",
+      "error": "Fehler"
+    },
+    "connectTitle": "Notion-Konto verbinden",
+    "connectHelp": "Melde dich im Browser an. Nach der Überprüfung werden Konto und Arbeitsbereich angezeigt."
   }
 }

@@ -2024,6 +2024,25 @@ export type LinearConnections = {
   connections: LinearConnection[];
 };
 
+export type NotionConnection = {
+  id: string;
+  namespace: string;
+  label: string;
+  status: LinearConnectionStatus;
+  identity?: {
+    account_id: string;
+    account_name: string;
+    account_email?: string;
+    workspace_id: string;
+    workspace_name?: string;
+  };
+  capabilities: { search: boolean; read: boolean; write: boolean };
+  last_error?: string;
+  created_at: number;
+  updated_at: number;
+};
+export type NotionConnections = { connections: NotionConnection[] };
+
 export type ClockifyRealm = 'global' | 'eu' | 'us' | 'uk' | 'au';
 
 export type ClockifyConnectionStatus = 'connected' | 'disconnected' | 'reconnect_required' | 'error';
@@ -2144,6 +2163,16 @@ export const extensions = {
   ),
   disconnectLinearConnection: httpPost<LinearConnection, { connection_id: string }>(
     (params) => `/api/plugins/linear/connections/${encodeURIComponent(params.connection_id)}/disconnect`,
+    () => ({})
+  ),
+  getNotionConnections: httpGet<NotionConnections, void>('/api/plugins/notion/connections'),
+  connectNewNotionConnection: httpPost<NotionConnection, void>('/api/plugins/notion/connections'),
+  connectNotionConnection: httpPost<NotionConnection, { connection_id: string; reconnect: boolean }>(
+    (params) => `/api/plugins/notion/connections/${encodeURIComponent(params.connection_id)}/connect`,
+    (params) => ({ reconnect: params.reconnect })
+  ),
+  disconnectNotionConnection: httpPost<NotionConnection, { connection_id: string }>(
+    (params) => `/api/plugins/notion/connections/${encodeURIComponent(params.connection_id)}/disconnect`,
     () => ({})
   ),
   getClockifyConnections: httpGet<ClockifyConnections, void>('/api/plugins/clockify/connections'),

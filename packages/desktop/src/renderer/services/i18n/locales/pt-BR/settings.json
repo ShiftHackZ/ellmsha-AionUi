@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1747,5 +1748,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "Contas do Notion",
+    "description": "Conecte contas e espaços de trabalho do Notion com login seguro no navegador.",
+    "connect": "Conectar conta",
+    "reconnect": "Reconectar",
+    "disconnect": "Desconectar",
+    "disconnectConfirm": "Desconectar esta conta? A autorização local será removida e suas ferramentas ficarão indisponíveis para os agentes.",
+    "enableFirst": "Ative o Notion para conectar uma conta.",
+    "authorizing": "Conclua o login do Notion no navegador. Isso pode levar alguns minutos.",
+    "loadFailed": "Não foi possível carregar as contas do Notion.",
+    "connectionFailed": "Não foi possível conectar ao Notion. Tente novamente e conclua a autorização no navegador.",
+    "empty": "Nenhuma conta do Notion conectada.",
+    "selectionHelp": "Cada conta tem seu próprio espaço de trabalho e credenciais. Se várias contas corresponderem, o agente perguntará qual usar.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Desconectada",
+      "connecting": "Conectando",
+      "reconnect_required": "Reconexão necessária",
+      "error": "Erro"
+    },
+    "connectTitle": "Conectar conta do Notion",
+    "connectHelp": "Entre pelo navegador. Os dados da conta e do espaço de trabalho serão exibidos após a verificação."
   }
 }

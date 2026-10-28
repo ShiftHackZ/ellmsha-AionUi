@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1746,5 +1747,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "Notion 계정",
+    "description": "안전한 브라우저 로그인을 통해 Notion 계정과 워크스페이스를 연결하세요.",
+    "connect": "계정 연결",
+    "reconnect": "다시 연결",
+    "disconnect": "연결 해제",
+    "disconnectConfirm": "이 계정의 연결을 해제할까요? 로컬 인증이 삭제되고 에이전트가 해당 도구를 사용할 수 없게 됩니다.",
+    "enableFirst": "계정을 연결하려면 Notion을 활성화하세요.",
+    "authorizing": "브라우저에서 Notion 로그인을 완료하세요. 몇 분 정도 걸릴 수 있습니다.",
+    "loadFailed": "Notion 계정을 불러오지 못했습니다.",
+    "connectionFailed": "Notion에 연결하지 못했습니다. 다시 시도하고 브라우저 인증을 완료하세요.",
+    "empty": "연결된 Notion 계정이 없습니다.",
+    "selectionHelp": "각 계정은 독립적인 워크스페이스와 인증 정보를 사용합니다. 여러 계정이 요청에 해당하면 에이전트가 사용할 계정을 묻습니다.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "연결 해제됨",
+      "connecting": "연결 중",
+      "reconnect_required": "다시 연결 필요",
+      "error": "오류"
+    },
+    "connectTitle": "Notion 계정 연결",
+    "connectHelp": "브라우저에서 로그인하세요. 인증 후 계정과 워크스페이스 정보가 표시됩니다."
   }
 }

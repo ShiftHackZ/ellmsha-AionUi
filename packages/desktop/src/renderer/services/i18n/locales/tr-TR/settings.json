@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1744,5 +1745,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "Notion hesapları",
+    "description": "Güvenli tarayıcı girişiyle Notion hesaplarını ve çalışma alanlarını bağlayın.",
+    "connect": "Hesap bağla",
+    "reconnect": "Yeniden bağlan",
+    "disconnect": "Bağlantıyı kes",
+    "disconnectConfirm": "Bu hesabın bağlantısı kesilsin mi? Yerel yetkilendirme silinir ve araçları aracılara sunulmaz.",
+    "enableFirst": "Hesap bağlamak için Notion’ı etkinleştirin.",
+    "authorizing": "Tarayıcıda Notion girişini tamamlayın. Bu birkaç dakika sürebilir.",
+    "loadFailed": "Notion hesapları yüklenemedi.",
+    "connectionFailed": "Notion’a bağlanılamadı. Yeniden deneyin ve tarayıcı yetkilendirmesini tamamlayın.",
+    "empty": "Bağlı Notion hesabı yok.",
+    "selectionHelp": "Her hesabın ayrı çalışma alanı ve kimlik bilgileri vardır. Birden fazla hesap eşleşirse aracı hangisinin kullanılacağını sorar.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Bağlı değil",
+      "connecting": "Bağlanıyor",
+      "reconnect_required": "Yeniden bağlantı gerekli",
+      "error": "Hata"
+    },
+    "connectTitle": "Notion hesabı bağla",
+    "connectHelp": "Tarayıcıdan giriş yapın. Doğrulama sonrasında hesap ve çalışma alanı bilgileri gösterilir."
   }
 }

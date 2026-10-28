@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1745,5 +1746,28 @@
     "stop": "Зупинити runtime",
     "failed": "Помилка Copilot IDE",
     "modelsHint": "Після входу оновіть моделі. Оберіть Copilot IDE у моделях вбудованого агента. Інструменти, пам’ять і дозволи контролює eLLMsha."
+  },
+  "notion": {
+    "accounts": "Облікові записи Notion",
+    "description": "Підключайте облікові записи й робочі простори Notion через безпечний вхід у браузері.",
+    "connect": "Підключити обліковий запис",
+    "reconnect": "Перепідключити",
+    "disconnect": "Відключити",
+    "disconnectConfirm": "Відключити обліковий запис? Локальну авторизацію буде видалено, а його інструменти стануть недоступні агентам.",
+    "enableFirst": "Увімкніть Notion, щоб підключити обліковий запис.",
+    "authorizing": "Завершіть вхід у Notion у браузері. Це може зайняти кілька хвилин.",
+    "loadFailed": "Не вдалося завантажити облікові записи Notion.",
+    "connectionFailed": "Не вдалося підключитися до Notion. Спробуйте знову й завершіть авторизацію в браузері.",
+    "empty": "Немає підключених облікових записів Notion.",
+    "selectionHelp": "Кожен обліковий запис має власний робочий простір і облікові дані. Якщо запиту відповідає кілька записів, агент уточнить, який використати.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Відключено",
+      "connecting": "Підключення",
+      "reconnect_required": "Потрібне перепідключення",
+      "error": "Помилка"
+    },
+    "connectTitle": "Підключити обліковий запис Notion",
+    "connectHelp": "Увійдіть через браузер. Дані облікового запису й робочого простору з’являться після перевірки."
   }
 }

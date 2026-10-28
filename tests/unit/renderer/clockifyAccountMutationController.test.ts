@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ClockifyConnection, ClockifyConnections } from '@/common/adapter/ipcBridge';
 import {
-  ClockifyAccountMutationController,
-  type ClockifyAccountMutation,
-} from '@/renderer/pages/settings/PluginsSettings/clockifyAccountMutationController';
+  PluginAccountMutationController,
+  type PluginAccountMutation,
+} from '@/renderer/pages/settings/PluginsSettings/pluginAccountMutationController';
 
 const connection = (id: string, status: ClockifyConnection['status'] = 'connected'): ClockifyConnection => ({
   id,
@@ -28,20 +28,20 @@ const deferred = <T>() => {
 };
 
 const runOptions = (
-  mutation: ClockifyAccountMutation,
+  mutation: PluginAccountMutation,
   mutate: () => Promise<ClockifyConnection>,
   load: () => Promise<ClockifyConnections>,
   current: () => ClockifyConnections,
   publish: (value: ClockifyConnections) => void,
-  onPendingChange: (value?: ClockifyAccountMutation) => void
+  onPendingChange: (value?: PluginAccountMutation) => void
 ) => ({ mutation, mutate, load, current, publish, onPendingChange });
 
 describe('Clockify account mutation controller', () => {
   it('synchronously blocks double submit and keeps the original form target pending', async () => {
-    const controller = new ClockifyAccountMutationController();
+    const controller = new PluginAccountMutationController();
     const mutation = deferred<ClockifyConnection>();
     const load = deferred<ClockifyConnections>();
-    const pending: Array<ClockifyAccountMutation | undefined> = [];
+    const pending: Array<PluginAccountMutation | undefined> = [];
     const publish = vi.fn();
     const secondMutation = vi.fn(async () => connection('account-b'));
     const current = () => ({ connections: [connection('account-a')] });
@@ -80,7 +80,7 @@ describe('Clockify account mutation controller', () => {
   });
 
   it('waits for and publishes the authoritative list instead of a captured account list', async () => {
-    const controller = new ClockifyAccountMutationController();
+    const controller = new PluginAccountMutationController();
     const mutation = deferred<ClockifyConnection>();
     const load = deferred<ClockifyConnections>();
     let current = { connections: [connection('account-a')] };
@@ -113,10 +113,10 @@ describe('Clockify account mutation controller', () => {
   });
 
   it('reconciles rejection state, releases the guard, and permits the next mutation', async () => {
-    const controller = new ClockifyAccountMutationController();
+    const controller = new PluginAccountMutationController();
     const mutation = deferred<ClockifyConnection>();
     const load = deferred<ClockifyConnections>();
-    const pending: Array<ClockifyAccountMutation | undefined> = [];
+    const pending: Array<PluginAccountMutation | undefined> = [];
     const authoritative = { connections: [connection('account-a'), connection('account-b')] };
     const publish = vi.fn();
     const current = () => ({ connections: [connection('account-a')] });
@@ -155,7 +155,7 @@ describe('Clockify account mutation controller', () => {
   });
 
   it('merges into the latest state when authoritative refresh fails', async () => {
-    const controller = new ClockifyAccountMutationController();
+    const controller = new PluginAccountMutationController();
     let current = { connections: [connection('account-a'), connection('account-b')] };
     const publish = vi.fn((next: ClockifyConnections) => {
       current = next;

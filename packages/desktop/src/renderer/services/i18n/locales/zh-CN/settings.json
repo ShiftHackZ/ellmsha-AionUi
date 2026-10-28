@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1745,5 +1746,28 @@
     "stop": "Stop runtime",
     "failed": "Copilot IDE operation failed",
     "modelsHint": "After signing in, refresh models. Select Copilot IDE in the native agent model picker. eLLMsha manages tools, memory and approvals."
+  },
+  "notion": {
+    "accounts": "Notion 账户",
+    "description": "通过安全的浏览器登录连接 Notion 账户和工作区。",
+    "connect": "连接账户",
+    "reconnect": "重新连接",
+    "disconnect": "断开连接",
+    "disconnectConfirm": "断开此账户？将删除本地授权，代理将无法再使用其工具。",
+    "enableFirst": "请启用 Notion 以连接账户。",
+    "authorizing": "请在浏览器中完成 Notion 登录，可能需要几分钟。",
+    "loadFailed": "无法加载 Notion 账户。",
+    "connectionFailed": "无法连接 Notion。请重试并完成浏览器授权。",
+    "empty": "尚未连接 Notion 账户。",
+    "selectionHelp": "每个账户使用独立的工作区和凭据。当多个账户符合请求时，代理会询问使用哪个账户。",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "已断开",
+      "connecting": "正在连接",
+      "reconnect_required": "需要重新连接",
+      "error": "错误"
+    },
+    "connectTitle": "连接 Notion 账户",
+    "connectHelp": "在浏览器中登录。验证后将显示账户和工作区信息。"
   }
 }

@@ -69,6 +69,7 @@
   "clockifyNoConnectedAccounts": "No Clockify accounts are connected.",
   "clockifyAccountSelectionHelp": "When more than one Clockify identity is available, the assistant asks which account you mean. Workspace and project are chosen for each operation.",
   "clockifyAccountCount": "{{count}} connected",
+  "pluginAccountCount": "{{count}} connected",
   "clockifyPluginInactive": "Clockify is disabled. Accounts stay stored, but Clockify tools are not added to conversations until the plugin is enabled.",
   "clockifyConnected": "Clockify account connected and verified.",
   "clockifyConnectError": "Clockify API-key or identity verification failed.",
@@ -1744,5 +1745,28 @@
     "stop": "Остановить runtime",
     "failed": "Ошибка Copilot IDE",
     "modelsHint": "После входа обновите модели. Выберите Copilot IDE в моделях встроенного агента. Инструменты, память и разрешения контролирует eLLMsha."
+  },
+  "notion": {
+    "accounts": "Аккаунты Notion",
+    "description": "Подключайте аккаунты и рабочие пространства Notion через безопасный вход в браузере.",
+    "connect": "Подключить аккаунт",
+    "reconnect": "Переподключить",
+    "disconnect": "Отключить",
+    "disconnectConfirm": "Отключить аккаунт? Локальная авторизация будет удалена, а его инструменты станут недоступны агентам.",
+    "enableFirst": "Включите Notion, чтобы подключить аккаунт.",
+    "authorizing": "Завершите вход в Notion в браузере. Это может занять несколько минут.",
+    "loadFailed": "Не удалось загрузить аккаунты Notion.",
+    "connectionFailed": "Не удалось подключиться к Notion. Повторите попытку и завершите авторизацию в браузере.",
+    "empty": "Нет подключённых аккаунтов Notion.",
+    "selectionHelp": "У каждого аккаунта своё рабочее пространство и учётные данные. Если запрос подходит нескольким аккаунтам, агент уточнит, какой использовать.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Отключён",
+      "connecting": "Подключение",
+      "reconnect_required": "Требуется переподключение",
+      "error": "Ошибка"
+    },
+    "connectTitle": "Подключить аккаунт Notion",
+    "connectHelp": "Войдите через браузер. Данные аккаунта и рабочего пространства появятся после проверки."
   }
 }

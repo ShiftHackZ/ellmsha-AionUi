@@ -105,6 +105,19 @@ html body .arco-popconfirm-arrow.arco-trigger-arrow {
   }
 }
 
+/* Arco spaces bare SVG icons; IconPark renders a span around its SVG. */
+.arco-btn > .i-icon + span {
+  margin-inline-start: 8px;
+}
+
+.arco-btn-size-small > .i-icon + span {
+  margin-inline-start: 6px;
+}
+
+.arco-btn-size-mini > .i-icon + span {
+  margin-inline-start: 4px;
+}
+
 .arco-btn-primary.arco-btn-disabled {
   background-color: var(--aou-2) !important;
   border-color: var(--aou-2) !important;

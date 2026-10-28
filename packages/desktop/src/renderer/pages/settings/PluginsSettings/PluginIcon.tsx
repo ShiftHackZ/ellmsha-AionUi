@@ -1,5 +1,6 @@
 import clockifyLogo from '@/renderer/assets/plugin-logos/clockify.svg';
 import linearLogo from '@/renderer/assets/plugin-logos/linear.svg';
+import notionLogo from '@/renderer/assets/plugin-logos/notion.svg';
 import { Avatar } from '@arco-design/web-react';
 import { CodeBrackets, Computer, Phone, Puzzle, User } from '@icon-park/react';
 import React from 'react';
@@ -22,6 +23,8 @@ const brandLogo = (name: string): { backgroundColor: string; src: string; scale:
   switch (name.toLowerCase()) {
     case 'clockify':
       return { backgroundColor: '#03a9f4', src: clockifyLogo, scale: 1 };
+    case 'notion':
+      return { backgroundColor: '#ffffff', src: notionLogo, scale: 0.7 };
     case 'linear':
       return { backgroundColor: '#222326', src: linearLogo, scale: 0.62 };
     default:
