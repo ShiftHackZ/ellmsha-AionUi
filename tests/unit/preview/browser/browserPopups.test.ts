@@ -4,6 +4,7 @@ import type { BrowserWindow, WebContents } from 'electron';
 import type { BrowserPopupCommand } from '@/common/adapter/ipcBridge';
 import { MAX_BROWSER_TABS } from '@/common/config/constants';
 import {
+  browserTabLifecycle,
   bindBrowserPopups,
   configureBrowserPopups,
   controlBrowserPopup,
@@ -185,6 +186,37 @@ describe('native popup tabs', () => {
 describe('ordinary native browser tabs', () => {
   const ensure = (host: BrowserWindow, tabId = 'ordinary', url = 'https://fixture.test/', mountId = 'mount-one') =>
     controlBrowserPopup(host, { action: 'ensure', tabId, url, mountId, requireExisting: false });
+
+  it('announces ensure hiding immediately, so a following sync cannot revive an existing ceremony', () => {
+    const { host } = setup();
+    ensure(host);
+    controlBrowserPopup(host, {
+      action: 'sync',
+      tabId: 'ordinary',
+      mountId: 'mount-one',
+      active: true,
+      bounds: { x: 0, y: 0, width: 20, height: 20 },
+    });
+    let cancelled = false;
+    const listener = () => {
+      if (!getBrowserPopup('ordinary')?.active) cancelled = true;
+    };
+    browserTabLifecycle.on('changed', listener);
+    try {
+      ensure(host, 'ordinary', 'https://fixture.test/', 'mount-two');
+      expect(cancelled).toBe(true);
+      controlBrowserPopup(host, {
+        action: 'sync',
+        tabId: 'ordinary',
+        mountId: 'mount-two',
+        active: true,
+        bounds: { x: 0, y: 0, width: 20, height: 20 },
+      });
+      expect(cancelled).toBe(true);
+    } finally {
+      browserTabLifecycle.removeListener('changed', listener);
+    }
+  });
 
   it('reattaches the same contents without reloading, keeping its initial URL while navigation is pending', () => {
     const { host } = setup();

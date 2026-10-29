@@ -1792,5 +1792,23 @@
     },
     "connectTitle": "Connect Notion account",
     "connectHelp": "Sign in through your browser. Account and workspace details are filled in after verification."
+  },
+  "securityKey": {
+    "title": "USB security key",
+    "relyingParty": "Domain: {{domain}}",
+    "confirm": "Allow this website to use your USB security key? Your PIN is never shared with the website.",
+    "device": "Choose a USB security key",
+    "account": "Choose an account",
+    "pin": "Security key PIN",
+    "retries": "PIN attempts remaining: {{count}}",
+    "touch": "Follow your security key instructions. Touch the key when it flashes.",
+    "cancel": "Cancel",
+    "refresh": "Check again",
+    "continue": "Continue",
+    "invalidPin": "Incorrect PIN. Check the remaining attempts before trying again.",
+    "blockedPin": "Security key PIN is blocked. Cancel and follow the manufacturer’s recovery instructions.",
+    "unavailable": "No usable USB security key found. Connect your key and check again.",
+    "unsupported": "This key cannot satisfy the authentication request.",
+    "noCredential": "No matching credential was found on this key."
   }
 }

@@ -12,6 +12,9 @@ const { verifyBundledAioncoreResources } = require('../packages/shared-scripts/s
 const { verifyMobileMcpRuntime } = require('../../scripts/prepare-mobile-mcp.js');
 const { verifyChromeDevtoolsMcpRuntime } = require('../../scripts/prepare-chrome-devtools-mcp.js');
 const { verifyOpenComputerUseRuntime } = require('../../scripts/prepare-open-computer-use.js');
+const {
+  verifyNative: verifySecurityKeyNative,
+} = require('../packages/desktop/src/process/services/browser/webauthn/native/build.cjs');
 
 /**
  * afterPack hook for electron-builder
@@ -25,7 +28,35 @@ function resolveResourcesDir(electronPlatformName, appOutDir, packager) {
   return path.join(appOutDir, `${appName}.app`, 'Contents', 'Resources');
 }
 
+async function verifySecurityKeyAssets(resourcesDir) {
+  // Resolve through the installed builder so Bun's isolated dependency layout works too.
+  const { readAsar } = require(
+    require.resolve('app-builder-lib/out/asar/asar', { paths: [path.dirname(require.resolve('electron-builder'))] })
+  );
+  const archive = await readAsar(path.join(resourcesDir, 'app.asar'));
+  const dialog = 'out/renderer/pages/conversation/Preview/browser/SecurityKeyDialog/dialog.html';
+  const required = [
+    'out/main/securityKeyWorker.js',
+    'out/preload/browserWebAuthnPreload.js',
+    'out/preload/securityKeyPreload.js',
+    dialog,
+  ];
+  const html = (await archive.readFile(dialog)).toString('utf8');
+  for (const [, reference] of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
+    const asset = path.posix.normalize(path.posix.join(path.posix.dirname(dialog), reference));
+    if (!asset.startsWith('out/renderer/')) throw new Error('Security-key dialog asset escaped renderer output');
+    required.push(asset);
+  }
+  if (!/<script\b[^>]*\bsrc=/.test(html)) throw new Error('Packaged security-key dialog has no script');
+  for (const entry of required) {
+    if (!(archive.getFile(entry)?.size > 0))
+      throw new Error(`Packaged security-key asset is missing or empty: ${entry}`);
+  }
+}
+
 function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) {
+  if (electronPlatformName === 'darwin')
+    verifySecurityKeyNative(path.join(resourcesDir, 'app.asar.unpacked/out/main/native/security-key'), targetArch);
   const copilotRoot = path.join(resourcesDir, 'copilot-ide', 'runtime');
   if (fs.existsSync(path.join(copilotRoot, 'product.json'))) {
     const minimist = path.join(copilotRoot, 'node_modules', 'minimist', 'package.json');
@@ -108,6 +139,7 @@ module.exports = async function afterPack(context) {
       console.warn(`   ⚠️  app.asar.unpacked not found`);
     }
 
+    if (electronPlatformName === 'darwin') await verifySecurityKeyAssets(resourcesDir);
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
   } else {
     throw new Error(`resources directory not found: ${resourcesDir}`);

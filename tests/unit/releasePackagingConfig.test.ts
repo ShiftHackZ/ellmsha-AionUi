@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, posix, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { runInNewContext } from 'node:vm';
@@ -23,6 +23,40 @@ function yamlBlock(content: string, key: string): string {
 }
 
 describe('release packaging configuration', () => {
+  const afterPack = readProjectFile('scripts/afterPack.js');
+  const assetsStart = afterPack.indexOf('async function verifySecurityKeyAssets(');
+  const assetsEnd = afterPack.indexOf('\nfunction verifyBundledResources(', assetsStart);
+  const dialogPath = 'out/renderer/pages/conversation/Preview/browser/SecurityKeyDialog/dialog.html';
+  const scriptPath = 'out/renderer/assets/security-key-test.js';
+  async function verifySecurityKeyAssets(missing?: string, html?: string) {
+    const readAsar = async () => ({
+      readFile: async () =>
+        Buffer.from(html ?? '<script type="module" src="../../../../../assets/security-key-test.js"></script>'),
+      getFile: (entry: string) => ({ size: entry === missing ? 0 : 100 }),
+    });
+    const localRequire = Object.assign(() => ({ readAsar }), { resolve: (id: string) => id });
+    const verify = runInNewContext(`(${afterPack.slice(assetsStart, assetsEnd)})`, {
+      require: localRequire,
+      path: { join, dirname, posix },
+    });
+    await verify('/fixture/resources');
+  }
+  it('checks the packaged USB dialog assets through the shared local and CI hook', async () => {
+    await expect(verifySecurityKeyAssets()).resolves.toBeUndefined();
+    expect(afterPack).toContain("if (electronPlatformName === 'darwin') await verifySecurityKeyAssets(resourcesDir)");
+  });
+  it.each([
+    'out/main/securityKeyWorker.js',
+    'out/preload/browserWebAuthnPreload.js',
+    'out/preload/securityKeyPreload.js',
+    dialogPath,
+    scriptPath,
+  ])('rejects packaging when required security-key asset %s is absent', async (entry) => {
+    await expect(verifySecurityKeyAssets(entry)).rejects.toThrow('missing or empty');
+  });
+  it('rejects a security-key dialog without its renderer script', async () => {
+    await expect(verifySecurityKeyAssets(undefined, '<div id="root"></div>')).rejects.toThrow('has no script');
+  });
   const recoveryScript = readProjectFile('scripts/build-with-builder.js');
   const recoveryStart = recoveryScript.indexOf('function verifyMacPrepackagedApp(');
   const recoveryEnd = recoveryScript.indexOf('// Clean stale Windows packaging outputs', recoveryStart);

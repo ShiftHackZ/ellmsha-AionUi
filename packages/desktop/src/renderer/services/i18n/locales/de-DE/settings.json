@@ -1768,5 +1768,23 @@
     },
     "connectTitle": "Notion-Konto verbinden",
     "connectHelp": "Melde dich im Browser an. Nach der Überprüfung werden Konto und Arbeitsbereich angezeigt."
+  },
+  "securityKey": {
+    "title": "USB-Sicherheitsschlüssel",
+    "relyingParty": "Domain: {{domain}}",
+    "confirm": "Darf diese Website Ihren USB-Schlüssel verwenden? Ihre PIN wird niemals an die Website weitergegeben.",
+    "device": "USB-Sicherheitsschlüssel wählen",
+    "account": "Konto wählen",
+    "pin": "PIN des Sicherheitsschlüssels",
+    "retries": "Verbleibende PIN-Versuche: {{count}}",
+    "touch": "Folgen Sie den Anweisungen des Schlüssels. Berühren Sie ihn, wenn er blinkt.",
+    "cancel": "Abbrechen",
+    "refresh": "Erneut prüfen",
+    "continue": "Weiter",
+    "invalidPin": "Falsche PIN. Prüfen Sie die verbleibenden Versuche, bevor Sie es erneut versuchen.",
+    "blockedPin": "Die PIN ist gesperrt. Brechen Sie ab und folgen Sie den Wiederherstellungshinweisen des Herstellers.",
+    "unavailable": "Kein nutzbarer USB-Schlüssel gefunden. Schließen Sie ihn an und prüfen Sie erneut.",
+    "unsupported": "Dieser Schlüssel erfüllt die Authentifizierungsanforderung nicht.",
+    "noCredential": "Auf diesem Schlüssel wurden keine passenden Anmeldedaten gefunden."
   }
 }

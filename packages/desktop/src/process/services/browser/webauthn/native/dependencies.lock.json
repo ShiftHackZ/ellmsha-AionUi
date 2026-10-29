@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "dependencies": [
+    {
+      "name": "libfido2",
+      "version": "1.17.0",
+      "license": "BSD-2-Clause",
+      "source": "https://github.com/Yubico/libfido2/archive/refs/tags/1.17.0.tar.gz",
+      "sourceSha256": "ace062d14a482ff9325410ff63d06c8b5fe87e79ebc18dda07add2bc0188c77f"
+    },
+    {
+      "name": "libcbor",
+      "version": "0.14.0",
+      "license": "MIT",
+      "source": "https://github.com/PJK/libcbor/archive/refs/tags/v0.14.0.tar.gz",
+      "sourceSha256": "a8c1516e741562cf95aa4479c64916c3d4d2623e24fdc35e414e2320e7300aae"
+    },
+    {
+      "name": "openssl",
+      "version": "3.6.3",
+      "license": "Apache-2.0",
+      "source": "https://github.com/openssl/openssl/releases/download/openssl-3.6.3/openssl-3.6.3.tar.gz",
+      "sourceSha256": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1"
+    }
+  ],
+  "buildTool": {
+    "name": "cmake",
+    "version": "3.31.8",
+    "source": "https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-macos-universal.tar.gz",
+    "sha256": "d1449f969c54d5c00886d5b643340d493dfb3c81cb39ee29b35453395c11ebf7"
+  },
+  "pkgconf": {
+    "version": "3.0.10",
+    "license": "ISC",
+    "source": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.10.tar.xz",
+    "sha256": "9371b2f6372da574d4c6dc96fe9b1463037bcf6afcb6671c1555afde7b17e2de"
+  }
+}

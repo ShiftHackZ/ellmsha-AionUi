@@ -110,6 +110,14 @@ export default defineConfig(({ mode }) => {
                 stdio: 'inherit',
               }
             );
+            execFileSync(
+              process.execPath,
+              [
+                resolve(__dirname, 'src/process/services/browser/webauthn/native/build.cjs'),
+                resolve(process.env.ELLM_SHA_FIDO_NATIVE_OUTPUT || 'out/main/native/security-key'),
+              ],
+              { stdio: 'inherit' }
+            );
           },
         },
         // externalizeDepsPlugin replaces our custom getExternalDeps() + pluginExternalizeDynamicImports.
@@ -117,7 +125,7 @@ export default defineConfig(({ mode }) => {
         // '@aionui/web-host' excluded so its TS sources (which use ESM ".js" import specifiers)
         // are bundled by esbuild rather than left as `require('@aionui/web-host')`, which Node
         // cannot resolve because the package ships no compiled .js files (workspace-only).
-        externalizeDepsPlugin({ exclude: ['fix-path', '@aionui/web-host'] }),
+        externalizeDepsPlugin({ exclude: ['fix-path', '@aionui/web-host', 'tldts'] }),
         ...(isDevelopment
           ? [
               {
@@ -155,6 +163,7 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           input: {
             index: resolve('packages/desktop/src/index.ts'),
+            securityKeyWorker: resolve('packages/desktop/src/process/services/browser/webauthn/worker.ts'),
             // Built-in MCP server entry points (compiled by scripts/build-mcp-servers.js via esbuild,
             // not vite — esbuild bundles all deps for self-contained execution by external node processes)
           },
@@ -197,6 +206,8 @@ export default defineConfig(({ mode }) => {
             petPreload: resolve('packages/desktop/src/preload/petPreload.ts'),
             petHitPreload: resolve('packages/desktop/src/preload/petHitPreload.ts'),
             petConfirmPreload: resolve('packages/desktop/src/preload/petConfirmPreload.ts'),
+            browserWebAuthnPreload: resolve('packages/desktop/src/preload/browserWebAuthnPreload.ts'),
+            securityKeyPreload: resolve('packages/desktop/src/preload/securityKeyPreload.ts'),
           },
         },
       },
@@ -270,6 +281,7 @@ export default defineConfig(({ mode }) => {
             pet: resolve(rendererRoot, 'pet/pet.html'),
             'pet-hit': resolve(rendererRoot, 'pet/pet-hit.html'),
             'pet-confirm': resolve(rendererRoot, 'pet/pet-confirm.html'),
+            'security-key': resolve(rendererRoot, 'pages/conversation/Preview/browser/SecurityKeyDialog/dialog.html'),
           },
           external: ['node:crypto', 'crypto'],
           onwarn(warning, warn) {
@@ -279,7 +291,9 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks(id: string) {
               if (!id.includes('node_modules')) return undefined;
-              if (id.includes('/react-dom/') || id.includes('/react/')) return 'vendor-react';
+              // Scoped packages such as @monaco-editor/react are not React itself:
+              // merging them here makes React depend on editors and creates startup cycles.
+              if (id.includes('/node_modules/react-dom/') || id.includes('/node_modules/react/')) return 'vendor-react';
               if (id.includes('/@arco-design/')) return 'vendor-arco';
               if (
                 id.includes('/react-markdown/') ||

@@ -276,6 +276,7 @@ buildDependenciesFromSource: false
 nodeGypRebuild: false
 
 asarUnpack:
+  - 'out/main/native/security-key/**/*'
   - 'out/main/native/pet-panel.node'
   - '**/node_modules/better-sqlite3/**/*'
   - '**/node_modules/bcrypt/**/*'

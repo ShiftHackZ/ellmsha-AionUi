@@ -1768,5 +1768,23 @@
     },
     "connectTitle": "Connecter un compte Notion",
     "connectHelp": "Connectez-vous dans le navigateur. Les informations du compte et de l’espace de travail apparaîtront après vérification."
+  },
+  "securityKey": {
+    "title": "Clé de sécurité USB",
+    "relyingParty": "Domaine : {{domain}}",
+    "confirm": "Autoriser ce site à utiliser votre clé USB ? Votre code PIN n’est jamais transmis au site.",
+    "device": "Choisir une clé de sécurité USB",
+    "account": "Choisir un compte",
+    "pin": "Code PIN de la clé",
+    "retries": "Tentatives PIN restantes : {{count}}",
+    "touch": "Suivez les instructions de la clé. Touchez-la lorsqu’elle clignote.",
+    "cancel": "Annuler",
+    "refresh": "Vérifier à nouveau",
+    "continue": "Continuer",
+    "invalidPin": "Code PIN incorrect. Vérifiez les tentatives restantes avant de réessayer.",
+    "blockedPin": "Le code PIN est bloqué. Annulez et suivez les instructions de récupération du fabricant.",
+    "unavailable": "Aucune clé USB utilisable. Branchez votre clé et vérifiez à nouveau.",
+    "unsupported": "Cette clé ne peut pas satisfaire la demande d’authentification.",
+    "noCredential": "Aucun identifiant correspondant sur cette clé."
   }
 }

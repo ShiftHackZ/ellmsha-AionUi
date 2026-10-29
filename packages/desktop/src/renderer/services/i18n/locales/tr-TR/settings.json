@@ -1768,5 +1768,23 @@
     },
     "connectTitle": "Notion hesabı bağla",
     "connectHelp": "Tarayıcıdan giriş yapın. Doğrulama sonrasında hesap ve çalışma alanı bilgileri gösterilir."
+  },
+  "securityKey": {
+    "title": "USB güvenlik anahtarı",
+    "relyingParty": "Alan adı: {{domain}}",
+    "confirm": "Bu sitenin USB anahtarınızı kullanmasına izin verilsin mi? PIN hiçbir zaman web sitesiyle paylaşılmaz.",
+    "device": "USB güvenlik anahtarı seçin",
+    "account": "Hesap seçin",
+    "pin": "Güvenlik anahtarı PIN’i",
+    "retries": "Kalan PIN denemesi: {{count}}",
+    "touch": "Anahtarın yönergelerini izleyin. Işık yanıp söndüğünde anahtara dokunun.",
+    "cancel": "İptal",
+    "refresh": "Yeniden kontrol et",
+    "continue": "Devam",
+    "invalidPin": "PIN yanlış. Yeniden denemeden önce kalan hakkınızı kontrol edin.",
+    "blockedPin": "PIN engellendi. İptal edin ve üreticinin kurtarma yönergelerini izleyin.",
+    "unavailable": "Kullanılabilir USB anahtarı bulunamadı. Anahtarı bağlayıp yeniden kontrol edin.",
+    "unsupported": "Bu anahtar kimlik doğrulama isteğini karşılayamıyor.",
+    "noCredential": "Bu anahtarda eşleşen kimlik bilgisi bulunamadı."
   }
 }

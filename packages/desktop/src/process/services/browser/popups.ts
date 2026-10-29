@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { EventEmitter } from 'node:events';
+import path from 'node:path';
 import { clearBrowserHistory, readBrowserHistory, saveBrowserHistory } from './history';
 import { bindBrowserAuthHost, browserSession, getActiveBrowserProfile, requireBrowserProfile } from './profiles';
 import { WebContentsView, type BrowserWindow, type WebContents, type WebPreferences } from 'electron';
@@ -24,6 +26,8 @@ type NativeTab = {
 const openers = new Map<number, { tabId: string; window: BrowserWindow; profileId: string }>();
 // Ordinary tabs and not-yet-adopted popups share ownership and capacity.
 const tabs = new Map<string, NativeTab>();
+/** Authentication listens to real tab visibility changes, not dialog focus. */
+export const browserTabLifecycle = new EventEmitter();
 const inventories = new WeakMap<BrowserWindow, Map<string, Set<string>>>();
 const ID_PATTERN = /^[a-zA-Z0-9._:-]{1,200}$/;
 const validId = (value: unknown): value is string => typeof value === 'string' && ID_PATTERN.test(value);
@@ -44,8 +48,19 @@ const browserPreferences = (profileId: string): WebPreferences => ({
   sandbox: true,
   webSecurity: true,
   webviewTag: false,
-  preload: undefined,
+  preload:
+    process.platform === 'darwin'
+      ? path.join(
+          path.basename(__dirname) === 'chunks' ? path.dirname(__dirname) : __dirname,
+          '../preload/browserWebAuthnPreload.js'
+        )
+      : undefined,
 });
+
+export function getBrowserPopupForContents(contentsId: number) {
+  const opener = openers.get(contentsId);
+  return opener ? getBrowserPopup(opener.tabId, contentsId) : undefined;
+}
 
 /** Only exact, main-owned native tab contents may join the browser CDP registry. */
 export function getBrowserPopup(tabId: string, contentsId?: number) {
@@ -94,6 +109,7 @@ const closeTab = (tab: NativeTab): void => {
   tab.disposal = undefined;
   tab.notifyClose = false;
   tab.active = false;
+  browserTabLifecycle.emit('changed');
   if (tabs.get(tab.tabId) === tab) tabs.delete(tab.tabId);
   openers.delete(tab.view.webContents.id);
   tab.view.setVisible(false);
@@ -128,6 +144,7 @@ export function reconcileBrowserTabs(window: BrowserWindow, inventory: BrowserTa
     } else if (previous?.has(id) && !retained.has(id)) closeTab(tab);
   }
   if (inventory.ready) profiles.set(profile.profileId, retained);
+  browserTabLifecycle.emit('changed');
 }
 
 const reserveCapacity = (): void => {
@@ -148,7 +165,15 @@ const attachView = (
 ): NativeTab => {
   bindBrowserAuthHost(profileId, window);
   const child = view.webContents;
-  const tab: NativeTab = { tabId, profileId, view, window, active: false, pendingUrl: url, notifyClose: true };
+  const tab: NativeTab = {
+    tabId,
+    profileId,
+    view,
+    window,
+    active: false,
+    pendingUrl: url,
+    notifyClose: true,
+  };
   tabs.set(tabId, tab);
   openers.set(child.id, { tabId, window, profileId });
   // Browser pages own their styling; transparent documents get a normal opaque canvas.
@@ -263,7 +288,10 @@ export function configureBrowserPopups(contents: WebContents, window: BrowserWin
         )
           throw new Error('Stale browser opener.');
         reserveCapacity();
-        const view = new WebContentsView({ ...options, webPreferences: browserPreferences(parent.profileId) });
+        const view = new WebContentsView({
+          ...options,
+          webPreferences: browserPreferences(parent.profileId),
+        });
         const tabId = `browser-popup-${randomUUID()}`;
         attachView(window, tabId, view, url, parent.profileId);
         ipcBridge.application.browserTabCommand.emit({
@@ -320,6 +348,7 @@ export function controlBrowserPopup(
     tab.mountId = command.mountId;
     tab.active = false;
     tab.view.setVisible(false);
+    browserTabLifecycle.emit('changed');
     return popupState(command.tabId);
   }
   if (!tab || tab.window !== window) {
@@ -334,6 +363,7 @@ export function controlBrowserPopup(
   if (command.action === 'dispose') {
     view.setVisible(false);
     tab.active = false;
+    browserTabLifecycle.emit('changed');
     // A layout remount may cross multiple IPC turns. Inventory, not that timing,
     // decides whether an acknowledged page still belongs to the current scope.
     if (!inventories.get(window)?.get(tab.profileId)?.has(command.tabId)) {
@@ -361,6 +391,7 @@ export function controlBrowserPopup(
     view.setBounds({ x, y, width: w, height: h });
     tab.active = command.active && w > 0 && h > 0;
     view.setVisible(tab.active);
+    browserTabLifecycle.emit('changed');
   } else if (command.action === 'focus') {
     if (!tab.active) throw new Error('The browser tab is not visible.');
     contents.focus();
@@ -397,6 +428,7 @@ export function hideBrowserTabs(window: BrowserWindow): void {
       tab.active = false;
       tab.view.setVisible(false);
     }
+  browserTabLifecycle.emit('changed');
 }
 export function hideForeignBrowserProfiles(profileId: string): void {
   for (const tab of tabs.values())
@@ -404,6 +436,7 @@ export function hideForeignBrowserProfiles(profileId: string): void {
       tab.active = false;
       tab.view.setVisible(false);
     }
+  browserTabLifecycle.emit('changed');
 }
 
 /** Explicit local resource recovery only; never clear sign-ins or evict live pages automatically. */

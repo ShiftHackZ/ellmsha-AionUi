@@ -1770,5 +1770,23 @@
     },
     "connectTitle": "連接 Notion 帳戶",
     "connectHelp": "在瀏覽器中登入。驗證後將顯示帳戶與工作區資訊。"
+  },
+  "securityKey": {
+    "title": "USB 安全金鑰",
+    "relyingParty": "網域：{{domain}}",
+    "confirm": "允許此網站使用您的 USB 安全金鑰？PIN 不會與網站分享。",
+    "device": "選擇 USB 安全金鑰",
+    "account": "選擇帳戶",
+    "pin": "安全金鑰 PIN",
+    "retries": "剩餘 PIN 嘗試次數：{{count}}",
+    "touch": "請依安全金鑰的提示操作。閃爍時觸碰金鑰。",
+    "cancel": "取消",
+    "refresh": "重新檢查",
+    "continue": "繼續",
+    "invalidPin": "PIN 不正確。請在重試前檢查剩餘次數。",
+    "blockedPin": "安全金鑰 PIN 已鎖定。請取消並依製造商說明復原。",
+    "unavailable": "找不到可用的 USB 安全金鑰。請連接金鑰後重新檢查。",
+    "unsupported": "此金鑰無法滿足驗證要求。",
+    "noCredential": "此金鑰上找不到相符的憑證。"
   }
 }

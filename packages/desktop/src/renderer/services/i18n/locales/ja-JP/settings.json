@@ -1770,5 +1770,23 @@
     },
     "connectTitle": "Notion アカウントを接続",
     "connectHelp": "ブラウザーでログインしてください。認証後にアカウントとワークスペースの情報が表示されます。"
+  },
+  "securityKey": {
+    "title": "USB セキュリティキー",
+    "relyingParty": "ドメイン: {{domain}}",
+    "confirm": "このサイトに USB セキュリティキーの使用を許可しますか？PIN がサイトと共有されることはありません。",
+    "device": "USB セキュリティキーを選択",
+    "account": "アカウントを選択",
+    "pin": "セキュリティキーの PIN",
+    "retries": "PIN の残り試行回数: {{count}}",
+    "touch": "キーの指示に従い、点滅したらキーに触れてください。",
+    "cancel": "キャンセル",
+    "refresh": "再確認",
+    "continue": "続行",
+    "invalidPin": "PIN が違います。再試行の前に残り回数を確認してください。",
+    "blockedPin": "PIN がブロックされています。キャンセルしてメーカーの復旧手順に従ってください。",
+    "unavailable": "使用可能な USB キーがありません。接続して再確認してください。",
+    "unsupported": "このキーは認証要求を満たせません。",
+    "noCredential": "このキーに一致する資格情報がありません。"
   }
 }

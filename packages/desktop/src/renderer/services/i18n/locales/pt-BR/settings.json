@@ -1771,5 +1771,23 @@
     },
     "connectTitle": "Conectar conta do Notion",
     "connectHelp": "Entre pelo navegador. Os dados da conta e do espaço de trabalho serão exibidos após a verificação."
+  },
+  "securityKey": {
+    "title": "Chave de segurança USB",
+    "relyingParty": "Domínio: {{domain}}",
+    "confirm": "Permitir que este site use sua chave USB? Seu PIN nunca é compartilhado com o site.",
+    "device": "Escolher chave de segurança USB",
+    "account": "Escolher conta",
+    "pin": "PIN da chave",
+    "retries": "Tentativas de PIN restantes: {{count}}",
+    "touch": "Siga as instruções da chave. Toque nela quando piscar.",
+    "cancel": "Cancelar",
+    "refresh": "Verificar novamente",
+    "continue": "Continuar",
+    "invalidPin": "PIN incorreto. Confira as tentativas restantes antes de tentar novamente.",
+    "blockedPin": "O PIN está bloqueado. Cancele e siga as instruções de recuperação do fabricante.",
+    "unavailable": "Nenhuma chave USB disponível. Conecte a chave e verifique novamente.",
+    "unsupported": "Esta chave não atende à solicitação de autenticação.",
+    "noCredential": "Nenhuma credencial correspondente encontrada nesta chave."
   }
 }

@@ -29,6 +29,19 @@ function verifyApplicationSignature(appPath, env = process.env, run = execFileSy
         throw new Error('Application/helper lacks a stable certificate-based designated requirement');
       }
     }
+    const keyAddon = path.join(
+      appPath,
+      'Contents/Resources/app.asar.unpacked/out/main/native/security-key/security-key.node'
+    );
+    verifySignature(keyAddon, run);
+    const keyDetails = inspect('codesign', ['-d', '--verbose=4', keyAddon], { encoding: 'utf8' });
+    if (
+      keyDetails.status !== 0 ||
+      !keyDetails.stderr.split('\n').includes(`TeamIdentifier=${expectedTeam}`) ||
+      !keyDetails.stderr.split('\n').includes(`Authority=${expectedIdentity}`) ||
+      /Signature=adhoc/.test(keyDetails.stderr)
+    )
+      throw new Error('Security-key native addon lacks the selected Developer ID signature');
   }
 }
 

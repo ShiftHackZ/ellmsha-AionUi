@@ -1769,5 +1769,23 @@
     },
     "connectTitle": "连接 Notion 账户",
     "connectHelp": "在浏览器中登录。验证后将显示账户和工作区信息。"
+  },
+  "securityKey": {
+    "title": "USB 安全密钥",
+    "relyingParty": "域名：{{domain}}",
+    "confirm": "允许此网站使用您的 USB 安全密钥？PIN 不会与网站共享。",
+    "device": "选择 USB 安全密钥",
+    "account": "选择账户",
+    "pin": "安全密钥 PIN",
+    "retries": "剩余 PIN 尝试次数：{{count}}",
+    "touch": "请按安全密钥的提示操作。闪烁时触摸密钥。",
+    "cancel": "取消",
+    "refresh": "重新检查",
+    "continue": "继续",
+    "invalidPin": "PIN 不正确。请在重试前检查剩余次数。",
+    "blockedPin": "安全密钥 PIN 已锁定。请取消并按照制造商说明恢复。",
+    "unavailable": "未找到可用的 USB 安全密钥。请连接密钥后重新检查。",
+    "unsupported": "此密钥无法满足身份验证请求。",
+    "noCredential": "此密钥上未找到匹配的凭据。"
   }
 }
