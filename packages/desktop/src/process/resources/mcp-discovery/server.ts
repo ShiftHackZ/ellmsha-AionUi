@@ -40,7 +40,26 @@ const main = async (): Promise<void> => {
   const pending: JSONRPCMessage[] = [];
   const first = await new Promise<JSONRPCMessage>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('MCP initialize timeout')), 30_000);
+    let discoveryProbes = 0;
     downstream.onmessage = (message): void => {
+      // Copilot CLI 1.0.105 probes this optional extension before initialize.
+      // A standard unsupported-method reply lets it use ordinary MCP instead.
+      // Do not forward probes or expose any upstream data before initialization.
+      if ('method' in message && message.method === 'server/discover' && 'id' in message) {
+        if (++discoveryProbes > 4) {
+          clearTimeout(timer);
+          reject(new Error('Too many MCP discovery probes'));
+          return;
+        }
+        void downstream
+          .send({
+            jsonrpc: '2.0',
+            id: message.id,
+            error: { code: -32601, message: 'Method not found' },
+          })
+          .catch(reject);
+        return;
+      }
       clearTimeout(timer);
       downstream.onmessage = (next): void => {
         pending.push(next);
