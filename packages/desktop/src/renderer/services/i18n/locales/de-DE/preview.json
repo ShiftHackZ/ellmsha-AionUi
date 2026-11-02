@@ -152,5 +152,19 @@
     "externalAuthHelp": "Bei blockierter eingebetteter Anmeldung oder Sicherheitsschlüsseln den Standardbrowser verwenden. Seine Anmeldung ist von diesem Bereich getrennt.",
     "loadFailed": "Diese Seite konnte nicht geladen werden."
   },
-  "memoryArtifactUnavailable": "Dieses Speicherartefakt ist in dieser Unterhaltung nicht verfügbar."
+  "memoryArtifactUnavailable": "Dieses Speicherartefakt ist in dieser Unterhaltung nicht verfügbar.",
+  "showPanel": "Arbeitsbereich-Tabs anzeigen",
+  "hidePanel": "Arbeitsbereich-Tabs ausblenden",
+  "terminal": {
+    "running": "Läuft",
+    "exited": "Beendet · {{code}}",
+    "stop": "Prozess stoppen",
+    "unavailable": "Terminal nicht verfügbar. Zum Verbinden oder Stoppen erneut versuchen.",
+    "truncated": "Ältere Ausgaben wurden gekürzt. Die neuesten Ausgaben werden angezeigt.",
+    "waiting": "Warte auf Ausgabe…",
+    "stderr": "Standardfehlerausgabe",
+    "close": "Terminal stoppen und schließen",
+    "pid": "PID {{pid}}",
+    "shared": "Mit dem Agenten geteilt · Strg+C unterbricht · Stopp beendet die Sitzung"
+  }
 }

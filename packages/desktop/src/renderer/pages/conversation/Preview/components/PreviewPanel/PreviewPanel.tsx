@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import TerminalViewer from '../Terminal';
 import Usage from '@/renderer/components/Usage';
 import { ipcBridge } from '@/common';
 import { downloadFileFromPath, downloadTextContent } from '@/renderer/utils/file/download';
@@ -455,6 +456,8 @@ const PreviewPanel: React.FC = () => {
     // Browser tabs are rendered by the always-mounted BrowserTabLayer; rendering
     // them here would reload the page on every tab switch.
     if (content_type === 'browser') return null;
+    if (content_type === 'terminal' && metadata?.backgroundProcess)
+      return <TerminalViewer key={displayTab?.id} {...metadata.backgroundProcess} />;
     if (content_type === 'usage') return <Usage key={content} conversationId={content} />;
 
     // Markdown 模式 / Markdown mode
@@ -700,6 +703,7 @@ const PreviewPanel: React.FC = () => {
     id: tab.id,
     title: tab.title,
     isDirty: tab.isDirty,
+    terminal: tab.content_type === 'terminal',
     favicon: tab.content_type === 'browser' ? tab.metadata?.favicon : undefined,
     agentActive: tab.content_type === 'browser' ? tab.metadata?.agentActive : undefined,
   }));
@@ -746,34 +750,37 @@ const PreviewPanel: React.FC = () => {
 
         {/* 工具栏（URL / 浏览器 类型不显示工具栏，因为不需要下载/编辑等功能）
             Toolbar (hidden for URL and browser types — no download/edit needed) */}
-        {content_type !== 'url' && content_type !== 'browser' && !metadata?.missingFile && (
-          <PreviewToolbar
-            content_type={content_type}
-            isMarkdown={isMarkdown}
-            isHTML={isHTML}
-            viewMode={viewMode}
-            isSplitScreenEnabled={isSplitScreenEnabled}
-            file_name={metadata?.file_name || displayTab.title}
-            showOpenInSystemButton={showOpenInSystemButton}
-            historyTarget={historyTarget}
-            snapshotSaving={snapshotSaving}
-            onViewModeChange={(mode) => {
-              setViewMode(mode);
-              setIsSplitScreenEnabled(false); // 切换视图模式时关闭分屏 / Disable split when switching view mode
-            }}
-            onSplitScreenToggle={() => setIsSplitScreenEnabled(!isSplitScreenEnabled)}
-            onSaveSnapshot={handleSaveSnapshot}
-            onRefreshHistory={refreshHistory}
-            renderHistoryDropdown={renderHistoryDropdown}
-            onOpenInSystem={handleOpenInSystem}
-            onDownload={handleDownload}
-            onClose={closePreview}
-            inspectMode={inspectMode}
-            onInspectModeToggle={() => setInspectMode(!inspectMode)}
-            leftExtra={toolbarExtras?.left}
-            rightExtra={toolbarExtras?.right}
-          />
-        )}
+        {content_type !== 'url' &&
+          content_type !== 'browser' &&
+          content_type !== 'terminal' &&
+          !metadata?.missingFile && (
+            <PreviewToolbar
+              content_type={content_type}
+              isMarkdown={isMarkdown}
+              isHTML={isHTML}
+              viewMode={viewMode}
+              isSplitScreenEnabled={isSplitScreenEnabled}
+              file_name={metadata?.file_name || displayTab.title}
+              showOpenInSystemButton={showOpenInSystemButton}
+              historyTarget={historyTarget}
+              snapshotSaving={snapshotSaving}
+              onViewModeChange={(mode) => {
+                setViewMode(mode);
+                setIsSplitScreenEnabled(false); // 切换视图模式时关闭分屏 / Disable split when switching view mode
+              }}
+              onSplitScreenToggle={() => setIsSplitScreenEnabled(!isSplitScreenEnabled)}
+              onSaveSnapshot={handleSaveSnapshot}
+              onRefreshHistory={refreshHistory}
+              renderHistoryDropdown={renderHistoryDropdown}
+              onOpenInSystem={handleOpenInSystem}
+              onDownload={handleDownload}
+              onClose={closePreview}
+              inspectMode={inspectMode}
+              onInspectModeToggle={() => setInspectMode(!inspectMode)}
+              leftExtra={toolbarExtras?.left}
+              rightExtra={toolbarExtras?.right}
+            />
+          )}
 
         {metadata?.truncated && (
           <div className='sticky top-0 z-1 px-16px py-10px text-12px bg-warning-1 text-warning-7 border-b border-warning-3'>

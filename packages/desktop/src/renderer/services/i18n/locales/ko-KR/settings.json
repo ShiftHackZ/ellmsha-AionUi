@@ -1482,7 +1482,8 @@
     "localIdentity": "Use local identity",
     "connected": "Connected to your memory account.",
     "connectError": "Could not connect. Check the key and memory service.",
-    "title": "Memory"
+    "title": "Memory",
+    "library": "메모리 허브"
   },
   "upstreamComponents": "오픈 소스 기반",
   "upstreamComponentsDescription": "원본 프로젝트, 고정된 업스트림 버전 및 eLLMsha 수정 사항.",

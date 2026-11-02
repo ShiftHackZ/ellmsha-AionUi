@@ -152,5 +152,19 @@
     "externalAuthHelp": "Gömülü giriş veya güvenlik anahtarı desteklenmiyorsa varsayılan tarayıcınızı kullanın. Oturumu bu panelden ayrıdır.",
     "loadFailed": "Bu sayfa yüklenemedi."
   },
-  "memoryArtifactUnavailable": "Bu bellek belgesi bu konuşmada kullanılamıyor."
+  "memoryArtifactUnavailable": "Bu bellek belgesi bu konuşmada kullanılamıyor.",
+  "showPanel": "Çalışma alanı sekmelerini göster",
+  "hidePanel": "Çalışma alanı sekmelerini gizle",
+  "terminal": {
+    "running": "Çalışıyor",
+    "exited": "Sonlandı · {{code}}",
+    "stop": "İşlemi durdur",
+    "unavailable": "Terminal kullanılamıyor. Bağlanmak veya işlemi durdurmak için yeniden deneyin.",
+    "truncated": "Eski çıktı kısaltıldı. En son çıktı gösteriliyor.",
+    "waiting": "Çıktı bekleniyor…",
+    "stderr": "Standart hata",
+    "close": "Terminali durdur ve kapat",
+    "pid": "PID {{pid}}",
+    "shared": "Aracıyla ortak · Ctrl+C komutu keser · Durdur oturumu bitirir"
+  }
 }

@@ -72,11 +72,31 @@ const SettingsPageHeader: React.FC<SettingsPageHeaderProps> = ({
                 type='button'
                 role='tab'
                 aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onKeyDown={(event) => {
+                  const index = tabs.findIndex((item) => item.key === tab.key);
+                  const next =
+                    event.key === 'Home'
+                      ? 0
+                      : event.key === 'End'
+                        ? tabs.length - 1
+                        : event.key === 'ArrowRight'
+                          ? (index + 1) % tabs.length
+                          : event.key === 'ArrowLeft'
+                            ? (index + tabs.length - 1) % tabs.length
+                            : undefined;
+                  if (next === undefined) return;
+                  event.preventDefault();
+                  onTabChange?.(tabs[next].key);
+                  const controls =
+                    event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+                  controls?.[next]?.focus();
+                }}
                 data-testid={`settings-tab-${tab.key}`}
                 onClick={() => onTabChange?.(tab.key)}
                 className={classNames(
                   'relative inline-flex cursor-pointer items-center border-none bg-transparent px-2px pb-12px text-14px leading-none transition-colors',
-                  isActive ? 'font-600 text-t-primary' : 'font-500 text-t-tertiary hover:text-t-secondary'
+                  isActive ? 'font-600 text-t-primary' : 'font-500 text-t-secondary hover:text-t-primary'
                 )}
               >
                 <span>{tab.label}</span>

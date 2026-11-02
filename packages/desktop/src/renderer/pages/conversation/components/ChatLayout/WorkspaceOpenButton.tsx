@@ -2,7 +2,7 @@ import { ipcBridge } from '@/common';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { useOptionalPreviewContext } from '@/renderer/pages/conversation/Preview/context/PreviewContext';
 import { Browser, Command, Down, FolderOpen, Terminal } from '@icon-park/react';
-import { Button, Dropdown, Tooltip } from '@arco-design/web-react';
+import { Button, Dropdown, Tooltip, Message } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,13 +10,13 @@ import { useTranslation } from 'react-i18next';
  * `browser` 打开的是应用内浏览器（预览面板里的 tab），其余三个是拉起外部程序。
  * 两类行为不同，下拉里用分隔线区分。
  *
- * `browser` opens the in-app browser (a tab in the preview panel); the other three
+ * `browser` opens the in-app browser (a tab in the preview panel); Terminal opens a shared PTY tab; VS Code and File Explorer
  * launch external programs. The dropdown separates the two groups with a divider.
  */
 type ToolType = 'vscode' | 'terminal' | 'explorer' | 'browser';
 
 /** 拉起外部程序的工具，需要走 shell IPC / Tools that launch external programs via shell IPC */
-type ExternalToolType = Exclude<ToolType, 'browser'>;
+type ExternalToolType = Exclude<ToolType, 'browser' | 'terminal'>;
 
 interface ToolOption {
   key: ToolType;
@@ -29,16 +29,16 @@ interface WorkspaceOpenButtonProps {
   workspacePath: string;
   /**
    * Authoritative flag from `conversation.extra.is_temporary_workspace`.
-   * External shell tools are hidden for temp workspaces (there is no meaningful
+   * External openers are hidden for temp workspaces (there is no meaningful
    * project folder to open), but the in-app browser still applies — so the button
-   * itself stays, showing only Browser.
+   * itself stays, showing Browser and Terminal.
    */
   isTemporary: boolean;
 }
 
 const STORAGE_KEY = 'workspace-open-preference';
 
-const isExternalTool = (tool: ToolType): tool is ExternalToolType => tool !== 'browser';
+const isExternalTool = (tool: ToolType): tool is ExternalToolType => tool !== 'browser' && tool !== 'terminal';
 
 /**
  * Workspace Open Button — opens the workspace with various tools.
@@ -60,6 +60,7 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
    */
   const previewContext = useOptionalPreviewContext();
   const openBrowserTab = previewContext?.openBrowserTab;
+  const openTerminalTab = previewContext?.openTerminalTab;
   const [vscodeInstalled, setVscodeInstalled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [preferredTool, setPreferredTool] = useState<ToolType | null>(null);
@@ -73,7 +74,7 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
       setPreferredTool(saved);
     }
 
-    if (isTemporary) return;
+    if (isTemporary || !isElectronDesktop()) return;
 
     const checkTools = async () => {
       try {
@@ -93,6 +94,8 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
       try {
         if (isExternalTool(tool)) {
           await ipcBridge.shell.openFolderWith.invoke({ folder_path: workspacePath, tool });
+        } else if (tool === 'terminal') {
+          await openTerminalTab?.();
         } else {
           openBrowserTab?.();
         }
@@ -100,11 +103,12 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
         localStorage.setItem(STORAGE_KEY, tool);
         setPreferredTool(tool);
       } catch (error) {
+        if (tool === 'terminal') Message.error(t('preview.terminal.unavailable'));
         console.error(`[WorkspaceOpenButton] Failed to open folder with ${tool}:`, error);
       }
       setDropdownOpen(false);
     },
-    [workspacePath, openBrowserTab]
+    [workspacePath, openBrowserTab, openTerminalTab, t]
   );
 
   // Build dropdown options. Temp workspaces have no project folder, so the
@@ -115,28 +119,28 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
         key: 'vscode',
         label: t('conversation.workspace.openWith.vscode', { defaultValue: 'VS Code' }),
         icon: <Command size={16} />,
-        available: !isTemporary && vscodeInstalled,
+        available: isElectronDesktop() && !isTemporary && vscodeInstalled,
       },
       {
         key: 'terminal',
         label: t('conversation.workspace.openWith.terminal', { defaultValue: 'Terminal' }),
         icon: <Terminal size={16} />,
-        available: !isTemporary,
+        available: Boolean(openTerminalTab),
       },
       {
         key: 'explorer',
         label: t('conversation.workspace.openWith.explorer', { defaultValue: 'File Explorer' }),
         icon: <FolderOpen size={16} />,
-        available: !isTemporary,
+        available: isElectronDesktop() && !isTemporary,
       },
       {
         key: 'browser',
         label: t('conversation.workspace.openWith.browser', { defaultValue: 'Browser' }),
         icon: <Browser size={16} />,
-        available: Boolean(openBrowserTab),
+        available: isElectronDesktop() && Boolean(openBrowserTab),
       },
     ],
-    [t, isTemporary, vscodeInstalled, openBrowserTab]
+    [t, isTemporary, vscodeInstalled, openBrowserTab, openTerminalTab]
   );
 
   // Filter only available tools
@@ -166,13 +170,16 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
   }, [currentTool]);
 
   const tooltipContent =
-    currentTool === 'browser'
-      ? t('conversation.workspace.openWith.browser', { defaultValue: 'Browser' })
+    currentTool === 'browser' || currentTool === 'terminal'
+      ? t(
+          currentTool === 'browser'
+            ? 'conversation.workspace.openWith.browser'
+            : 'conversation.workspace.openWith.terminal'
+        )
       : t('conversation.workspace.openWorkspace', { defaultValue: 'Open workspace folder' });
 
-  // Don't render in WebUI/browser mode: shell tools would run on the server with
-  // no visible feedback, and the in-app browser needs Electron's <webview>.
-  if (!isElectronDesktop()) return null;
+  // WebUI still offers the shared terminal; external openers and native webviews are desktop-only.
+  if (availableOptions.length === 0) return null;
 
   // 一个可用项都没有时不渲染（临时工作区 + 无预览上下文），否则会留下一个点了没反应的按钮
   // Nothing available (temp workspace with no preview context): render nothing rather
@@ -186,7 +193,8 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
           {/* 分隔线：应用内浏览器与"拉起外部程序"是两类行为
               Divider: the in-app browser behaves differently from launching external programs */}
           {option.key === 'browser' && index > 0 && <div className='my-4px mx-8px h-1px bg-[var(--color-border-2)]' />}
-          <div
+          <Button
+            type='text'
             className={`workspace-open-dropdown-item flex items-center gap-8px px-12px py-8px cursor-pointer hover:bg-[var(--color-fill-2)] rounded-4px transition-colors ${
               currentTool === option.key ? 'bg-[var(--color-fill-2)]' : ''
             }`}
@@ -195,7 +203,7 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
             <span className='flex items-center justify-center w-20px h-20px'>{option.icon}</span>
             <span className='text-14px'>{option.label}</span>
             {currentTool === option.key && <span className='ml-auto text-12px text-[var(--color-text-3)]'>✓</span>}
-          </div>
+          </Button>
         </React.Fragment>
       ))}
     </div>
@@ -208,6 +216,7 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
           type='text'
           size='small'
           className='workspace-open-button__btn flex items-center gap-4px pl-8px pr-4px'
+          aria-label={tooltipContent}
           onClick={() => handleOpenWith(currentTool)}
         >
           {currentIcon}
@@ -225,6 +234,7 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
           type='text'
           size='small'
           className='workspace-open-button__dropdown-btn pl-2px pr-4px'
+          aria-label={t('conversation.workspace.openWorkspace')}
           style={{ marginLeft: '-4px' }}
         >
           <Down size={12} className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />

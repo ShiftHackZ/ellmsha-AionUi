@@ -1504,7 +1504,8 @@
     "localIdentity": "Use local identity",
     "connected": "Connected to your memory account.",
     "connectError": "Could not connect. Check the key and memory service.",
-    "title": "Memory"
+    "title": "Memory",
+    "library": "Memory Hub"
   },
   "upstreamComponents": "Built with open source",
   "upstreamComponentsDescription": "Original projects, pinned upstream versions and eLLMsha modifications.",

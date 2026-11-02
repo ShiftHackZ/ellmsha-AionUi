@@ -6,7 +6,8 @@
 
 import selectedTabStyles from '@/renderer/components/base/SelectedTab.module.css';
 import { iconColors } from '@/renderer/styles/colors';
-import { Close, Plus } from '@icon-park/react';
+import { Close, Plus, Terminal } from '@icon-park/react';
+import { Button } from '@arco-design/web-react';
 import { IconShrink } from '@arco-design/web-react/icon';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,6 +56,7 @@ export interface PreviewTab {
    * Site icon URL, browser tabs only
    */
   favicon?: string;
+  terminal?: boolean;
 
   /**
    * Agent 正在操作该浏览器 tab
@@ -195,6 +197,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                     to its content width and refuses to shrink below it. */}
                 <span className='text-12px flex items-center gap-4px min-w-0'>
                   {/* 站点图标（浏览器 tab）/ Site icon (browser tabs) */}
+                  {tab.terminal && <Terminal size={14} aria-hidden className='shrink-0' />}
                   {tab.favicon && (
                     <img
                       src={tab.favicon}
@@ -237,15 +240,17 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                     24px hover box while the close icon was bare. Giving it the same kind
                     of box (16px — one step down from the plus's 24px since it lives inside
                     a tab) and trimming the glyph to 12px evens out their visual weight. */}
-                <span
-                  className='flex items-center justify-center w-16px h-16px rd-4px flex-shrink-0 hover:bg-bg-3 transition-colors'
+                <Button
+                  type='text'
+                  aria-label={t(tab.terminal ? 'preview.terminal.close' : 'common.close')}
+                  title={t(tab.terminal ? 'preview.terminal.close' : 'common.close')}
+                  className='!size-24px !p-0 rd-4px flex-shrink-0'
                   onClick={(e) => {
                     e.stopPropagation();
                     onCloseTab(tab.id);
                   }}
-                >
-                  <Close theme='outline' size='12' fill={iconColors.secondary} className='hover:fill-primary' />
-                </span>
+                  icon={<Close theme='outline' size='12' fill={iconColors.secondary} aria-hidden />}
+                />
               </div>
             ))
           ) : (

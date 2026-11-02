@@ -403,6 +403,69 @@ export const conversation = {
   },
 };
 
+export type BackgroundProcessSnapshot = {
+  id: string;
+  conversation_id: string;
+  title: string;
+  command: string;
+  cwd: string;
+  pid: number;
+  running: boolean;
+  closed: boolean;
+  exit_code: number | null;
+  stdout: string;
+  stderr: string;
+  stdout_truncated: boolean;
+  input_revision: number;
+  human_input_active: boolean;
+  rows: number;
+  cols: number;
+  cursor: [number, number];
+};
+export type TerminalOutput = {
+  data: string;
+  next_offset: number;
+  reset: boolean;
+  running: boolean;
+  input_revision: number;
+  rows: number;
+  cols: number;
+  screen_revision: number;
+};
+type BackgroundProcessTarget = { conversation_id: string; process_id: string };
+const backgroundProcessPath = (p: { conversation_id: string }): string =>
+  `/api/conversations/${encodeURIComponent(p.conversation_id)}/background-processes`;
+export const backgroundProcess = {
+  close: httpPost<BackgroundProcessSnapshot, BackgroundProcessTarget>(
+    (p) => `${backgroundProcessPath(p)}/${encodeURIComponent(p.process_id)}/close`,
+    () => ({})
+  ),
+  start: httpPost<
+    BackgroundProcessSnapshot,
+    { conversation_id: string; command?: string; title?: string; cwd?: string }
+  >(backgroundProcessPath, ({ command = '', title, cwd }) => ({ command, title, cwd })),
+  input: httpPost<BackgroundProcessSnapshot, BackgroundProcessTarget & { data: string; expected_revision?: number }>(
+    (p) => `${backgroundProcessPath(p)}/${encodeURIComponent(p.process_id)}/input`,
+    ({ data, expected_revision }) => ({ data, expected_revision })
+  ),
+  resize: httpPost<BackgroundProcessSnapshot, BackgroundProcessTarget & { rows: number; cols: number }>(
+    (p) => `${backgroundProcessPath(p)}/${encodeURIComponent(p.process_id)}/resize`,
+    ({ rows, cols }) => ({ rows, cols })
+  ),
+  output: httpGet<TerminalOutput, BackgroundProcessTarget & { after?: number; screen_revision?: number }>(
+    (p) =>
+      `${backgroundProcessPath(p)}/${encodeURIComponent(p.process_id)}/output${p.after === undefined ? '' : `?after=${p.after}&screen_revision=${p.screen_revision ?? 0}`}`
+  ),
+  list: httpGet<BackgroundProcessSnapshot[], { conversation_id: string }>(backgroundProcessPath),
+  read: httpGet<BackgroundProcessSnapshot, BackgroundProcessTarget>(
+    (p) => `${backgroundProcessPath(p)}/${encodeURIComponent(p.process_id)}`
+  ),
+  stop: httpPost<BackgroundProcessSnapshot, BackgroundProcessTarget>(
+    (p) => `${backgroundProcessPath(p)}/${encodeURIComponent(p.process_id)}/stop`,
+    () => ({})
+  ),
+};
+
 export const runtime = {
   statusChanged: wsEmitter<IRuntimeStatusEvent>('runtime.statusChanged'),
 };

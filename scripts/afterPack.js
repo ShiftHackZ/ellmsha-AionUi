@@ -54,7 +54,37 @@ async function verifySecurityKeyAssets(resourcesDir) {
   }
 }
 
+async function verifyTerminalAssets(resourcesDir) {
+  const { readAsar } = require(
+    require.resolve('app-builder-lib/out/asar/asar', { paths: [path.dirname(require.resolve('electron-builder'))] })
+  );
+  const archive = await readAsar(path.join(resourcesDir, 'app.asar'));
+  const contract = JSON.parse((await archive.readFile('out/renderer/terminal-contract.json')).toString('utf8'));
+  if (contract.protocol !== 2 || !contract.renderer?.length || !contract.styles?.length)
+    throw new Error('Shared terminal contract missing');
+  for (const entry of [...contract.renderer, ...contract.styles, 'terminal-licenses.txt']) {
+    if (
+      typeof entry !== 'string' ||
+      entry.includes('..') ||
+      entry.startsWith('/') ||
+      !(archive.getFile(`out/renderer/${entry}`)?.size > 0)
+    )
+      throw new Error('Shared terminal asset missing or empty');
+  }
+}
+
+function verifyBackgroundProcessAssets(resourcesDir) {
+  const entry = path.join(resourcesDir, 'app.asar.unpacked', 'out', 'main', 'builtin-mcp-background-processes.js');
+  if (!fs.existsSync(entry) || fs.statSync(entry).size === 0)
+    throw new Error('Packaged background terminal MCP is missing or empty');
+  const source = fs.readFileSync(entry, 'utf8');
+  for (const tool of ['ellmsha_terminal_create', 'ellmsha_terminal_write', 'ellmsha_terminal_send_key']) {
+    if (!source.includes(tool)) throw new Error('Packaged shared terminal MCP is stale');
+  }
+}
+
 function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) {
+  verifyBackgroundProcessAssets(resourcesDir);
   if (electronPlatformName === 'darwin')
     verifySecurityKeyNative(path.join(resourcesDir, 'app.asar.unpacked/out/main/native/security-key'), targetArch);
   const copilotRoot = path.join(resourcesDir, 'copilot-ide', 'runtime');
@@ -140,6 +170,7 @@ module.exports = async function afterPack(context) {
     }
 
     if (electronPlatformName === 'darwin') await verifySecurityKeyAssets(resourcesDir);
+    await verifyTerminalAssets(resourcesDir);
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
   } else {
     throw new Error(`resources directory not found: ${resourcesDir}`);

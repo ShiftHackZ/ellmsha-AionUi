@@ -152,5 +152,19 @@
     "externalAuthHelp": "若內嵌登入或安全金鑰不受支援，請使用預設瀏覽器。其登入工作階段與此面板分開。",
     "loadFailed": "無法載入此頁面。"
   },
-  "memoryArtifactUnavailable": "此對話中無法存取該記憶文件。"
+  "memoryArtifactUnavailable": "此對話中無法存取該記憶文件。",
+  "showPanel": "顯示工作區分頁",
+  "hidePanel": "隱藏工作區分頁",
+  "terminal": {
+    "running": "執行中",
+    "exited": "已結束 · {{code}}",
+    "stop": "停止程序",
+    "unavailable": "終端機無法使用。請重試以重新連線或停止程序。",
+    "truncated": "較早的輸出已截斷，僅顯示最近的輸出。",
+    "waiting": "等待輸出…",
+    "stderr": "標準錯誤",
+    "close": "停止並關閉終端機",
+    "pid": "PID {{pid}}",
+    "shared": "與智慧體共用 · Ctrl+C 中斷命令 · 停止結束工作階段"
+  }
 }

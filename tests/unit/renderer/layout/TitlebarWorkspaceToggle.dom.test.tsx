@@ -3,6 +3,10 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const platform = vi.hoisted(() => ({ desktop: true, mac: false }));
+const preview = vi.hoisted(() => ({ isOpen: true, togglePreview: vi.fn() }));
+vi.mock('@/renderer/pages/conversation/Preview/context/PreviewContext', () => ({
+  useOptionalPreviewContext: () => preview,
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -48,28 +52,20 @@ describe('Titlebar workspace toggle', () => {
     setUpdateReadyState({ ready: false, version: '' });
   });
 
-  it('places the update action immediately before the sidebar action and opens the existing card', () => {
-    const open = vi.fn();
-    window.addEventListener('aionui-open-update-modal', open);
-    const { container } = render(<Titlebar workspaceAvailable />);
-    const update = screen.getByRole('button', { name: 'update.installer.check' });
-    const menu = container.querySelector('.app-titlebar__menu')!;
-    expect(menu.querySelectorAll('button')[0]).toBe(update);
-    expect(menu.querySelectorAll('button')[1]?.querySelector('svg')).toBeTruthy();
-    fireEvent.click(update);
-    expect(open).toHaveBeenCalledOnce();
-    window.removeEventListener('aionui-open-update-modal', open);
-  });
-  it('shows the quiet availability badge without opening the card', () => {
-    const open = vi.fn();
-    window.addEventListener('aionui-open-update-modal', open);
+  it('keeps update controls out of the titlebar even when a release is available', () => {
+    setUpdateReadyState({ ready: false, available: true, version: 'fixture' });
     render(<Titlebar workspaceAvailable />);
-    const button = screen.getByRole('button', { name: 'update.installer.check' });
-    expect(button.querySelector('.arco-badge-dot')).toBeNull();
-    act(() => setUpdateReadyState({ ready: false, available: true, version: '2026.10.13-patch.10' }));
-    expect(button.querySelector('.arco-badge-dot')).not.toBeNull();
-    expect(open).not.toHaveBeenCalled();
-    window.removeEventListener('aionui-open-update-modal', open);
+    expect(screen.queryByRole('button', { name: 'update.installer.check' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'update.availableTitle' })).toBeNull();
+  });
+  it('places the accessible preview visibility action immediately left of the file tree action', () => {
+    const { container } = render(<Titlebar workspaceAvailable />);
+    const toggle = screen.getByRole('button', { name: 'preview.hidePanel' });
+    const toolbar = container.querySelector('.app-titlebar__toolbar')!;
+    expect(toolbar.querySelectorAll('button')[0]).toBe(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(toggle);
+    expect(preview.togglePreview).toHaveBeenCalledOnce();
   });
   it('does not expose desktop installer controls in WebUI', () => {
     platform.desktop = false;
@@ -83,7 +79,7 @@ describe('Titlebar workspace toggle', () => {
     expect(screen.queryByRole('button', { name: 'conversation.welcome.quickActionFeedback' })).not.toBeInTheDocument();
     const workspace = screen.getByRole('button', { name: 'common.expandMore' });
 
-    expect(workspace.parentElement?.firstElementChild).toBe(workspace);
+    expect(workspace.previousElementSibling).toBe(screen.getByRole('button', { name: 'preview.hidePanel' }));
     expect(workspace.nextElementSibling).toBe(screen.getByTestId('window-controls'));
   });
 
@@ -98,7 +94,7 @@ describe('Titlebar workspace toggle', () => {
     expect(screen.queryByRole('button', { name: 'conversation.welcome.quickActionFeedback' })).not.toBeInTheDocument();
     const workspace = screen.getByRole('button', { name: 'common.expandMore' });
 
-    expect(workspace.parentElement?.firstElementChild).toBe(workspace);
+    expect(workspace.previousElementSibling).toBe(screen.getByRole('button', { name: 'preview.hidePanel' }));
     expect(screen.queryByTestId('window-controls')).not.toBeInTheDocument();
   });
 

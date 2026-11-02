@@ -152,5 +152,19 @@
     "externalAuthHelp": "For blocked embedded sign-in or security keys, use your default browser. Its sign-in session is separate from this panel.",
     "loadFailed": "Could not load this page."
   },
-  "memoryArtifactUnavailable": "This memory artifact is unavailable in this conversation."
+  "memoryArtifactUnavailable": "This memory artifact is unavailable in this conversation.",
+  "showPanel": "Show workspace tabs",
+  "hidePanel": "Hide workspace tabs",
+  "terminal": {
+    "running": "Running",
+    "exited": "Exited · {{code}}",
+    "stop": "Stop process",
+    "unavailable": "Terminal unavailable. Retry to reconnect or stop the process.",
+    "truncated": "Older output was trimmed. Showing the most recent output.",
+    "waiting": "Waiting for output…",
+    "stderr": "Standard error",
+    "close": "Stop and close terminal",
+    "pid": "PID {{pid}}",
+    "shared": "Shared with your agent · Ctrl+C interrupts · Stop ends the session"
+  }
 }

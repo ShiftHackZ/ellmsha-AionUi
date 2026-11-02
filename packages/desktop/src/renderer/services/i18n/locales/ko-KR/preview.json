@@ -152,5 +152,19 @@
     "externalAuthHelp": "내장 로그인이 차단되거나 보안 키가 지원되지 않으면 기본 브라우저를 사용하세요. 로그인 세션은 이 패널과 별개입니다.",
     "loadFailed": "이 페이지를 불러오지 못했습니다."
   },
-  "memoryArtifactUnavailable": "이 대화에서는 해당 메모리 문서를 사용할 수 없습니다."
+  "memoryArtifactUnavailable": "이 대화에서는 해당 메모리 문서를 사용할 수 없습니다.",
+  "showPanel": "작업 공간 탭 표시",
+  "hidePanel": "작업 공간 탭 숨기기",
+  "terminal": {
+    "running": "실행 중",
+    "exited": "종료됨 · {{code}}",
+    "stop": "프로세스 중지",
+    "unavailable": "터미널을 사용할 수 없습니다. 다시 시도하여 연결하거나 프로세스를 중지하세요.",
+    "truncated": "이전 출력이 잘렸습니다. 최신 출력을 표시합니다.",
+    "waiting": "출력 대기 중…",
+    "stderr": "표준 오류",
+    "close": "중지하고 터미널 닫기",
+    "pid": "PID {{pid}}",
+    "shared": "에이전트와 공유 · Ctrl+C로 중단 · 중지로 세션 종료"
+  }
 }

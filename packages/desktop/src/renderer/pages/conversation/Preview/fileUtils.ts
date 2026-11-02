@@ -12,6 +12,7 @@ import type { PreviewContentType } from '@/common/types/office/preview';
  */
 export const FILE_EXTENSION_MAP: Record<PreviewContentType, readonly string[]> = {
   usage: [],
+  terminal: [],
   markdown: ['md', 'markdown', 'mdown', 'mkd'],
   html: ['html', 'htm'],
   pdf: ['pdf'],

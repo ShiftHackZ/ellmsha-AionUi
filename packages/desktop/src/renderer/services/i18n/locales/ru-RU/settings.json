@@ -1480,7 +1480,8 @@
     "localIdentity": "Локальная учётная запись",
     "connected": "Память подключена.",
     "connectError": "Не удалось подключиться. Проверьте ключ и сервис памяти.",
-    "title": "Память"
+    "title": "Память",
+    "library": "Центр памяти"
   },
   "upstreamComponents": "На основе открытых проектов",
   "upstreamComponentsDescription": "Оригинальные проекты, версии upstream и модификации eLLMsha.",

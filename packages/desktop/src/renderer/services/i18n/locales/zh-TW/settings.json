@@ -1482,7 +1482,8 @@
     "localIdentity": "Use local identity",
     "connected": "Connected to your memory account.",
     "connectError": "Could not connect. Check the key and memory service.",
-    "title": "Memory"
+    "title": "Memory",
+    "library": "記憶中心"
   },
   "upstreamComponents": "基於開源專案",
   "upstreamComponentsDescription": "原始專案、固定的上游版本和 eLLMsha 修改。",

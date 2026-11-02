@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip } from '@arco-design/web-react';
-import { ArrowCircleLeft, CloseOne, Moon, SettingTwo, SunOne } from '@icon-park/react';
+import { Button, Tooltip } from '@arco-design/web-react';
+import { ArrowCircleLeft, CloseOne, Download, Moon, SettingTwo, SunOne } from '@icon-park/react';
 import classNames from 'classnames';
+import { isElectronDesktop } from '@/renderer/utils/platform';
+import { getUpdateReadyState, subscribeUpdateReadyState } from '@/renderer/components/settings/updateReadyState';
 import { iconColors } from '@renderer/styles/colors';
 import type { SiderTooltipProps } from '@renderer/utils/ui/siderTooltip';
 
@@ -36,6 +38,13 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
   onLogoutClick,
 }) => {
   const { t } = useTranslation();
+  const [updateAvailable, setUpdateAvailable] = useState(() =>
+    Boolean(getUpdateReadyState().available || getUpdateReadyState().ready)
+  );
+  useEffect(
+    () => subscribeUpdateReadyState((state) => setUpdateAvailable(Boolean(state.available || state.ready))),
+    []
+  );
 
   const settingsIcon = isSettings ? (
     <ArrowCircleLeft
@@ -123,6 +132,17 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
                 )}
               </span>
             </div>
+          </Tooltip>
+        )}
+        {isElectronDesktop() && updateAvailable && (
+          <Tooltip {...siderTooltipProps} content={t('update.availableTitle')} position='right'>
+            <Button
+              type='text'
+              aria-label={t('update.availableTitle')}
+              className='!h-32px !w-40px shrink-0 !text-primary rd-8px'
+              onClick={() => window.dispatchEvent(new CustomEvent('aionui-open-update-modal'))}
+              icon={<Download theme='outline' size='18' fill='currentColor' aria-hidden />}
+            />
           </Tooltip>
         )}
       </div>

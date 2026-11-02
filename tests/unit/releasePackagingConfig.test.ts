@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, join, posix, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -25,7 +25,7 @@ function yamlBlock(content: string, key: string): string {
 describe('release packaging configuration', () => {
   const afterPack = readProjectFile('scripts/afterPack.js');
   const assetsStart = afterPack.indexOf('async function verifySecurityKeyAssets(');
-  const assetsEnd = afterPack.indexOf('\nfunction verifyBundledResources(', assetsStart);
+  const assetsEnd = afterPack.indexOf('\nasync function verifyTerminalAssets(', assetsStart);
   const dialogPath = 'out/renderer/pages/conversation/Preview/browser/SecurityKeyDialog/dialog.html';
   const scriptPath = 'out/renderer/assets/security-key-test.js';
   async function verifySecurityKeyAssets(missing?: string, html?: string) {
@@ -56,6 +56,88 @@ describe('release packaging configuration', () => {
   });
   it('rejects a security-key dialog without its renderer script', async () => {
     await expect(verifySecurityKeyAssets(undefined, '<div id="root"></div>')).rejects.toThrow('has no script');
+  });
+  it.each([undefined, 'js', 'css', 'license', 'contract'])(
+    'checks actual terminal JS, CSS and attribution on every packaged platform (missing=%s)',
+    async (missing) => {
+      const begin = afterPack.indexOf('async function verifyTerminalAssets(');
+      const end = afterPack.indexOf('\nfunction verifyBackgroundProcessAssets(', begin);
+      const contract = { protocol: 2, renderer: ['assets/terminal.js'], styles: ['assets/terminal.css'] };
+      const readAsar = async () => ({
+        readFile: async () => Buffer.from(JSON.stringify(missing === 'contract' ? { protocol: 1 } : contract)),
+        getFile: (entry: string) => ({
+          size: entry.endsWith(
+            missing === 'js'
+              ? 'terminal.js'
+              : missing === 'css'
+                ? 'terminal.css'
+                : missing === 'license'
+                  ? 'terminal-licenses.txt'
+                  : 'never'
+          )
+            ? 0
+            : 100,
+        }),
+      });
+      const localRequire = Object.assign(() => ({ readAsar }), { resolve: (id: string) => id });
+      const verify = runInNewContext(`(${afterPack.slice(begin, end)})`, {
+        require: localRequire,
+        path: { join, dirname },
+      });
+      if (missing) await expect(verify('/fixture')).rejects.toThrow();
+      else await expect(verify('/fixture')).resolves.toBeUndefined();
+      expect(afterPack).toContain('await verifyTerminalAssets(resourcesDir)');
+    }
+  );
+  it('requires a nonempty bundled background MCP in the shared packaging hook', () => {
+    const root = mkdtempSync(join(tmpdir(), 'background-assets-'));
+    const start = afterPack.indexOf('function verifyBackgroundProcessAssets(');
+    const end = afterPack.indexOf('function verifyBundledResources(', start);
+    const verify = runInNewContext(`(${afterPack.slice(start, end)})`, {
+      path: { join },
+      fs: { existsSync, statSync, readFileSync },
+    });
+    const entry = join(root, 'app.asar.unpacked/out/main/builtin-mcp-background-processes.js');
+    try {
+      expect(() => verify(root)).toThrow('missing or empty');
+      mkdirSync(dirname(entry), { recursive: true });
+      writeFileSync(entry, '');
+      expect(() => verify(root)).toThrow('missing or empty');
+      writeFileSync(entry, '// old MCP');
+      expect(() => verify(root)).toThrow('stale');
+      writeFileSync(entry, 'ellmsha_terminal_create ellmsha_terminal_write ellmsha_terminal_send_key');
+      expect(() => verify(root)).not.toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+  it('binds the packaged and source Web CLI to the background tool bundle without replacing an explicit override', () => {
+    const source = readProjectFile('packages/web-cli/src/index.ts');
+    const statement = source.match(/process\.env\.AIONUI_BACKGROUND_PROCESS_MCP_PATH \|\|=[\s\S]*?;/)![0];
+    for (const packagedLayout of [true, false]) {
+      const process = { env: {} as Record<string, string> };
+      runInNewContext(statement, {
+        process,
+        packagedLayout,
+        path: { join },
+        cliRoot: '/bundle',
+        integrationRoot: '/repo',
+      });
+      expect(process.env.AIONUI_BACKGROUND_PROCESS_MCP_PATH).toBe(
+        packagedLayout
+          ? '/bundle/mcp/builtin-mcp-background-processes.js'
+          : '/repo/aionui/out/main/builtin-mcp-background-processes.js'
+      );
+      process.env.AIONUI_BACKGROUND_PROCESS_MCP_PATH = '/explicit/fixture.js';
+      runInNewContext(statement, {
+        process,
+        packagedLayout,
+        path: { join },
+        cliRoot: '/bundle',
+        integrationRoot: '/repo',
+      });
+      expect(process.env.AIONUI_BACKGROUND_PROCESS_MCP_PATH).toBe('/explicit/fixture.js');
+    }
   });
   const recoveryScript = readProjectFile('scripts/build-with-builder.js');
   const recoveryStart = recoveryScript.indexOf('function verifyMacPrepackagedApp(');

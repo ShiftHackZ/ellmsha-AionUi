@@ -5,8 +5,11 @@
  */
 
 import { ipcBridge } from '@/common';
+import { Message } from '@arco-design/web-react';
+import { useTranslation } from 'react-i18next';
+import { useBackgroundTerminals } from '../components/Terminal/useBackgroundProcess';
 import type { PreviewContentType } from '@/common/types/office/preview';
-import type { ChatFileRef, ContentEncoding } from '@/common/types/chatFile';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import { chatFileRefKey, isChatFileRef } from '@/common/types/chatFile';
 import { emitter } from '@/renderer/utils/emitter';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,8 +17,9 @@ import { BROWSER_BLANK_URL, BROWSER_TAB_FALLBACK_TITLE, MAX_BROWSER_TABS } from 
 import { isBrowserMcpActivity, isBrowserMcpSettled } from '../browser/agentActivity';
 import { maybeNotifyFirstAgentBrowserUse } from '../browser/firstUseNotice';
 import type { PreviewScopeKey } from './previewScope';
-import type { BrowserProfileContext } from '@/common/adapter/ipcBridge';
+import type { BackgroundProcessSnapshot, BrowserProfileContext } from '@/common/adapter/ipcBridge';
 import { isElectronDesktop } from '@/renderer/utils/platform';
+import { usePreviewRefresh } from '../hooks/usePreviewRefresh';
 import { useCurrentConversation } from '../../explorer/currentConversationStore';
 
 /** DOM 片段数据结构 / DOM snippet data structure */
@@ -29,6 +33,7 @@ export interface DomSnippet {
 }
 
 export interface PreviewMetadata {
+  backgroundProcess?: { conversationId: string; processId: string };
   memoryArtifact?: { conversationId: string; path: string };
   language?: string;
   title?: string;
@@ -112,7 +117,9 @@ export interface PreviewContextValue {
    * Open a browser tab; blank page when url is omitted.
    */
   openBrowserTab: (url?: string, options?: Pick<OpenPreviewOptions, 'tabId' | 'activate'>) => void;
+  openTerminalTab: () => Promise<void>;
   closePreview: () => void;
+  togglePreview: () => void;
   closeTab: (tabId: string) => void;
   switchTab: (tabId: string) => void;
   updateContent: (content: string) => void;
@@ -284,6 +291,7 @@ const browserTabIds = (tabs: PreviewTab[]): string[] =>
   tabs.filter((tab) => tab.content_type === 'browser').map((tab) => tab.id);
 
 export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const conversationId = useCurrentConversation();
   const [browserProfile, setBrowserProfile] = useState<BrowserProfileContext>();
   const browserProfileRef = useRef<BrowserProfileContext | undefined>(undefined);
@@ -472,6 +480,8 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // title/content fallbacks below would wrongly merge two fresh tabs that
       // happen to share a placeholder title.
       if (type === 'browser') return null;
+      if (type === 'terminal')
+        return tabList.find((tab) => tab.content_type === 'terminal' && tab.content === content) ?? null;
       if (type === 'usage')
         return tabList.find((tab) => tab.content_type === 'usage' && tab.content === content) ?? null;
 
@@ -604,7 +614,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const activeTab = activeTabIdRef.current
           ? currentTabs.find((tab) => tab.id === activeTabIdRef.current)
           : undefined;
-        return activeTab && !activeTab.isDirty ? activeTab : null;
+        return activeTab && !activeTab.isDirty && activeTab.content_type !== 'terminal' ? activeTab : null;
       })();
 
       // 上限触发时被复用的最旧浏览器 tab / Oldest browser tab reused at the cap
@@ -685,12 +695,17 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [openPreview]
   );
 
+  // Hiding the panel preserves every tab and unsaved edit; closing is separate.
+  const togglePreview = useCallback(() => {
+    if (tabsRef.current.length === 0) {
+      openBrowserTab();
+      return;
+    }
+    setIsOpen((visible) => !visible);
+  }, [openBrowserTab]);
+
   const closePreview = useCallback(() => {
-    pendingPopupTabs.current.clear();
     setIsOpen(false);
-    setTabs((current) => (isElectronDesktop() ? current.filter((tab) => tab.content_type === 'browser') : []));
-    setActiveTabId(null);
-    setDomSnippets([]);
   }, []);
 
   // Switch the preview scope (project id / workspace fallback / null). Persists
@@ -746,33 +761,75 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Track last-known mtime per file path for external change detection
   const fileMtimeRef = useRef<Map<string, number>>(new Map());
 
+  const removeTab = useCallback((tabId: string) => {
+    const current = tabsRef.current;
+    const tab = current.find((item) => item.id === tabId);
+    if (!tab) return;
+    if (tab.metadata?.fileRef) fileMtimeRef.current.delete(chatFileRefKey(tab.metadata.fileRef));
+    const remaining = current.filter((item) => item.id !== tabId);
+    tabsRef.current = remaining;
+    setTabs((latest) => latest.filter((item) => item.id !== tabId));
+    // Read current selection when an asynchronous terminal Stop completes.
+    // A user may have switched tabs while shutdown was in progress.
+    if (activeTabIdRef.current === tabId) {
+      const next = remaining.at(-1)?.id ?? null;
+      activeTabIdRef.current = next;
+      setActiveTabId(next);
+      if (next === null) setIsOpen(false);
+    }
+  }, []);
+
+  const openBackgroundTerminal = useCallback(
+    (process: BackgroundProcessSnapshot) => {
+      if (process.closed) {
+        removeTab(`terminal-${process.id}`);
+        return;
+      }
+      openPreview(
+        process.id,
+        'terminal',
+        {
+          title: process.title,
+          editable: false,
+          backgroundProcess: { conversationId: process.conversation_id, processId: process.id },
+        },
+        { tabId: `terminal-${process.id}`, activate: false }
+      );
+    },
+    [openPreview, removeTab]
+  );
+  useBackgroundTerminals(conversationId, openBackgroundTerminal);
+  const openTerminalTab = useCallback(async () => {
+    if (!conversationId) throw new Error('Conversation unavailable');
+    const process = await ipcBridge.backgroundProcess.start.invoke({ conversation_id: conversationId });
+    openPreview(
+      process.id,
+      'terminal',
+      {
+        title: process.title,
+        editable: false,
+        backgroundProcess: { conversationId: process.conversation_id, processId: process.id },
+      },
+      { tabId: `terminal-${process.id}`, activate: true }
+    );
+  }, [conversationId, openPreview]);
+
   const closeTab = useCallback(
     (tabId: string) => {
-      setTabs((prevTabs) => {
-        // Clean up mtime record for the closed tab (keyed by ChatFileRef identity)
-        const tabToClose = prevTabs.find((tab) => tab.id === tabId);
-        if (tabToClose?.metadata?.fileRef) {
-          fileMtimeRef.current.delete(chatFileRefKey(tabToClose.metadata.fileRef));
-        }
-
-        const newTabs = prevTabs.filter((tab) => tab.id !== tabId);
-
-        // 如果关闭的是当前激活的 tab / If closing the active tab
-        if (tabId === activeTabId) {
-          if (newTabs.length > 0) {
-            // 切换到最后一个 tab / Switch to the last tab
-            setActiveTabId(newTabs[newTabs.length - 1].id);
-          } else {
-            // 没有 tab 了，关闭预览面板 / No more tabs, close preview panel
-            setIsOpen(false);
-            setActiveTabId(null);
-          }
-        }
-
-        return newTabs;
-      });
+      const terminal = tabsRef.current.find((tab) => tab.id === tabId)?.metadata?.backgroundProcess;
+      if (!terminal) {
+        removeTab(tabId);
+        return;
+      }
+      void ipcBridge.backgroundProcess.close
+        .invoke({
+          conversation_id: terminal.conversationId,
+          process_id: terminal.processId,
+        })
+        .then(() => removeTab(tabId))
+        .catch(() => Message.error(t('preview.terminal.unavailable')));
     },
-    [activeTabId]
+    [removeTab, t]
   );
 
   useEffect(() => {
@@ -1077,75 +1134,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, [closeTab]); // 只依赖 closeTab，不依赖 tabs，避免重复订阅 / Only depend on closeTab, not tabs, to avoid re-subscribing
 
-  // File mtime polling: detect external file changes (Claude Code CLI, Gemini, etc.) by comparing lastModified.
-  // Only polls the active tab to minimize IPC overhead; checks other tabs once on tab switch.
-  // Uses polling instead of fileWatch IPC events because buildEmitter's main→renderer event delivery
-  // is unreliable after the first emission in Electron (only the first event reaches the renderer).
-  const checkFileUpdate = useCallback(
-    (tab: PreviewTab) => {
-      const fileRef = tab.metadata?.fileRef;
-      if (!fileRef || tab.isDirty) return;
-      const refKey = chatFileRefKey(fileRef);
-      if (savingFilesRef.current.has(refKey)) return;
-
-      void ipcBridge.fs.getContentMetadata
-        .invoke({ file: fileRef })
-        .then((metadata) => {
-          if (!metadata) return;
-          const prevMtime = fileMtimeRef.current.get(refKey);
-          fileMtimeRef.current.set(refKey, metadata.lastModified);
-          if (prevMtime === undefined || metadata.lastModified === prevMtime) return;
-
-          const encoding: ContentEncoding = tab.content_type === 'image' ? 'dataurl' : 'utf8';
-
-          void ipcBridge.fs.readContent
-            .invoke({ file: fileRef, encoding })
-            .then((content) => {
-              if (content == null) return;
-              setTabs((latest) =>
-                latest.map((t) => {
-                  const tRef = t.metadata?.fileRef;
-                  if (!tRef || chatFileRefKey(tRef) !== refKey) return t;
-                  if (savingFilesRef.current.has(refKey) || t.isDirty) return t;
-                  return { ...t, content, originalContent: content, isDirty: false };
-                })
-              );
-            })
-            .catch((error) => {
-              console.error('[PreviewContext] Failed to read content after mtime change:', refKey, error);
-            });
-        })
-        .catch((error) => {
-          console.error('[PreviewContext] Failed to get content metadata:', refKey, error);
-        });
-    },
-    [setTabs]
-  );
-
-  // Keep a ref to activeTab so the polling interval always sees the latest object
-  // without re-running the effect on every tabs state change.
-  const activeTabRef = useRef<PreviewTab | null>(null);
-  activeTabRef.current = activeTab;
-
-  const activeFileKey = activeTab?.metadata?.fileRef ? chatFileRefKey(activeTab.metadata.fileRef) : undefined;
-
-  // Poll active tab every 1s
-  useEffect(() => {
-    if (!activeFileKey) return;
-
-    const pollId = setInterval(() => {
-      const current = activeTabRef.current;
-      if (current) checkFileUpdate(current);
-    }, 1000);
-
-    // Check immediately on tab switch
-    const current = activeTabRef.current;
-    if (current) checkFileUpdate(current);
-
-    return () => {
-      clearInterval(pollId);
-    };
-  }, [activeFileKey, checkFileUpdate]);
+  usePreviewRefresh(tabs, setTabs, savingFilesRef, fileMtimeRef);
 
   // 监听 preview.open 事件（用于 agent 打开网页预览）/ Listen to preview.open event (for agent to open web preview)
   // 同时监听 IPC 和 renderer emitter 两种方式 / Listen to both IPC and renderer emitter
@@ -1252,11 +1241,13 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activeTab,
       openPreview,
       closePreview,
+      togglePreview,
       closeTab,
       switchTab: setActiveTabId,
       updateContent,
       updateTab,
       openBrowserTab,
+      openTerminalTab,
       browserTabLimitHitAt,
       saveContent,
       findPreviewTab,
@@ -1277,11 +1268,13 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     activeTab,
     openPreview,
     closePreview,
+    togglePreview,
     closeTab,
     setActiveTabId,
     updateContent,
     updateTab,
     openBrowserTab,
+    openTerminalTab,
     browserTabLimitHitAt,
     saveContent,
     findPreviewTab,

@@ -1480,7 +1480,8 @@
     "localIdentity": "Use local identity",
     "connected": "Connected to your memory account.",
     "connectError": "Could not connect. Check the key and memory service.",
-    "title": "Memory"
+    "title": "Memory",
+    "library": "Centro de memoria"
   },
   "upstreamComponents": "Creado con código abierto",
   "upstreamComponentsDescription": "Proyectos originales, versiones upstream fijadas y modificaciones de eLLMsha.",

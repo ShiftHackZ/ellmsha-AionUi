@@ -1481,7 +1481,8 @@
     "localIdentity": "Use local identity",
     "connected": "Connected to your memory account.",
     "connectError": "Could not connect. Check the key and memory service.",
-    "title": "Memory"
+    "title": "Memory",
+    "library": "Центр пам’яті"
   },
   "upstreamComponents": "На основі відкритих проєктів",
   "upstreamComponentsDescription": "Оригінальні проєкти, версії upstream та модифікації eLLMsha.",

@@ -8,9 +8,9 @@ import {
   ExpandRight,
   Peoples,
   Search,
-  Download,
+  Browser,
 } from '@icon-park/react';
-import { Badge, Button, Tooltip } from '@arco-design/web-react';
+import { Button, Tooltip } from '@arco-design/web-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -29,7 +29,7 @@ import { resolveFeedbackModule } from '@/renderer/services/feedback/resolveFeedb
 import { isElectronDesktop, isMacOS } from '@/renderer/utils/platform';
 import { IS_DISCONTINUED_BUILD } from '@/renderer/utils/discontinuedBuild';
 import MigrationInviteCapsule from './MigrationInviteCapsule';
-import { getUpdateReadyState, subscribeUpdateReadyState } from '@/renderer/components/settings/updateReadyState';
+import { useOptionalPreviewContext } from '@/renderer/pages/conversation/Preview/context/PreviewContext';
 import './titlebar.css';
 
 interface TitlebarProps {
@@ -114,8 +114,7 @@ const Titlebar: React.FC<TitlebarProps> = ({ workspaceAvailable }) => {
   const [workspaceCollapsed, setWorkspaceCollapsed] = useState(true);
   const [mobileCenterTitle, setMobileCenterTitle] = useState(appTitle);
   const [mobileCenterOffset, setMobileCenterOffset] = useState(0);
-  const [updateAvailable, setUpdateAvailable] = useState(() => Boolean(getUpdateReadyState().available));
-  useEffect(() => subscribeUpdateReadyState((state) => setUpdateAvailable(Boolean(state.available))), []);
+  const preview = useOptionalPreviewContext();
   const layout = useLayoutContext();
   const navigationHistory = useNavigationHistory();
   const { openFeedback } = useFeedback();
@@ -337,21 +336,6 @@ const Titlebar: React.FC<TitlebarProps> = ({ workspaceAvailable }) => {
             <ArrowCircleLeft theme='outline' size={iconSize} fill='currentColor' />
           </button>
         )}
-        {showSiderToggle && isDesktopRuntime && !layout?.isMobile && (
-          <Tooltip content={t('update.installer.check')}>
-            <Button
-              type='text'
-              className='app-titlebar__button !text-t-primary'
-              aria-label={t('update.installer.check')}
-              onClick={() => window.dispatchEvent(new CustomEvent('aionui-open-update-modal'))}
-              icon={
-                <Badge dot count={updateAvailable ? 1 : 0}>
-                  <Download theme='outline' size={iconSize} fill='currentColor' strokeWidth={desktopIconStroke} />
-                </Badge>
-              }
-            />
-          </Tooltip>
-        )}
         {showSiderToggle && (
           <button
             type='button'
@@ -451,6 +435,18 @@ const Titlebar: React.FC<TitlebarProps> = ({ workspaceAvailable }) => {
           >
             <FeedbackIcon size={iconSize} strokeWidth={desktopIconStroke} />
           </button>
+        )}
+        {showWorkspaceButton && preview && (
+          <Tooltip content={t(preview.isOpen ? 'preview.hidePanel' : 'preview.showPanel')}>
+            <Button
+              type='text'
+              className='app-titlebar__button !text-t-primary'
+              aria-label={t(preview.isOpen ? 'preview.hidePanel' : 'preview.showPanel')}
+              aria-expanded={preview.isOpen}
+              onClick={preview.togglePreview}
+              icon={<Browser theme='outline' size={iconSize} fill='currentColor' aria-hidden />}
+            />
+          </Tooltip>
         )}
         {showWorkspaceButton && (
           <button

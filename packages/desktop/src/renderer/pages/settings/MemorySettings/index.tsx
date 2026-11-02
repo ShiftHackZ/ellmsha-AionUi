@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import WebviewHost from '@/renderer/components/media/WebviewHost';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import SettingsPageWrapper from '../components/SettingsPageWrapper';
+import SettingsPageHeader from '../components/SettingsPageHeader';
 import { createMemoryThemePayload } from './memoryTheme';
 
 const defaultPanelUrl =
@@ -14,6 +15,7 @@ const defaultPanelUrl =
 
 const MemorySettings: React.FC = () => {
   const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState('library');
   const { theme, activeTheme } = useThemeContext();
   const initialTheme = useRef(theme);
   const [panelUrl, setPanelUrl] = useState(defaultPanelUrl);
@@ -115,73 +117,82 @@ const MemorySettings: React.FC = () => {
   return (
     <SettingsPageWrapper contentClassName='!max-w-none'>
       <div className='flex flex-col gap-16px min-h-500px text-t-primary'>
-        <div>
-          <h1 className='text-20px font-semibold text-t-primary'>{t('settings.memoryUi.title')}</h1>
-          <p className='text-t-secondary text-13px'>TencentDB Agent Memory Panel · {panelUrl}</p>
+        <SettingsPageHeader
+          title={t('settings.memoryUi.title')}
+          tabs={[
+            { key: 'library', label: t('settings.memoryUi.library') },
+            { key: 'embedding', label: t('settings.memoryUi.embedding') },
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <section hidden={activeTab !== 'embedding'} role='tabpanel' aria-label={t('settings.memoryUi.embedding')}>
           <p className='text-t-secondary text-13px'>{t('settings.memoryGenerationModel')}</p>
-        </div>
-        <EmbeddingSettings onReady={refreshPanel} />
-        {isElectronDesktop() && (
-          <div className='rounded-8px border border-solid border-border-2 p-12px flex flex-col gap-8px'>
-            <strong className='text-14px'>{t('settings.memoryUi.account')}</strong>
-            <p className='text-t-secondary text-12px m-0'>{t('settings.memoryUi.accountHint')}</p>
-            <form
-              className='flex gap-8px'
-              onSubmit={(event) => {
-                event.preventDefault();
-                void submit(userKey);
-              }}
-            >
-              <Input.Password
-                autoComplete='off'
-                aria-label={t('settings.memoryUi.userKey')}
-                placeholder='sk-mem-…'
-                value={userKey}
-                onChange={setUserKey}
-                className='flex-1 min-w-0'
-              />
-              <Button htmlType='submit' type='primary' disabled={busy || !userKey.trim()}>
-                {t('settings.memoryUi.connect')}
-              </Button>
-              {localPanel && (
-                <Button onClick={() => void connectLocal()} disabled={busy}>
-                  {t('settings.memoryUi.localIdentity')}
+          <EmbeddingSettings onReady={refreshPanel} />
+        </section>
+        <section hidden={activeTab !== 'library'} role='tabpanel' aria-label={t('settings.memoryUi.library')}>
+          {isElectronDesktop() && (
+            <div className='rounded-8px border border-solid border-border-2 p-12px flex flex-col gap-8px'>
+              <strong className='text-14px'>{t('settings.memoryUi.account')}</strong>
+              <p className='text-t-secondary text-12px m-0'>{t('settings.memoryUi.accountHint')}</p>
+              <form
+                className='flex gap-8px'
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void submit(userKey);
+                }}
+              >
+                <Input.Password
+                  autoComplete='off'
+                  aria-label={t('settings.memoryUi.userKey')}
+                  placeholder='sk-mem-…'
+                  value={userKey}
+                  onChange={setUserKey}
+                  className='flex-1 min-w-0'
+                />
+                <Button htmlType='submit' type='primary' disabled={busy || !userKey.trim()}>
+                  {t('settings.memoryUi.connect')}
                 </Button>
+                {localPanel && (
+                  <Button onClick={() => void connectLocal()} disabled={busy}>
+                    {t('settings.memoryUi.localIdentity')}
+                  </Button>
+                )}
+              </form>
+              {message && (
+                <p role='status' className='text-12px m-0'>
+                  {message}
+                </p>
               )}
-            </form>
-            {message && (
-              <p role='status' className='text-12px m-0'>
-                {message}
-              </p>
+            </div>
+          )}
+          <div className='h-600px min-h-400px shrink-0 overflow-hidden rounded-8px border border-solid border-border-2'>
+            {isElectronDesktop() ? (
+              <WebviewHost
+                url={initialPanelUrl.toString()}
+                id='tdai-memory-panel'
+                partition='persist:tdai-memory-panel'
+                onDidFinishLoad={(webview) => {
+                  webviewRef.current = webview;
+                  syncTheme(webview);
+                }}
+              />
+            ) : (
+              <iframe
+                ref={iframeRef}
+                title='TencentDB Agent Memory Panel'
+                src={initialPanelUrl.toString()}
+                onLoad={() => {
+                  iframeRef.current?.contentWindow?.postMessage(
+                    { type: 'ellmsha-theme', detail: currentThemePayload() },
+                    panelOrigin
+                  );
+                }}
+                className='w-full h-full border-0'
+              />
             )}
           </div>
-        )}
-        <div className='h-600px min-h-400px shrink-0 overflow-hidden rounded-8px border border-solid border-border-2'>
-          {isElectronDesktop() ? (
-            <WebviewHost
-              url={initialPanelUrl.toString()}
-              id='tdai-memory-panel'
-              partition='persist:tdai-memory-panel'
-              onDidFinishLoad={(webview) => {
-                webviewRef.current = webview;
-                syncTheme(webview);
-              }}
-            />
-          ) : (
-            <iframe
-              ref={iframeRef}
-              title='TencentDB Agent Memory Panel'
-              src={initialPanelUrl.toString()}
-              onLoad={() => {
-                iframeRef.current?.contentWindow?.postMessage(
-                  { type: 'ellmsha-theme', detail: currentThemePayload() },
-                  panelOrigin
-                );
-              }}
-              className='w-full h-full border-0'
-            />
-          )}
-        </div>
+        </section>
       </div>
     </SettingsPageWrapper>
   );

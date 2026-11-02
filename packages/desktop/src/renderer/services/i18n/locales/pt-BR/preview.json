@@ -152,5 +152,19 @@
     "externalAuthHelp": "Se o login integrado ou a chave de segurança não for compatível, use o navegador padrão. A sessão dele é separada deste painel.",
     "loadFailed": "Não foi possível carregar esta página."
   },
-  "memoryArtifactUnavailable": "Este documento de memória não está disponível nesta conversa."
+  "memoryArtifactUnavailable": "Este documento de memória não está disponível nesta conversa.",
+  "showPanel": "Mostrar abas do espaço de trabalho",
+  "hidePanel": "Ocultar abas do espaço de trabalho",
+  "terminal": {
+    "running": "Em execução",
+    "exited": "Encerrado · {{code}}",
+    "stop": "Parar processo",
+    "unavailable": "Terminal indisponível. Tente novamente para conectar ou parar o processo.",
+    "truncated": "A saída antiga foi cortada. Exibindo a saída mais recente.",
+    "waiting": "Aguardando saída…",
+    "stderr": "Saída de erro",
+    "close": "Parar e fechar terminal",
+    "pid": "PID {{pid}}",
+    "shared": "Compartilhado com o agente · Ctrl+C interrompe · Parar encerra a sessão"
+  }
 }

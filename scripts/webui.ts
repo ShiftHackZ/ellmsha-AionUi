@@ -210,6 +210,12 @@ async function main(): Promise<void> {
   execFileSync('node', [path.join(integrationRoot, 'scripts', 'prepare-open-computer-use.js')], { stdio: 'inherit' });
   process.env.AIONUI_TDAI_MEMORY_MCP_PATH ||= path.join(repoRoot, 'out', 'main', 'builtin-mcp-tencent-memory.js');
   process.env.AIONUI_CHAT_HISTORY_MCP_PATH ||= path.join(repoRoot, 'out', 'main', 'builtin-mcp-chat-history.js');
+  process.env.AIONUI_BACKGROUND_PROCESS_MCP_PATH ||= path.join(
+    repoRoot,
+    'out',
+    'main',
+    'builtin-mcp-background-processes.js'
+  );
   process.env.ELLM_SHA_BMAD_SKILLS_DIR ||= path.resolve(repoRoot, '../bmad-method/ellmsha-skills');
   process.env.ELLM_SHA_PONYTAIL_SKILLS_DIR ||= path.resolve(repoRoot, '../ponytail/skills');
   process.env.ELLM_SHA_SKILLS_DIR ||= path.join(repoRoot, 'resources', 'ellmsha-skills');

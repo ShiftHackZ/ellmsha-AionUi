@@ -53,6 +53,11 @@ async function main() {
   await Promise.all([
     esbuild.build({
       ...SHARED_OPTIONS,
+      entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/background-process/server.ts')],
+      outfile: path.join(OUTPUT_DIR, 'builtin-mcp-background-processes.js'),
+    }),
+    esbuild.build({
+      ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/mcp-discovery/server.ts')],
       outfile: path.join(OUTPUT_DIR, 'builtin-mcp-discovery.js'),
     }),

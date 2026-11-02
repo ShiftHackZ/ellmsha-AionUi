@@ -1482,7 +1482,8 @@
     "localIdentity": "Use local identity",
     "connected": "Connected to your memory account.",
     "connectError": "Could not connect. Check the key and memory service.",
-    "title": "Memory"
+    "title": "Memory",
+    "library": "メモリハブ"
   },
   "upstreamComponents": "オープンソースを使用",
   "upstreamComponentsDescription": "元のプロジェクト、固定された上流バージョン、eLLMsha の変更。",

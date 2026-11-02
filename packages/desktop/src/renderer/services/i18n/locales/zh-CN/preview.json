@@ -152,5 +152,19 @@
     "externalAuthHelp": "若内嵌登录或安全密钥不受支持，请使用默认浏览器。其登录会话与此面板分开。",
     "loadFailed": "无法加载此页面。"
   },
-  "memoryArtifactUnavailable": "此对话中无法访问该记忆文档。"
+  "memoryArtifactUnavailable": "此对话中无法访问该记忆文档。",
+  "showPanel": "显示工作区标签页",
+  "hidePanel": "隐藏工作区标签页",
+  "terminal": {
+    "running": "运行中",
+    "exited": "已退出 · {{code}}",
+    "stop": "停止进程",
+    "unavailable": "终端不可用。请重试以重新连接或停止进程。",
+    "truncated": "较早的输出已截断，仅显示最近的输出。",
+    "waiting": "等待输出…",
+    "stderr": "标准错误",
+    "close": "停止并关闭终端",
+    "pid": "PID {{pid}}",
+    "shared": "与智能体共享 · Ctrl+C 中断命令 · 停止结束会话"
+  }
 }

@@ -152,5 +152,19 @@
     "externalAuthHelp": "Si la connexion intégrée ou la clé de sécurité est bloquée, utilisez votre navigateur par défaut. Sa session est distincte de ce panneau.",
     "loadFailed": "Impossible de charger cette page."
   },
-  "memoryArtifactUnavailable": "Ce document de mémoire est indisponible dans cette conversation."
+  "memoryArtifactUnavailable": "Ce document de mémoire est indisponible dans cette conversation.",
+  "showPanel": "Afficher les onglets de travail",
+  "hidePanel": "Masquer les onglets de travail",
+  "terminal": {
+    "running": "En cours",
+    "exited": "Terminé · {{code}}",
+    "stop": "Arrêter le processus",
+    "unavailable": "Terminal indisponible. Réessayez pour vous reconnecter ou arrêter le processus.",
+    "truncated": "Les anciennes sorties ont été tronquées. Les plus récentes sont affichées.",
+    "waiting": "En attente de sortie…",
+    "stderr": "Sortie d’erreur",
+    "close": "Arrêter et fermer le terminal",
+    "pid": "PID {{pid}}",
+    "shared": "Partagé avec l’agent · Ctrl+C interrompt · Arrêter termine la session"
+  }
 }

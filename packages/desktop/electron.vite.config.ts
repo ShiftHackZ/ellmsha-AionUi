@@ -16,10 +16,17 @@ const rootPackageJson = JSON.parse(readFileSync(resolve(__dirname, '../../packag
 
 // Build builtin MCP servers after main process bundle so they survive out/main/ cleanup.
 function buildMcpServersPlugin() {
+  let outputDir = resolve('out/main');
   return {
     name: 'vite-plugin-build-mcp-servers',
+    configResolved(config: { build: { outDir: string } }) {
+      outputDir = resolve(config.build.outDir);
+    },
     closeBundle() {
-      execSync(`node "${resolve('scripts/build-mcp-servers.js')}"`, { stdio: 'inherit' });
+      execFileSync(process.execPath, [resolve('scripts/build-mcp-servers.js')], {
+        stdio: 'inherit',
+        env: { ...process.env, ELLM_SHA_MCP_OUTPUT_DIR: outputDir },
+      });
     },
   };
 }
@@ -126,18 +133,6 @@ export default defineConfig(({ mode }) => {
         // are bundled by esbuild rather than left as `require('@aionui/web-host')`, which Node
         // cannot resolve because the package ships no compiled .js files (workspace-only).
         externalizeDepsPlugin({ exclude: ['fix-path', '@aionui/web-host', 'tldts'] }),
-        ...(isDevelopment
-          ? [
-              {
-                name: 'dev-build-mcp-servers',
-                closeBundle() {
-                  execSync(`node "${resolve(__dirname, '../../scripts/build-mcp-servers.js')}"`, {
-                    stdio: 'inherit',
-                  });
-                },
-              },
-            ]
-          : []),
         ...(!isDevelopment
           ? [
               viteStaticCopy({
@@ -154,7 +149,7 @@ export default defineConfig(({ mode }) => {
             ]
           : []),
         ...(enableSentrySourceMaps ? [sentryVitePlugin(sentryPluginOptions)] : []),
-        ...(isDevelopment ? [buildMcpServersPlugin()] : []),
+        buildMcpServersPlugin(),
       ],
       resolve: { alias: mainAliases, extensions: ['.ts', '.tsx', '.js', '.json'] },
       build: {
@@ -264,6 +259,42 @@ export default defineConfig(({ mode }) => {
         ],
       },
       plugins: [
+        {
+          name: 'shared-terminal-bundle-contract',
+          apply: 'build',
+          generateBundle(_options, bundle) {
+            const renderer = Object.values(bundle)
+              .filter(
+                (item) =>
+                  item.type === 'chunk' &&
+                  Object.keys(item.modules).some((id) =>
+                    id.replaceAll('\\', '/').includes('/node_modules/@xterm/xterm/')
+                  )
+              )
+              .map((item) => item.fileName);
+            const styles = Object.values(bundle)
+              .filter(
+                (item) =>
+                  item.type === 'asset' && item.fileName.endsWith('.css') && String(item.source).includes('.xterm')
+              )
+              .map((item) => item.fileName);
+            if (!renderer.length || !styles.length)
+              this.error('Shared terminal emulator or stylesheet missing from production renderer');
+            this.emitFile({
+              type: 'asset',
+              fileName: 'terminal-licenses.txt',
+              source: readFileSync(
+                resolve(rendererRoot, 'pages/conversation/Preview/components/Terminal/licenses.txt'),
+                'utf8'
+              ),
+            });
+            this.emitFile({
+              type: 'asset',
+              fileName: 'terminal-contract.json',
+              source: JSON.stringify({ protocol: 2, renderer, styles }),
+            });
+          },
+        },
         UnoCSS(unoConfig),
         iconParkPlugin(),
         ...(enableSentrySourceMaps ? [sentryVitePlugin(sentryPluginOptions)] : []),
@@ -291,6 +322,7 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks(id: string) {
               if (!id.includes('node_modules')) return undefined;
+              if (id.replaceAll('\\', '/').includes('/node_modules/@xterm/')) return 'vendor-terminal';
               // Scoped packages such as @monaco-editor/react are not React itself:
               // merging them here makes React depend on editors and creates startup cycles.
               if (id.includes('/node_modules/react-dom/') || id.includes('/node_modules/react/')) return 'vendor-react';

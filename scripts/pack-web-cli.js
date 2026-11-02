@@ -118,7 +118,12 @@ fs.copyFileSync(
   path.join(projectRoot, 'out/main/builtin-mcp-chat-history.js'),
   path.join(mcpDest, 'builtin-mcp-chat-history.js')
 );
-for (const name of ['builtin-mcp-discovery.js', 'builtin-mcp-browser.js', 'builtin-mcp-chrome-devtools.js']) {
+for (const name of [
+  'builtin-mcp-discovery.js',
+  'builtin-mcp-browser.js',
+  'builtin-mcp-chrome-devtools.js',
+  'builtin-mcp-background-processes.js',
+]) {
   fs.copyFileSync(path.join(projectRoot, 'out', 'main', name), path.join(mcpDest, name));
 }
 fs.cpSync(chromeDevtoolsMcp.runtimeRoot, path.join(mcpDest, 'chrome-devtools-mcp'), { recursive: true });

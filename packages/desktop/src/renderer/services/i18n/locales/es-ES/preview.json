@@ -152,5 +152,19 @@
     "externalAuthHelp": "Si el inicio de sesión integrado o la llave de seguridad no es compatible, usa el navegador predeterminado. Su sesión es independiente de este panel.",
     "loadFailed": "No se pudo cargar esta página."
   },
-  "memoryArtifactUnavailable": "Este documento de memoria no está disponible en esta conversación."
+  "memoryArtifactUnavailable": "Este documento de memoria no está disponible en esta conversación.",
+  "showPanel": "Mostrar pestañas del espacio de trabajo",
+  "hidePanel": "Ocultar pestañas del espacio de trabajo",
+  "terminal": {
+    "running": "En ejecución",
+    "exited": "Finalizado · {{code}}",
+    "stop": "Detener proceso",
+    "unavailable": "Terminal no disponible. Reintenta para conectar o detener el proceso.",
+    "truncated": "Se recortó la salida antigua. Se muestra la salida más reciente.",
+    "waiting": "Esperando salida…",
+    "stderr": "Salida de error",
+    "close": "Detener y cerrar terminal",
+    "pid": "PID {{pid}}",
+    "shared": "Compartido con el agente · Ctrl+C interrumpe · Detener finaliza la sesión"
+  }
 }
