@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
-import { dirname, join, posix, resolve } from 'node:path';
+import { dirname, join, normalize, posix, resolve, win32 } from 'node:path';
+import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { runInNewContext } from 'node:vm';
@@ -32,12 +33,12 @@ describe('release packaging configuration', () => {
     const readAsar = async () => ({
       readFile: async () =>
         Buffer.from(html ?? '<script type="module" src="../../../../../assets/security-key-test.js"></script>'),
-      getFile: (entry: string) => ({ size: entry === missing ? 0 : 100 }),
+      getFile: (entry: string) => ({ size: entry.replaceAll('\\', '/') === missing ? 0 : 100 }),
     });
     const localRequire = Object.assign(() => ({ readAsar }), { resolve: (id: string) => id });
     const verify = runInNewContext(`(${afterPack.slice(assetsStart, assetsEnd)})`, {
       require: localRequire,
-      path: { join, dirname, posix },
+      path: { join, dirname, normalize, posix },
     });
     await verify('/fixture/resources');
   }
@@ -87,6 +88,81 @@ describe('release packaging configuration', () => {
       if (missing) await expect(verify('/fixture')).rejects.toThrow();
       else await expect(verify('/fixture')).resolves.toBeUndefined();
       expect(afterPack).toContain('await verifyTerminalAssets(resourcesDir)');
+    }
+  );
+  it.each([
+    ['Windows', win32, false],
+    ['Windows', win32, true],
+    ['POSIX', posix, false],
+    ['POSIX', posix, true],
+  ] as const)(
+    'validates terminal assets with the actual %s archive reader (missing=%s)',
+    async (_name, platform, missing) => {
+      const localRequire = createRequire(import.meta.url);
+      const readerPath = localRequire.resolve('app-builder-lib/out/asar/asar', {
+        paths: [dirname(localRequire.resolve('electron-builder'))],
+      });
+      type Archive = {
+        getFile: (entry: string) => { size: number } | undefined;
+        readFile: (entry: string) => Promise<Buffer>;
+      };
+      const readerModule = { exports: {} as { AsarFilesystem: new (source: string, header: unknown) => Archive } };
+      const readerRequire = createRequire(readerPath);
+      const loadReader = runInNewContext(
+        `(function(exports, require, module, __filename, __dirname) { ${readFileSync(readerPath, 'utf8')}\n})`,
+        { Buffer, process }
+      );
+      loadReader(
+        readerModule.exports,
+        (name: string) => (name === 'path' ? platform : readerRequire(name)),
+        readerModule,
+        readerPath,
+        dirname(readerPath)
+      );
+      const assets: Record<string, string> = {
+        'out/renderer/terminal-contract.json': JSON.stringify({
+          protocol: 2,
+          renderer: ['assets/terminal.js'],
+          styles: ['assets/terminal.css'],
+        }),
+        'out/renderer/assets/terminal.js': 'terminal fixture',
+        'out/renderer/assets/terminal.css': 'terminal fixture CSS',
+        'out/renderer/terminal-licenses.txt': 'fixture attribution',
+      };
+      const leaf = (name: string) => ({ size: Buffer.byteLength(assets[name]), offset: '0' });
+      const header = {
+        files: {
+          out: {
+            files: {
+              renderer: {
+                files: {
+                  'terminal-contract.json': leaf('out/renderer/terminal-contract.json'),
+                  'terminal-licenses.txt': leaf('out/renderer/terminal-licenses.txt'),
+                  assets: {
+                    files: {
+                      ...(!missing && { 'terminal.js': leaf('out/renderer/assets/terminal.js') }),
+                      'terminal.css': leaf('out/renderer/assets/terminal.css'),
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+      const archive = new readerModule.exports.AsarFilesystem('fixture.asar', header);
+      archive.readFile = async (entry) => {
+        if (!archive.getFile(entry)?.size) throw new Error('Fixture archive entry missing');
+        return Buffer.from(assets[entry.replaceAll('\\', '/')]);
+      };
+      const dependencies = Object.assign(() => ({ readAsar: async () => archive }), {
+        resolve: () => 'fixture-reader',
+      });
+      const begin = afterPack.indexOf('async function verifyTerminalAssets(');
+      const end = afterPack.indexOf('\nfunction verifyBackgroundProcessAssets(', begin);
+      const verify = runInNewContext(`(${afterPack.slice(begin, end)})`, { require: dependencies, path: platform });
+      if (missing) await expect(verify('fixture')).rejects.toThrow();
+      else await expect(verify('fixture')).resolves.toBeUndefined();
     }
   );
   it('requires a nonempty bundled background MCP in the shared packaging hook', () => {

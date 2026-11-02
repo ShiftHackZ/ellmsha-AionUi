@@ -41,7 +41,7 @@ async function verifySecurityKeyAssets(resourcesDir) {
     'out/preload/securityKeyPreload.js',
     dialog,
   ];
-  const html = (await archive.readFile(dialog)).toString('utf8');
+  const html = (await archive.readFile(path.normalize(dialog))).toString('utf8');
   for (const [, reference] of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
     const asset = path.posix.normalize(path.posix.join(path.posix.dirname(dialog), reference));
     if (!asset.startsWith('out/renderer/')) throw new Error('Security-key dialog asset escaped renderer output');
@@ -49,7 +49,7 @@ async function verifySecurityKeyAssets(resourcesDir) {
   }
   if (!/<script\b[^>]*\bsrc=/.test(html)) throw new Error('Packaged security-key dialog has no script');
   for (const entry of required) {
-    if (!(archive.getFile(entry)?.size > 0))
+    if (!(archive.getFile(path.normalize(entry))?.size > 0))
       throw new Error(`Packaged security-key asset is missing or empty: ${entry}`);
   }
 }
@@ -59,7 +59,9 @@ async function verifyTerminalAssets(resourcesDir) {
     require.resolve('app-builder-lib/out/asar/asar', { paths: [path.dirname(require.resolve('electron-builder'))] })
   );
   const archive = await readAsar(path.join(resourcesDir, 'app.asar'));
-  const contract = JSON.parse((await archive.readFile('out/renderer/terminal-contract.json')).toString('utf8'));
+  const contract = JSON.parse(
+    (await archive.readFile(path.join('out', 'renderer', 'terminal-contract.json'))).toString('utf8')
+  );
   if (contract.protocol !== 2 || !contract.renderer?.length || !contract.styles?.length)
     throw new Error('Shared terminal contract missing');
   for (const entry of [...contract.renderer, ...contract.styles, 'terminal-licenses.txt']) {
@@ -67,7 +69,7 @@ async function verifyTerminalAssets(resourcesDir) {
       typeof entry !== 'string' ||
       entry.includes('..') ||
       entry.startsWith('/') ||
-      !(archive.getFile(`out/renderer/${entry}`)?.size > 0)
+      !(archive.getFile(path.join('out', 'renderer', entry))?.size > 0)
     )
       throw new Error('Shared terminal asset missing or empty');
   }
