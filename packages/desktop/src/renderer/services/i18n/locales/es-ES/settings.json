@@ -1787,5 +1787,27 @@
     "unavailable": "No se encontró una llave USB disponible. Conéctela y compruebe de nuevo.",
     "unsupported": "Esta llave no cumple la solicitud de autenticación.",
     "noCredential": "No se encontró una credencial coincidente en esta llave."
+  },
+  "figma": {
+    "accounts": "Cuentas de Figma",
+    "description": "Consulta diseños, exporta imágenes y gestiona comentarios con cuentas independientes. La edición del lienzo requiere el MCP oficial de Figma.",
+    "connect": "Conectar cuenta",
+    "reconnect": "Reconectar",
+    "disconnect": "Desconectar",
+    "disconnectConfirm": "¿Desconectar esta cuenta y eliminar su token guardado?",
+    "enableFirst": "Activa Figma para conectar una cuenta.",
+    "loadFailed": "No se pudieron cargar las cuentas de Figma.",
+    "failed": "No se pudo conectar la cuenta de Figma. Revisa el token e inténtalo de nuevo.",
+    "empty": "No hay cuentas de Figma conectadas.",
+    "token": "Token de acceso personal",
+    "tokenHelp": "Crea un token en Figma → Settings → Security. Obligatorio: current_user:read. Diseños: file_content:read; carpetas: folders:read; comentarios: file_comments:read/write. Los tokens se guardan cifrados.",
+    "browserHelp": "También puedes pedir al agente que conecte la cuenta de Figma del navegador integrado. El token generado se importa de forma privada; nunca pegues tokens en el chat.",
+    "selectionHelp": "Elige la cuenta para cada operación. Si coinciden varias, el agente preguntará cuál usar.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Desconectada",
+      "reconnect_required": "Requiere reconexión",
+      "error": "Error"
+    }
   }
 }

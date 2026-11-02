@@ -1787,5 +1787,27 @@
     "unavailable": "Aucune clé USB utilisable. Branchez votre clé et vérifiez à nouveau.",
     "unsupported": "Cette clé ne peut pas satisfaire la demande d’authentification.",
     "noCredential": "Aucun identifiant correspondant sur cette clé."
+  },
+  "figma": {
+    "accounts": "Comptes Figma",
+    "description": "Consultez les designs, exportez des images et gérez les commentaires avec des comptes distincts. La modification du canevas nécessite le MCP officiel de Figma.",
+    "connect": "Connecter un compte",
+    "reconnect": "Reconnecter",
+    "disconnect": "Déconnecter",
+    "disconnectConfirm": "Déconnecter ce compte et supprimer son jeton enregistré ?",
+    "enableFirst": "Activez Figma pour connecter un compte.",
+    "loadFailed": "Impossible de charger les comptes Figma.",
+    "failed": "Impossible de connecter le compte Figma. Vérifiez le jeton et réessayez.",
+    "empty": "Aucun compte Figma connecté.",
+    "token": "Jeton d’accès personnel",
+    "tokenHelp": "Créez un jeton dans Figma → Settings → Security. Requis : current_user:read. Designs : file_content:read ; dossiers : folders:read ; commentaires : file_comments:read/write. Les jetons sont chiffrés.",
+    "browserHelp": "Vous pouvez aussi demander à l’agent de connecter le compte Figma du navigateur intégré. Le jeton généré est importé en privé ; ne collez jamais de jeton dans le chat.",
+    "selectionHelp": "Choisissez le compte pour chaque opération. Si plusieurs correspondent, l’agent demandera lequel utiliser.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Déconnecté",
+      "reconnect_required": "Reconnexion nécessaire",
+      "error": "Erreur"
+    }
   }
 }

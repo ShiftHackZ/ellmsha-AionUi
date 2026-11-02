@@ -1787,5 +1787,27 @@
     "unavailable": "Kullanılabilir USB anahtarı bulunamadı. Anahtarı bağlayıp yeniden kontrol edin.",
     "unsupported": "Bu anahtar kimlik doğrulama isteğini karşılayamıyor.",
     "noCredential": "Bu anahtarda eşleşen kimlik bilgisi bulunamadı."
+  },
+  "figma": {
+    "accounts": "Figma hesapları",
+    "description": "Ayrı hesaplarla tasarımları inceleyin, görselleri dışa aktarın ve yorumları yönetin. Tuval düzenleme, Figma’nın resmi MCP hizmetini gerektirir.",
+    "connect": "Hesap bağla",
+    "reconnect": "Yeniden bağla",
+    "disconnect": "Bağlantıyı kes",
+    "disconnectConfirm": "Bu hesabın bağlantısı kesilsin ve kayıtlı belirteci silinsin mi?",
+    "enableFirst": "Hesap bağlamak için Figma’yı etkinleştirin.",
+    "loadFailed": "Figma hesapları yüklenemedi.",
+    "failed": "Figma hesabı bağlanamadı. Belirteci kontrol edip yeniden deneyin.",
+    "empty": "Bağlı Figma hesabı yok.",
+    "token": "Kişisel erişim belirteci",
+    "tokenHelp": "Figma → Settings → Security bölümünde belirteç oluşturun. Gerekli: current_user:read. Tasarımlar: file_content:read; klasörler: folders:read; yorumlar: file_comments:read/write. Belirteçler şifreli saklanır.",
+    "browserHelp": "Uygulama içi tarayıcıda açık Figma hesabını bağlamasını ajandan isteyebilirsiniz. Oluşturulan belirteç özel olarak içe aktarılır; belirteçleri sohbete yapıştırmayın.",
+    "selectionHelp": "Her işlem için hesabı seçin. Birden fazla hesap uygunsa ajan hangisini kullanacağını sorar.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Bağlı değil",
+      "reconnect_required": "Yeniden bağlantı gerekli",
+      "error": "Hata"
+    }
   }
 }

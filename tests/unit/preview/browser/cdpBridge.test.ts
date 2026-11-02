@@ -1210,8 +1210,8 @@ describe('cdpBridge multi-tab routing and lifecycle', () => {
       await client.connect(transport);
       const tools = await client.listTools();
       const toolNames = tools.tools.map((tool) => tool.name);
-      expect(toolNames).toHaveLength(32);
-      expect(new Set(toolNames).size).toBe(32);
+      expect(toolNames).toHaveLength(33);
+      expect(new Set(toolNames).size).toBe(33);
       expect(toolNames).toEqual(
         expect.arrayContaining([
           'browser_tabs_list',

@@ -110,6 +110,8 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
     'plugins/computer-use/aion-extension.json',
     'plugins/clockify/aion-extension.json',
     'plugins/notion/aion-extension.json',
+    'plugins/figma/aion-extension.json',
+    'plugins/figma/skills/figma-design-work/SKILL.md',
   ];
   const missingIntegrations = integrationResources.filter(
     (relativePath) => !fs.existsSync(path.join(resourcesDir, relativePath))

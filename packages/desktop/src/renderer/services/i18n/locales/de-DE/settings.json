@@ -1787,5 +1787,27 @@
     "unavailable": "Kein nutzbarer USB-Schlüssel gefunden. Schließen Sie ihn an und prüfen Sie erneut.",
     "unsupported": "Dieser Schlüssel erfüllt die Authentifizierungsanforderung nicht.",
     "noCredential": "Auf diesem Schlüssel wurden keine passenden Anmeldedaten gefunden."
+  },
+  "figma": {
+    "accounts": "Figma-Konten",
+    "description": "Designs prüfen, Bilder exportieren und Kommentare mit getrennten Konten verwalten. Zum Bearbeiten der Arbeitsfläche ist Figmas offizieller MCP erforderlich.",
+    "connect": "Konto verbinden",
+    "reconnect": "Erneut verbinden",
+    "disconnect": "Trennen",
+    "disconnectConfirm": "Dieses Konto trennen und sein gespeichertes Token löschen?",
+    "enableFirst": "Figma aktivieren, um ein Konto zu verbinden.",
+    "loadFailed": "Figma-Konten konnten nicht geladen werden.",
+    "failed": "Figma-Konto konnte nicht verbunden werden. Token prüfen und erneut versuchen.",
+    "empty": "Keine Figma-Konten verbunden.",
+    "token": "Persönliches Zugriffstoken",
+    "tokenHelp": "Token unter Figma → Settings → Security erstellen. Erforderlich: current_user:read. Für Designs: file_content:read, Ordner: folders:read, Kommentare: file_comments:read/write. Tokens werden verschlüsselt gespeichert.",
+    "browserHelp": "Der Agent kann auch das im integrierten Browser angemeldete Figma-Konto verbinden. Das erzeugte Token wird privat importiert; Tokens nie in den Chat einfügen.",
+    "selectionHelp": "Das Konto pro Vorgang auswählen. Bei mehreren passenden Konten fragt der Agent nach.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Getrennt",
+      "reconnect_required": "Erneute Verbindung erforderlich",
+      "error": "Fehler"
+    }
   }
 }

@@ -50,6 +50,13 @@ describe('resolveBuiltinPluginsPath', () => {
     expect(existsSync('../plugins/linear/skills/linear-project-work/SKILL.md')).toBe(true);
     expect(existsSync('../plugins/linear/skills/linear-project-work/scripts/normalize-linear-images.mjs')).toBe(true);
     expect(existsSync('../plugins/linear/skills/linear-project-work/scripts/linear-mcp-adapter.mjs')).toBe(true);
+    const figma = JSON.parse(readFileSync('../plugins/figma/aion-extension.json', 'utf8'));
+    expect(figma.name).toBe('figma');
+    expect(figma.contributes.skills[0].path).toBe('skills/figma-design-work/SKILL.md');
+    expect(existsSync('../plugins/figma/skills/figma-design-work/SKILL.md')).toBe(true);
+    expect(readFileSync('scripts/afterPack.js', 'utf8')).toContain('plugins/figma/aion-extension.json');
+    expect(readFileSync('scripts/pack-web-cli.js', 'utf8')).toContain("path.join(tarballContentDir, 'plugins')");
+    expect(readFileSync('../docker/aionui.Dockerfile', 'utf8')).toContain('COPY plugins/ ./plugins/');
     expect(existsSync('../plugins/sd05-fixture')).toBe(false);
   });
 

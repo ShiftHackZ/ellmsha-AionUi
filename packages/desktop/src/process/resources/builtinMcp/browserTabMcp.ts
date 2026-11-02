@@ -33,6 +33,7 @@ export interface BrowserTabController {
   activate(tabId: string): Promise<void>;
   navigate(tabId: string, url: string, activate: boolean): Promise<void>;
   close(tabId: string): Promise<void>;
+  importFigmaAccount?(tabId: string, selector: string, connectionId?: string): Promise<JsonObject>;
 }
 
 const objectSchema = (properties: JsonObject, required: string[] = []) => ({
@@ -82,6 +83,27 @@ export const STABLE_BROWSER_TOOLS = [
       ['tab_id', 'url']
     ),
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: 'browser_figma_connect_account',
+    description:
+      'Privately import a newly generated Figma personal access token from one exact signed-in in-app Figma tab. Use only when the user asks to connect an account. Generate the token through Figma Settings → Security first; do not read/copy its value into chat. Only verified public account metadata is returned. Refresh Settings → Plugins → Figma after importing. Reconnect must use the same Figma identity.',
+    inputSchema: objectSchema(
+      {
+        tab_id: { type: 'string', description: 'Exact stable in-app Figma tab ID from browser_tabs_list.' },
+        selector: {
+          type: 'string',
+          description:
+            'CSS selector for exactly one field displaying the newly generated PAT. Use field metadata, never the token value. Password fields and non-leaf containers are rejected.',
+        },
+        connection_id: {
+          type: 'string',
+          description: 'Existing Figma connection UUID when replacing its token; omit to add an account.',
+        },
+      },
+      ['tab_id', 'selector']
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
     name: 'browser_tab_close',
@@ -154,6 +176,18 @@ export const callStableBrowserTool = async (controller: BrowserTabController, na
     case 'browser_tab_navigate':
       await controller.navigate(stringArgument(args, 'tab_id'), stringArgument(args, 'url'), args?.activate !== false);
       return textResult({ navigated: true, tab_id: args?.tab_id, url: args?.url });
+    case 'browser_figma_connect_account': {
+      if (!controller.importFigmaAccount)
+        throw new Error('Private Figma import is unavailable in this browser runtime.');
+      const connectionId = args?.connection_id === undefined ? undefined : stringArgument(args, 'connection_id');
+      return textResult(
+        await controller.importFigmaAccount(
+          stringArgument(args, 'tab_id'),
+          stringArgument(args, 'selector'),
+          connectionId
+        )
+      );
+    }
     case 'browser_tab_close':
       await controller.close(stringArgument(args, 'tab_id'));
       return textResult({ closed: true, tab_id: args?.tab_id });
@@ -430,15 +464,18 @@ export class CdpBrowserTabController implements BrowserTabController {
     const socket = await this.connect();
     const id = this.nextId++;
     const result = new Promise<JsonObject>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(
-          new McpError(
-            ErrorCode.RequestTimeout,
-            `Browser command ${method} timed out. Its outcome may be unknown; do not replay a mutation blindly.`
-          )
-        );
-      }, 15_000);
+      const timer = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(
+            new McpError(
+              ErrorCode.RequestTimeout,
+              `Browser command ${method} timed out. Its outcome may be unknown; do not replay a mutation blindly.`
+            )
+          );
+        },
+        method === 'Aionui.importFigmaAccount' ? 60_000 : 15_000
+      );
       this.pending.set(id, { resolve, reject, timer });
     });
     socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
@@ -482,6 +519,14 @@ export class CdpBrowserTabController implements BrowserTabController {
 
   async close(tabId: string): Promise<void> {
     await this.request('Target.closeTarget', { targetId: tabId });
+  }
+
+  async importFigmaAccount(tabId: string, selector: string, connectionId?: string): Promise<JsonObject> {
+    return this.request('Aionui.importFigmaAccount', {
+      targetId: tabId,
+      selector,
+      ...(connectionId ? { connectionId } : {}),
+    });
   }
 
   async disconnect(): Promise<void> {

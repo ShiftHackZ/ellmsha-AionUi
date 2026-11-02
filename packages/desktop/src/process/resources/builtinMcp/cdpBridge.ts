@@ -4,6 +4,7 @@ import {
   validateBrowserToken,
   browserSession,
 } from '../../services/browser/profiles';
+import { importFigmaAccountFromTab } from '../../services/browser/figma';
 import { canOpenBrowserUrl, getBrowserPopup } from '../../services/browser/popups';
 /**
  * @license
@@ -648,6 +649,36 @@ export const startCdpBridge = async (options: CdpBridgeOptions): Promise<CdpBrid
       }
       await validateBrowserToken(socketState.token);
       assertVisible(profileId);
+      if (method === 'Aionui.importFigmaAccount' && !sessionId) {
+        const tabId = params?.targetId;
+        const selector = params?.selector;
+        const connectionId = params?.connectionId;
+        if (
+          typeof tabId !== 'string' ||
+          typeof selector !== 'string' ||
+          (connectionId !== undefined && typeof connectionId !== 'string')
+        )
+          throw new Error('Invalid Figma import target.');
+        const target = targets.get(tabId);
+        if (!target || target.profileId !== profileId)
+          throw new Error('Figma target is unavailable for this browser profile.');
+        const assertAuthorized = async () => {
+          await validateBrowserToken(socketState.token);
+          assertVisible(profileId);
+          if (targets.get(tabId) !== target || target.contents.isDestroyed()) throw new Error('Figma target changed.');
+        };
+        const connection = await runLifecycle(() =>
+          importFigmaAccountFromTab(
+            target.contents,
+            selector,
+            socketState.token,
+            assertAuthorized,
+            typeof connectionId === 'string' ? connectionId : undefined
+          )
+        );
+        ws.send(JSON.stringify({ id, result: { connection }, sessionId }));
+        return;
+      }
       const decision = decideCdpCommand(req, () => targetInfos(profileId), socketState.manualSessions, profileId);
       if (decision.kind === 'error') {
         sendError(ws, id, decision.message, -32601, sessionId);

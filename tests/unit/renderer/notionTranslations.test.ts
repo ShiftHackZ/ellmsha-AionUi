@@ -39,3 +39,31 @@ describe('Notion translations', () => {
     });
   }
 });
+
+describe('Figma account translations', () => {
+  const root = path.resolve('packages/desktop/src/renderer/services/i18n/locales');
+  for (const locale of fs.readdirSync(root).filter((entry) => fs.existsSync(path.join(root, entry, 'settings.json')))) {
+    it(`includes Figma setup, privacy and account actions: ${locale}`, () => {
+      const settings = JSON.parse(fs.readFileSync(path.join(root, locale, 'settings.json'), 'utf8'));
+      for (const key of [
+        'accounts',
+        'description',
+        'connect',
+        'reconnect',
+        'disconnect',
+        'disconnectConfirm',
+        'enableFirst',
+        'loadFailed',
+        'failed',
+        'empty',
+        'token',
+        'tokenHelp',
+        'browserHelp',
+        'selectionHelp',
+      ])
+        expect(settings.figma[key].trim().length).toBeGreaterThan(0);
+      expect(settings.figma.tokenHelp).toContain('current_user:read');
+      expect(settings.figma.status.connected).toBeTruthy();
+    });
+  }
+});

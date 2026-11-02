@@ -78,6 +78,7 @@ describe('browser MCP stable tab contract', () => {
       activate: vi.fn().mockResolvedValue(undefined),
       navigate: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
+      importFigmaAccount: vi.fn().mockResolvedValue({ connection: { id: 'figma-one', label: 'Work account' } }),
     };
     const server = createBrowserMcpProxy(upstream as never, controller);
     const client = new Client({ name: 'browser-tab-test', version: '1.0.0' });
@@ -97,8 +98,18 @@ describe('browser MCP stable tab contract', () => {
         'browser_tab_activate',
         'browser_tab_navigate',
         'browser_tab_close',
+        'browser_figma_connect_account',
       ])
     );
+    const figmaImport = tools.tools.find((tool) => tool.name === 'browser_figma_connect_account');
+    expect(figmaImport?.annotations?.readOnlyHint).toBe(false);
+    expect(figmaImport?.inputSchema.properties).not.toHaveProperty('token');
+    const imported = await client.callTool({
+      name: 'browser_figma_connect_account',
+      arguments: { tab_id: 'browser-stable', selector: '#new-token' },
+    });
+    expect(controller.importFigmaAccount).toHaveBeenCalledWith('browser-stable', '#new-token', undefined);
+    expect(imported.content[0]).toMatchObject({ type: 'text', text: expect.stringContaining('figma-one') });
     const inlineSnapshot = tools.tools.find((tool) => tool.name === 'take_snapshot');
     expect(inlineSnapshot?.annotations?.readOnlyHint).toBe(true);
     expect(inlineSnapshot?.inputSchema.properties).not.toHaveProperty('filePath');

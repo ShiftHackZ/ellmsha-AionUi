@@ -2143,6 +2143,20 @@ export type ConnectClockifyConnection = {
   realm: ClockifyRealm;
 };
 
+/** Credential-free Figma account metadata. Tokens are only accepted on connect. */
+export type FigmaConnection = {
+  id: string;
+  namespace: string;
+  label: string;
+  status: 'connected' | 'disconnected' | 'reconnect_required' | 'error';
+  identity?: { account_id: string; account_name: string; account_email?: string };
+  last_error?: string;
+  created_at: number;
+  updated_at: number;
+};
+export type FigmaConnections = { connections: FigmaConnection[] };
+export type ConnectFigmaConnection = { personal_access_token: string };
+
 export interface IExtensionPermissionSummary {
   name: string;
   description: string;
@@ -2248,6 +2262,16 @@ export const extensions = {
   ),
   disconnectClockifyConnection: httpPost<ClockifyConnection, { connection_id: string }>(
     (params) => `/api/plugins/clockify/connections/${encodeURIComponent(params.connection_id)}/disconnect`,
+    () => ({})
+  ),
+  getFigmaConnections: httpGet<FigmaConnections, void>('/api/plugins/figma/connections'),
+  connectNewFigmaConnection: httpPost<FigmaConnection, ConnectFigmaConnection>('/api/plugins/figma/connections'),
+  reconnectFigmaConnection: httpPost<FigmaConnection, ConnectFigmaConnection & { connection_id: string }>(
+    (params) => `/api/plugins/figma/connections/${encodeURIComponent(params.connection_id)}/connect`,
+    (params) => ({ personal_access_token: params.personal_access_token })
+  ),
+  disconnectFigmaConnection: httpPost<FigmaConnection, { connection_id: string }>(
+    (params) => `/api/plugins/figma/connections/${encodeURIComponent(params.connection_id)}/disconnect`,
     () => ({})
   ),
   stateChanged: wsEmitter<{ name: string; enabled: boolean; reason?: string }>('extensions.state-changed'),

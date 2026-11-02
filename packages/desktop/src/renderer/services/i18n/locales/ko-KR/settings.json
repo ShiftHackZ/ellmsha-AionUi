@@ -1789,5 +1789,27 @@
     "unavailable": "사용할 수 있는 USB 키가 없습니다. 키를 연결하고 다시 확인하세요.",
     "unsupported": "이 키는 인증 요청을 충족할 수 없습니다.",
     "noCredential": "이 키에 일치하는 자격 증명이 없습니다."
+  },
+  "figma": {
+    "accounts": "Figma 계정",
+    "description": "별도 계정으로 디자인 확인, 이미지 내보내기, 댓글 관리를 할 수 있습니다. 캔버스 편집에는 Figma 공식 MCP가 필요합니다.",
+    "connect": "계정 연결",
+    "reconnect": "다시 연결",
+    "disconnect": "연결 해제",
+    "disconnectConfirm": "이 계정을 연결 해제하고 저장된 토큰을 삭제할까요?",
+    "enableFirst": "계정을 연결하려면 Figma를 활성화하세요.",
+    "loadFailed": "Figma 계정을 불러올 수 없습니다.",
+    "failed": "Figma 계정을 연결할 수 없습니다. 토큰을 확인하고 다시 시도하세요.",
+    "empty": "연결된 Figma 계정이 없습니다.",
+    "token": "개인 액세스 토큰",
+    "tokenHelp": "Figma → Settings → Security에서 토큰을 만드세요. 필수: current_user:read. 디자인: file_content:read, 폴더: folders:read, 댓글: file_comments:read/write. 토큰은 암호화되어 저장됩니다.",
+    "browserHelp": "앱 내 브라우저에 로그인된 Figma 계정을 연결하도록 에이전트에게 요청할 수도 있습니다. 생성된 토큰은 비공개로 가져옵니다. 채팅에 토큰을 붙여넣지 마세요.",
+    "selectionHelp": "작업마다 계정을 선택하세요. 여러 계정이 해당하면 에이전트가 사용할 계정을 묻습니다.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "연결 해제됨",
+      "reconnect_required": "다시 연결 필요",
+      "error": "오류"
+    }
   }
 }

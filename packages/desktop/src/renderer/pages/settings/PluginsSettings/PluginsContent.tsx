@@ -2,6 +2,7 @@ import { ipcBridge } from '@/common';
 import { isBackendHttpError, isWebUiBrowserMode } from '@/common/adapter/httpBridge';
 import type {
   ClockifyConnections,
+  FigmaConnections,
   IExtensionInfo,
   LinearConnection,
   LinearConnections,
@@ -21,6 +22,7 @@ import {
 import type { PluginCatalogItem } from './pluginViewModel';
 import ClockifyAccounts from './ClockifyAccounts';
 import NotionAccounts from './NotionAccounts';
+import FigmaAccounts from './FigmaAccounts';
 import ComputerUseSetup from './ComputerUseSetup';
 import PluginIcon from './PluginIcon';
 
@@ -63,6 +65,7 @@ const PluginsContent: React.FC<PluginsContentProps> = ({
   const [linearLoadError, setLinearLoadError] = useState(false);
   const [linearRetrying, setLinearRetrying] = useState(false);
   const [clockify, setClockify] = useState<ClockifyConnections>(EMPTY_CLOCKIFY);
+  const [figma, setFigma] = useState<FigmaConnections>({ connections: [] });
   const [notion, setNotion] = useState<NotionConnections>(EMPTY_NOTION);
   const [clockifyLoadError, setClockifyLoadError] = useState(false);
   const [clockifyRetrying, setClockifyRetrying] = useState(false);
@@ -96,11 +99,12 @@ const PluginsContent: React.FC<PluginsContentProps> = ({
     const linearConnections = webUiBrowserMode
       ? ipcBridge.extensions.getLinearConnections.invoke()
       : ipcBridge.extensions.migrateLegacyLinearConnection.invoke();
-    const [extensionsResult, linearResult, clockifyResult, notionResult] = await Promise.allSettled([
+    const [extensionsResult, linearResult, clockifyResult, notionResult, figmaResult] = await Promise.allSettled([
       ipcBridge.extensions.getLoadedExtensions.invoke(),
       linearConnections,
       ipcBridge.extensions.getClockifyConnections.invoke(),
       ipcBridge.extensions.getNotionConnections.invoke(),
+      ipcBridge.extensions.getFigmaConnections.invoke(),
     ]);
     if (extensionsResult.status === 'fulfilled') {
       setExtensions(normalizePluginCatalog(extensionsResult.value ?? []));
@@ -123,8 +127,13 @@ const PluginsContent: React.FC<PluginsContentProps> = ({
       console.error('[PluginsContent] Failed to load Clockify connections:', clockifyResult.reason);
       setClockifyLoadError(true);
     }
+    setFigma(figmaResult.status === 'fulfilled' ? (figmaResult.value ?? { connections: [] }) : { connections: [] });
     setNotion(notionResult.status === 'fulfilled' ? (notionResult.value ?? EMPTY_NOTION) : EMPTY_NOTION);
-    if ([extensionsResult, linearResult, clockifyResult, notionResult].some((result) => result.status === 'rejected')) {
+    if (
+      [extensionsResult, linearResult, clockifyResult, notionResult, figmaResult].some(
+        (result) => result.status === 'rejected'
+      )
+    ) {
       Message.error(t('settings.pluginsLoadError'));
     }
     setLoading(false);
@@ -672,6 +681,8 @@ const PluginsContent: React.FC<PluginsContentProps> = ({
           />
         ) : selectedPlugin.name === 'notion' ? (
           <NotionAccounts enabled={selectedPlugin.enabled} onChange={setNotion} />
+        ) : selectedPlugin.name === 'figma' ? (
+          <FigmaAccounts enabled={selectedPlugin.enabled} onChange={setFigma} />
         ) : selectedPlugin.name === 'computer-use' ? (
           <ComputerUseSetup webUiBrowserMode={webUiBrowserMode} />
         ) : (
@@ -821,6 +832,13 @@ const PluginsContent: React.FC<PluginsContentProps> = ({
                       <Tag>
                         {t('settings.pluginAccountCount', {
                           count: notion.connections.filter((connection) => connection.status === 'connected').length,
+                        })}
+                      </Tag>
+                    )}
+                    {extension.name === 'figma' && figma.connections.length > 0 && (
+                      <Tag>
+                        {t('settings.pluginAccountCount', {
+                          count: figma.connections.filter((item) => item.status === 'connected').length,
                         })}
                       </Tag>
                     )}

@@ -30,6 +30,7 @@ const bridge = vi.hoisted(() => ({
   linearList: vi.fn(),
   clockify: vi.fn(),
   notion: vi.fn(),
+  figma: vi.fn(),
   notionDisconnect: vi.fn(),
   enable: vi.fn(),
   disable: vi.fn(),
@@ -55,6 +56,7 @@ vi.mock('@/common', () => ({
       getLinearConnections: { invoke: bridge.linearList },
       getClockifyConnections: { invoke: bridge.clockify },
       getNotionConnections: { invoke: bridge.notion },
+      getFigmaConnections: { invoke: bridge.figma },
       disconnectNotionConnection: { invoke: bridge.notionDisconnect },
       enableExtension: { invoke: bridge.enable },
       disableExtension: { invoke: bridge.disable },
@@ -151,6 +153,7 @@ beforeEach(() => {
   bridge.linearList.mockResolvedValue({ connections: [] });
   bridge.clockify.mockResolvedValue({ connections: [] });
   bridge.notion.mockResolvedValue({ connections: [] });
+  bridge.figma.mockResolvedValue({ connections: [] });
   bridge.enable.mockResolvedValue(undefined);
   bridge.disable.mockResolvedValue(undefined);
   bridge.install.mockResolvedValue({

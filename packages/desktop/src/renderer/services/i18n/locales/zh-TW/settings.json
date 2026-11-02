@@ -1789,5 +1789,27 @@
     "unavailable": "找不到可用的 USB 安全金鑰。請連接金鑰後重新檢查。",
     "unsupported": "此金鑰無法滿足驗證要求。",
     "noCredential": "此金鑰上找不到相符的憑證。"
+  },
+  "figma": {
+    "accounts": "Figma 帳戶",
+    "description": "使用獨立帳戶檢視設計、匯出圖片和管理留言。編輯畫布需要 Figma 官方 MCP。",
+    "connect": "連接帳戶",
+    "reconnect": "重新連接",
+    "disconnect": "中斷連接",
+    "disconnectConfirm": "中斷此帳戶並刪除已儲存的權杖？",
+    "enableFirst": "請先啟用 Figma 再連接帳戶。",
+    "loadFailed": "無法載入 Figma 帳戶。",
+    "failed": "無法連接 Figma 帳戶，請檢查權杖後重試。",
+    "empty": "尚未連接 Figma 帳戶。",
+    "token": "個人存取權杖",
+    "tokenHelp": "在 Figma → Settings → Security 中建立權杖。必要：current_user:read。設計：file_content:read；資料夾：folders:read；留言：file_comments:read/write。權杖將加密儲存。",
+    "browserHelp": "也可以請代理連接內建瀏覽器中已登入的 Figma 帳戶。產生的權杖會私密匯入，請勿將權杖貼到聊天中。",
+    "selectionHelp": "每次操作請選擇帳戶。如果有多個符合的帳戶，代理會詢問使用哪一個。",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "已中斷",
+      "reconnect_required": "需要重新連接",
+      "error": "錯誤"
+    }
   }
 }

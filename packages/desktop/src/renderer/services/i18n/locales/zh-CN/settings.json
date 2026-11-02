@@ -1788,5 +1788,27 @@
     "unavailable": "未找到可用的 USB 安全密钥。请连接密钥后重新检查。",
     "unsupported": "此密钥无法满足身份验证请求。",
     "noCredential": "此密钥上未找到匹配的凭据。"
+  },
+  "figma": {
+    "accounts": "Figma 账户",
+    "description": "使用独立账户查看设计、导出图片和管理评论。编辑画布需要 Figma 官方 MCP。",
+    "connect": "连接账户",
+    "reconnect": "重新连接",
+    "disconnect": "断开连接",
+    "disconnectConfirm": "断开此账户并删除已保存的令牌？",
+    "enableFirst": "请先启用 Figma 再连接账户。",
+    "loadFailed": "无法加载 Figma 账户。",
+    "failed": "无法连接 Figma 账户，请检查令牌后重试。",
+    "empty": "尚未连接 Figma 账户。",
+    "token": "个人访问令牌",
+    "tokenHelp": "在 Figma → Settings → Security 中创建令牌。必需：current_user:read。设计：file_content:read；文件夹：folders:read；评论：file_comments:read/write。令牌将加密保存。",
+    "browserHelp": "也可以请代理连接内置浏览器中已登录的 Figma 账户。生成的令牌会私密导入，请勿将令牌粘贴到聊天中。",
+    "selectionHelp": "每次操作请选择账户。如果有多个匹配账户，代理会询问使用哪一个。",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "已断开",
+      "reconnect_required": "需要重新连接",
+      "error": "错误"
+    }
   }
 }

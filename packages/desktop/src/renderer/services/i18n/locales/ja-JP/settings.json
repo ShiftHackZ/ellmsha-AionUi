@@ -1789,5 +1789,27 @@
     "unavailable": "使用可能な USB キーがありません。接続して再確認してください。",
     "unsupported": "このキーは認証要求を満たせません。",
     "noCredential": "このキーに一致する資格情報がありません。"
+  },
+  "figma": {
+    "accounts": "Figma アカウント",
+    "description": "個別のアカウントでデザインの確認、画像の書き出し、コメントの管理ができます。キャンバスの編集には Figma 公式 MCP が必要です。",
+    "connect": "アカウントを接続",
+    "reconnect": "再接続",
+    "disconnect": "切断",
+    "disconnectConfirm": "このアカウントを切断し、保存済みトークンを削除しますか？",
+    "enableFirst": "アカウントを接続するには Figma を有効にしてください。",
+    "loadFailed": "Figma アカウントを読み込めませんでした。",
+    "failed": "Figma アカウントに接続できませんでした。トークンを確認して再試行してください。",
+    "empty": "接続済みの Figma アカウントはありません。",
+    "token": "個人アクセストークン",
+    "tokenHelp": "Figma → Settings → Security でトークンを作成します。必須：current_user:read。デザイン：file_content:read、フォルダー：folders:read、コメント：file_comments:read/write。トークンは暗号化して保存されます。",
+    "browserHelp": "アプリ内ブラウザーでログイン中の Figma アカウントの接続をエージェントに依頼することもできます。生成したトークンは非公開で取り込まれます。チャットにトークンを貼り付けないでください。",
+    "selectionHelp": "操作ごとにアカウントを選択してください。複数のアカウントが該当する場合、エージェントが確認します。",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "未接続",
+      "reconnect_required": "再接続が必要",
+      "error": "エラー"
+    }
   }
 }

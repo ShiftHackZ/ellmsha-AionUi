@@ -1811,5 +1811,27 @@
     "unavailable": "No usable USB security key found. Connect your key and check again.",
     "unsupported": "This key cannot satisfy the authentication request.",
     "noCredential": "No matching credential was found on this key."
+  },
+  "figma": {
+    "accounts": "Figma accounts",
+    "description": "Inspect designs, export images and manage comments with separate accounts. Canvas editing requires Figma’s official MCP.",
+    "connect": "Connect account",
+    "reconnect": "Reconnect",
+    "disconnect": "Disconnect",
+    "disconnectConfirm": "Disconnect this account and remove its saved token?",
+    "enableFirst": "Enable Figma to connect an account.",
+    "loadFailed": "Could not load Figma accounts.",
+    "failed": "Could not connect the Figma account. Check the token and try again.",
+    "empty": "No Figma accounts connected.",
+    "token": "Personal access token",
+    "tokenHelp": "Create a token in Figma → Settings → Security. Required: current_user:read. Add file_content:read for designs, folders:read for folders, file_comments:read/write for comments. Tokens are stored encrypted.",
+    "browserHelp": "You can also ask your agent to connect the Figma account signed in to the in-app browser. It imports the generated token privately; never paste tokens into chat.",
+    "selectionHelp": "Choose the account for each operation. If several accounts match, the agent asks which one to use.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Disconnected",
+      "reconnect_required": "Reconnect required",
+      "error": "Error"
+    }
   }
 }

@@ -1,3 +1,4 @@
+import figmaLogo from '@/renderer/assets/plugin-logos/figma.svg';
 import clockifyLogo from '@/renderer/assets/plugin-logos/clockify.svg';
 import linearLogo from '@/renderer/assets/plugin-logos/linear.svg';
 import notionLogo from '@/renderer/assets/plugin-logos/notion.svg';
@@ -21,6 +22,8 @@ const iconClass = (name: string): string => {
 
 const brandLogo = (name: string): { backgroundColor: string; src: string; scale: number } | undefined => {
   switch (name.toLowerCase()) {
+    case 'figma':
+      return { backgroundColor: '#ffffff', src: figmaLogo, scale: 0.7 };
     case 'clockify':
       return { backgroundColor: '#03a9f4', src: clockifyLogo, scale: 1 };
     case 'notion':

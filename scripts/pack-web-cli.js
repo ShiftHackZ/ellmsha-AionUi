@@ -138,6 +138,10 @@ for (const [name, source] of [
   }
 }
 fs.cpSync(path.join(integrationRoot, 'plugins'), path.join(tarballContentDir, 'plugins'), { recursive: true });
+for (const resource of ['figma/aion-extension.json', 'figma/skills/figma-design-work/SKILL.md']) {
+  if (!fs.statSync(path.join(tarballContentDir, 'plugins', resource)).isFile())
+    throw new Error('Packaged Figma plugin is incomplete');
+}
 fs.cpSync(mobileMcp.runtimeRoot, path.join(tarballContentDir, 'mobile-mcp'), { recursive: true });
 verifyMobileMcpRuntime({
   runtimeRoot: path.join(tarballContentDir, 'mobile-mcp'),

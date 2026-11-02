@@ -1790,5 +1790,27 @@
     "unavailable": "Nenhuma chave USB disponível. Conecte a chave e verifique novamente.",
     "unsupported": "Esta chave não atende à solicitação de autenticação.",
     "noCredential": "Nenhuma credencial correspondente encontrada nesta chave."
+  },
+  "figma": {
+    "accounts": "Contas do Figma",
+    "description": "Consulte designs, exporte imagens e gerencie comentários com contas separadas. A edição da tela exige o MCP oficial do Figma.",
+    "connect": "Conectar conta",
+    "reconnect": "Reconectar",
+    "disconnect": "Desconectar",
+    "disconnectConfirm": "Desconectar esta conta e remover o token salvo?",
+    "enableFirst": "Ative o Figma para conectar uma conta.",
+    "loadFailed": "Não foi possível carregar as contas do Figma.",
+    "failed": "Não foi possível conectar a conta do Figma. Verifique o token e tente novamente.",
+    "empty": "Nenhuma conta do Figma conectada.",
+    "token": "Token de acesso pessoal",
+    "tokenHelp": "Crie um token em Figma → Settings → Security. Obrigatório: current_user:read. Designs: file_content:read; pastas: folders:read; comentários: file_comments:read/write. Tokens são armazenados criptografados.",
+    "browserHelp": "Você também pode pedir ao agente para conectar a conta do Figma no navegador integrado. O token gerado é importado de forma privada; nunca cole tokens no chat.",
+    "selectionHelp": "Escolha a conta para cada operação. Se houver várias opções, o agente perguntará qual usar.",
+    "status": {
+      "connected": "Connected · last verified",
+      "disconnected": "Desconectada",
+      "reconnect_required": "Reconexão necessária",
+      "error": "Erro"
+    }
   }
 }
