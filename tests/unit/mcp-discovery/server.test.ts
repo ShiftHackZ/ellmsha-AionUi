@@ -81,11 +81,10 @@ process.stdin.on('end',()=>process.exit(0));
     }
     try {
       await client.connect(transport);
-      expect((await client.listTools()).tools.find((tool) => tool.name === 'qa_probe')?.inputSchema.properties).toEqual(
-        {
-          proof: { type: 'string' },
-        }
-      );
+      expect((await client.listTools()).tools.find((tool) => tool.name === 'qa_probe')?.inputSchema).toEqual({
+        type: 'object',
+        additionalProperties: true,
+      });
       await client.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'qa_probe' } });
       const result = await client.callTool({ name: 'qa_probe', arguments: { proof: 'callback' } });
       expect(JSON.stringify(result)).toContain('file:///qa-only');

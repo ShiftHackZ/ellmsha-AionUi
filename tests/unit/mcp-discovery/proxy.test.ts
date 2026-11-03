@@ -25,7 +25,9 @@ const setup = async (definitions?: Tool[]) => {
       description: `Fixture ${index}. ${'Large integration documentation. '.repeat(30)}`,
       inputSchema: {
         type: 'object',
-        properties: { proof: { type: 'string', description: 'Required proof' } },
+        properties: {
+          proof: { type: 'string', description: `Required proof. ${'Schema documentation. '.repeat(100)}` },
+        },
         required: ['proof'],
         additionalProperties: false,
       },
@@ -36,15 +38,19 @@ const setup = async (definitions?: Tool[]) => {
     { name: 'fixture', version: '1' },
     { capabilities: { tools: { listChanged: true }, resources: {} }, instructions: 'QA_INTEGRATION_DOCUMENTATION' }
   );
+  const calls: Array<{ name: string; arguments?: Record<string, unknown> }> = [];
   fixture.setRequestHandler(ListToolsRequestSchema, async (request) => ({
     tools: tools.slice(request.params?.cursor ? 200 : 0, request.params?.cursor ? undefined : 200),
     ...(request.params?.cursor ? {} : { nextCursor: 'page2' }),
   }));
-  fixture.setRequestHandler(CallToolRequestSchema, async (request) => ({
-    content: [{ type: 'text', text: 'QA_EXECUTED' }],
-    structuredContent: { proof: request.params.arguments?.proof },
-    _meta: { fixture: true },
-  }));
+  fixture.setRequestHandler(CallToolRequestSchema, async (request) => {
+    calls.push(request.params);
+    return {
+      content: [{ type: 'text', text: 'QA_EXECUTED' }],
+      structuredContent: { proof: request.params.arguments?.proof },
+      _meta: { fixture: true },
+    };
+  });
   fixture.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [{ name: 'qa-skill', uri: 'fixture://qa-skill' }],
   }));
@@ -61,17 +67,20 @@ const setup = async (definitions?: Tool[]) => {
   await proxy.connect(c);
   await downstream.connect(d);
   peers.push(downstream, proxy, upstream, fixture);
-  return { tools, downstream, fixture };
+  return { tools, downstream, fixture, calls };
 };
-it('sends compact schemas for 293 tools, without eagerly injecting integration or skill bodies', async () => {
+it('keeps a schema-heavy catalog compact before and after discovery without changing tool identities', async () => {
   const { tools, downstream } = await setup();
   const listed = await downstream.listTools();
-  expect(JSON.stringify(listed).length).toBeLessThan(JSON.stringify(tools).length / 2);
+  expect(Buffer.byteLength(JSON.stringify(listed))).toBeLessThan(120_000);
+  expect(listed.tools.slice(1).map((tool) => tool.name)).toEqual(tools.map((tool) => tool.name));
   expect(listed.tools.find((tool) => tool.name === 'qa_tool_292')).toMatchObject({
-    inputSchema: tools[292].inputSchema,
+    inputSchema: { type: 'object', additionalProperties: true },
     annotations: { destructiveHint: true },
   });
-  expect(JSON.stringify(listed)).not.toMatch(/QA_SKILL_BODY|QA_INTEGRATION_DOCUMENTATION/);
+  expect(JSON.stringify(listed)).not.toMatch(/Schema documentation|QA_SKILL_BODY|QA_INTEGRATION_DOCUMENTATION/);
+  await downstream.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'qa_tool_292' } });
+  expect(await downstream.listTools()).toEqual(listed);
 });
 it('loads only the selected schema, executes the original name/arguments and preserves structured results', async () => {
   const { tools, downstream } = await setup();
@@ -80,8 +89,7 @@ it('loads only the selected schema, executes the original name/arguments and pre
     arguments: { query: 'qa_tool_292', limit: 1 },
   });
   expect(JSON.stringify(search)).toContain('QA_INTEGRATION_DOCUMENTATION');
-  const listed = await downstream.listTools();
-  expect(listed.tools.find((tool) => tool.name === 'qa_tool_292')).toEqual(tools[292]);
+  expect(JSON.parse((search.content as Array<{ text: string }>)[0].text).tools).toEqual([tools[292]]);
   const result = await downstream.callTool({ name: 'qa_tool_292', arguments: { proof: 'selected-proof' } });
   expect(result).toMatchObject({
     content: [{ text: 'QA_EXECUTED' }],
@@ -89,13 +97,26 @@ it('loads only the selected schema, executes the original name/arguments and pre
     _meta: { fixture: true },
   });
 });
+it('preserves tool metadata and execution hints while deferring input and output schemas', async () => {
+  const metadata = {
+    name: 'embedded_app',
+    title: 'Embedded app',
+    icons: [{ src: 'https://fixture.invalid/icon.svg' }],
+    execution: { taskSupport: 'optional' as const },
+    _meta: { ui: { resourceUri: 'ui://fixture/view' } },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+  };
+  const { downstream } = await setup([{ ...metadata, inputSchema: { type: 'object' } }]);
+  expect((await downstream.listTools()).tools.find((tool) => tool.name === metadata.name)).toMatchObject(metadata);
+});
 it('keeps discovery state separate for each agent and rejects missing/unknown tools', async () => {
   const one = await setup();
   const two = await setup();
   await one.downstream.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'qa_tool_292' } });
-  expect((await two.downstream.listTools()).tools.find((tool) => tool.name === 'qa_tool_292')?.description).not.toEqual(
-    one.tools[292].description
-  );
+  await expect(
+    two.downstream.callTool({ name: 'qa_tool_292', arguments: { proof: 'not-discovered-here' } })
+  ).rejects.toThrow(/Load the current input schema/);
+  expect(two.calls).toEqual([]);
   await expect(one.downstream.callTool({ name: 'ellmsha_search_tools', arguments: {} })).rejects.toThrow();
   await expect(one.downstream.callTool({ name: 'unknown_tool', arguments: {} })).rejects.toThrow();
   await expect(one.downstream.callTool({ name: 'qa_tool_292', arguments: {} })).rejects.toThrow(/schema/);
@@ -120,9 +141,22 @@ it('invalidates a previously loaded schema after an upstream catalog change', as
   // A second search refreshes even for clients ignoring list_changed notifications.
   const result = await downstream.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'qa_tool_292' } });
   expect(JSON.stringify(result)).toContain('revision2');
-  expect(
-    (await downstream.listTools()).tools.find((tool) => tool.name === 'qa_tool_292')?.inputSchema.properties
-  ).toHaveProperty('revision2');
+  expect((await downstream.listTools()).tools.find((tool) => tool.name === 'qa_tool_292')?.inputSchema).toEqual({
+    type: 'object',
+    additionalProperties: true,
+  });
+});
+
+it('rejects undiscovered, changed and removed tools before forwarding any call', async () => {
+  const { downstream, tools, calls } = await setup();
+  const call = () => downstream.callTool({ name: 'qa_tool_292', arguments: { proof: 'guarded' } });
+  await expect(call()).rejects.toThrow(/Load the current input schema/);
+  await downstream.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'qa_tool_292' } });
+  tools[292] = { ...tools[292], inputSchema: { type: 'object', properties: { revision2: { type: 'string' } } } };
+  await expect(call()).rejects.toThrow(/Load the current input schema/);
+  tools.pop();
+  await expect(call()).rejects.toThrow(/not in the authorized integration catalog/);
+  expect(calls).toEqual([]);
 });
 
 it('retains resource-only MCP skill servers that do not offer tools/list', async () => {
@@ -167,6 +201,7 @@ it('validates revised input schemas even when the upstream reuses the same schem
 
 it('propagates cancellation to an upstream tool instead of leaving detached work', async () => {
   const { downstream, fixture } = await setup();
+  await downstream.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'qa_tool_292' } });
   let cancelled = false;
   let start!: () => void;
   const started = new Promise<void>((resolve) => {
@@ -196,6 +231,39 @@ it('propagates cancellation to an upstream tool instead of leaving detached work
   await expect.poll(() => cancelled).toBe(true);
 });
 
+it('cancels an in-flight schema refresh without executing the pending tool', async () => {
+  const { downstream, fixture, calls } = await setup();
+  await downstream.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'qa_tool_292' } });
+  let cancelled = false;
+  let start!: () => void;
+  const started = new Promise<void>((resolve) => {
+    start = resolve;
+  });
+  fixture.setRequestHandler(ListToolsRequestSchema, async (_request, extra) => {
+    await new Promise<void>((resolve) => {
+      extra.signal.addEventListener(
+        'abort',
+        () => {
+          cancelled = true;
+          resolve();
+        },
+        { once: true }
+      );
+      start();
+    });
+    return { tools: [] };
+  });
+  const controller = new AbortController();
+  const pending = downstream.callTool({ name: 'qa_tool_292', arguments: { proof: 'cancel' } }, undefined, {
+    signal: controller.signal,
+  });
+  await started;
+  controller.abort();
+  await expect(pending).rejects.toThrow();
+  await expect.poll(() => cancelled).toBe(true);
+  expect(calls).toEqual([]);
+});
+
 it('finds tools for the actual multi-keyword queries that failed in skcockpit', async () => {
   const { downstream } = await setup([
     { name: 'browser_tabs_list', description: 'List browser tabs', inputSchema: { type: 'object' } },
@@ -223,7 +291,7 @@ it('finds tools for the actual multi-keyword queries that failed in skcockpit', 
   expect(await search('computer use screenshot inspect desktop window')).toContain('get_app_state');
 });
 
-it('advertises real argument types before discovery, including parameters named description', async () => {
+it('returns exact argument types on discovery and rejects guessed types, including parameters named description', async () => {
   const inputSchema: Tool['inputSchema'] = {
     type: 'object',
     properties: { app: { type: 'string' }, element_index: { type: 'string' }, description: { type: 'string' } },
@@ -231,7 +299,8 @@ it('advertises real argument types before discovery, including parameters named 
     additionalProperties: false,
   };
   const { downstream } = await setup([{ name: 'click', description: 'Click an app element', inputSchema }]);
-  expect((await downstream.listTools()).tools.find((tool) => tool.name === 'click')?.inputSchema).toEqual(inputSchema);
+  const search = await downstream.callTool({ name: 'ellmsha_search_tools', arguments: { query: 'click' } });
+  expect(JSON.parse((search.content as Array<{ text: string }>)[0].text).tools[0].inputSchema).toEqual(inputSchema);
   await expect(downstream.callTool({ name: 'click', arguments: { app: 'Arc', element_index: 280 } })).rejects.toThrow(
     /schema/
   );
