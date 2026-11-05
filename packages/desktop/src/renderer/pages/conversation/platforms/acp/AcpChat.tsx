@@ -28,6 +28,7 @@ import { useAcpMessage } from './useAcpMessage';
 
 const AcpChat: React.FC<{
   conversation_id: string;
+  skillProjectId?: string;
   workspace?: string;
   backend: string;
   session_mode?: string;
@@ -45,6 +46,7 @@ const AcpChat: React.FC<{
   forkCapability?: { at_turn: boolean };
 }> = ({
   conversation_id,
+  skillProjectId,
   workspace,
   backend,
   session_mode,
@@ -73,6 +75,7 @@ const AcpChat: React.FC<{
     <ConversationProvider
       value={{
         conversation_id: conversation_id,
+        skillProjectId,
         workspace,
         type: 'acp',
         cron_job_id,

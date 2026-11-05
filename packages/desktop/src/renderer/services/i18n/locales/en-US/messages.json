@@ -80,5 +80,14 @@
     "errorPointUnsupported": "This agent can only fork from the latest message",
     "errorUnsupported": "This agent does not support forking",
     "errorGeneric": "Fork failed: {{message}}"
+  },
+  "questions": {
+    "submit": "Send answers",
+    "other": "Your own answer",
+    "answered": "Answers sent.",
+    "dismissed": "Question dismissed.",
+    "failed": "Could not send the response. Try again.",
+    "notification": "A chat is waiting for your answer.",
+    "decline": "Decline"
   }
 }

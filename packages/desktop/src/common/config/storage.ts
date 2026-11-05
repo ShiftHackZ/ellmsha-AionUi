@@ -150,7 +150,7 @@ interface IChatConversation<T, Extra> {
   desc?: string;
   id: string;
   type: T;
-  extra: Extra;
+  extra: Extra & { tool_scope?: 'default' | 'session_only' };
   model: TProviderWithModel;
   status?: TChatConversationStatus | undefined;
   runtime?: TConversationRuntimeSummary;

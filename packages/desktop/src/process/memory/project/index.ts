@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, readdir, realpath, mkdir, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import type { ChatRuleMutation, ChatRuleScope } from '@/common/types/agent/chatRules';
 import { z } from 'zod';
 
 export const projectContextSchema = z.object({
@@ -76,24 +77,48 @@ export async function discoverRepositories(context: ProjectContext) {
   };
 }
 
-/** Resolve registered roots with a conversation-bound capability, never model-supplied paths. */
-export async function resolveProjectContext(): Promise<ProjectContext> {
-  const origin = process.env.AIONUI_GENERATION_CONTEXT_URL;
-  const token = process.env.AIONUI_GENERATION_TOKEN;
-  const conversation = process.env.AIONUI_CONVERSATION_ID;
-  if (!origin || !token || !conversation)
-    throw new Error('Project context requires an application chat. Restart the chat.');
-  const response = await fetch(new URL('/api/memory/project/context', origin), {
+const chatBinding = () => ({
+  origin: process.env.AIONUI_GENERATION_CONTEXT_URL,
+  token: process.env.AIONUI_GENERATION_TOKEN,
+  conversationId: process.env.AIONUI_CONVERSATION_ID,
+});
+
+export function hasMemoryChatBinding(): boolean {
+  const { origin, token, conversationId } = chatBinding();
+  return Boolean(origin && token && conversationId);
+}
+
+/** The host binds this bearer to one chat. The caller cannot select another conversation. */
+export async function callMemoryChatHost(
+  route: 'project/context' | 'rules/read' | `rules/${ChatRuleScope}/${'write' | 'delete'}` | 'question',
+  mutation?: ChatRuleMutation,
+  questions?: unknown[],
+  cancellation?: AbortSignal
+): Promise<unknown> {
+  const { origin, token, conversationId } = chatBinding();
+  if (!origin || !token || !conversationId)
+    throw new Error('Memory context requires an application chat. Restart the chat.');
+  const response = await fetch(new URL(`/api/memory/${route}`, origin), {
     method: 'POST',
     redirect: 'error',
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.any([
+      AbortSignal.timeout(route === 'question' ? 10 * 60_000 : route.startsWith('rules') ? 35_000 : 10_000),
+      ...(cancellation ? [cancellation] : []),
+    ]),
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ conversation_id: conversation }),
+    body: JSON.stringify({ conversation_id: conversationId, mutation, questions }),
   });
-  if (!response.ok) throw new Error(`Project context unavailable (HTTP ${response.status})`);
+  if (response.status === 409 && route.startsWith('rules/') && route !== 'rules/read')
+    throw new Error('Rule conflict. Read the current revision with tdai_rules_read before retrying.');
+  if (!response.ok) throw new Error(`Memory context unavailable (HTTP ${response.status})`);
   const envelope = await response.json();
-  if (!envelope.success) throw new Error('Project context unavailable');
-  return projectContextSchema.parse(envelope.data);
+  if (!envelope.success) throw new Error('Memory context unavailable');
+  return envelope.data;
+}
+
+/** Resolve registered roots with a conversation-bound capability, never model-supplied paths. */
+export async function resolveProjectContext(): Promise<ProjectContext> {
+  return projectContextSchema.parse(await callMemoryChatHost('project/context'));
 }
 
 /** Native desktop: grant snapshot access only after explicit project indexing.

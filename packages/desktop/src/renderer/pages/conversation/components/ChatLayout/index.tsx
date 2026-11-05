@@ -6,6 +6,7 @@ import { useResizableSplit } from '@/renderer/hooks/ui/useResizableSplit';
 import ChatTitleEditor from '@/renderer/pages/conversation/components/ChatTitleEditor';
 import MobileWorkspaceOverlay from './MobileWorkspaceOverlay';
 import WorkspacePanelHeader from './WorkspacePanelHeader';
+import { RulesTabButton } from './RulesTabButton';
 import { useContainerWidth } from '@/renderer/pages/conversation/hooks/useContainerWidth';
 import { useLayoutConstraints } from '@/renderer/pages/conversation/hooks/useLayoutConstraints';
 import { useTitleRename } from '@/renderer/pages/conversation/hooks/useTitleRename';
@@ -182,6 +183,23 @@ const ChatLayout: React.FC<{
     return () => observer.disconnect();
   }, [layout?.isMobile]);
 
+  // Project chats use the Explorer toolbar. Temporary chats may have no visible workspace.
+  const localRules = !previewHosted && conversation_id;
+  const headerActions = (
+    <>
+      {localRules && (!workspaceEnabled || rightSiderCollapsed) && <RulesTabButton />}
+      {props.headerExtra}
+    </>
+  );
+  const siderTitle = (
+    <div className='flex items-center justify-between gap-4px'>
+      {props.siderTitle}
+      {localRules && !rightSiderCollapsed && (
+        <RulesTabButton onOpen={isMobile ? () => setRightSiderCollapsed(true) : undefined} />
+      )}
+    </div>
+  );
+
   const desktopHeader = (
     <ArcoLayout.Header
       className={classNames(
@@ -214,15 +232,13 @@ const ChatLayout: React.FC<{
           }
         />
       </FlexFullContainer>
-      <div className='flex items-center gap-12px min-w-0 max-w-[75%]'>{props.headerExtra}</div>
+      <div className='flex items-center gap-12px min-w-0 max-w-[75%]'>{headerActions}</div>
     </ArcoLayout.Header>
   );
 
   const headerBlock = (
     <>
-      {layout?.isMobile
-        ? mobileActionsSlot && props.headerExtra && createPortal(props.headerExtra, mobileActionsSlot)
-        : desktopHeader}
+      {layout?.isMobile ? mobileActionsSlot && createPortal(headerActions, mobileActionsSlot) : desktopHeader}
       {props.tabsSlot}
     </>
   );
@@ -298,7 +314,7 @@ const ChatLayout: React.FC<{
                     lineStyle: { width: '2px' },
                   })}
                 <div className={classNames('h-full w-full overflow-hidden', isDesktop ? '' : 'rounded-[15px]')}>
-                  <PreviewPanel />
+                  <PreviewPanel conversationId={conversation_id} />
                 </div>
               </div>
             )}
@@ -327,7 +343,7 @@ const ChatLayout: React.FC<{
               workspacePath={workspacePath}
               isTemporaryWorkspace={isTemporaryWorkspace}
             >
-              {props.siderTitle}
+              {siderTitle}
             </WorkspacePanelHeader>
             <ArcoLayout.Content style={{ height: `calc(100% - ${WORKSPACE_HEADER_HEIGHT}px)` }}>
               {props.sider}
@@ -342,7 +358,7 @@ const ChatLayout: React.FC<{
             setRightSiderCollapsed={setRightSiderCollapsed}
             workspaceWidthPx={workspaceWidthPx}
             mobileWorkspaceHandleRight={mobileWorkspaceHandleRight}
-            siderTitle={props.siderTitle}
+            siderTitle={siderTitle}
             sider={props.sider}
             workspacePath={workspacePath}
             isTemporaryWorkspace={isTemporaryWorkspace}

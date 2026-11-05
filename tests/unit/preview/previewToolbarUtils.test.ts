@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { shouldShowDownload } from '@renderer/pages/conversation/Preview/components/PreviewPanel/previewToolbarUtils';
 
 describe('shouldShowDownload', () => {
-  it('does not offer file download for a statistics tab', () => {
-    expect(shouldShowDownload('usage', false)).toBe(false);
+  it.each(['usage', 'rules'])('hides file downloads for the %s tab', (type) => {
+    expect(shouldShowDownload(type, false)).toBe(false);
   });
   it('hides download for on-disk code files', () => {
     expect(shouldShowDownload('code', true)).toBe(false);

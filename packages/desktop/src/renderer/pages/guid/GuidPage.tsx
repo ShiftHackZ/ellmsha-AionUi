@@ -14,7 +14,11 @@ import type { AssistantDetail } from '@/common/types/agent/assistantTypes';
 
 import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
 import { appendPromptToDraft } from '@/renderer/hooks/chat/useSendBoxDraft';
-import { getFuzzyMatchIndices, useSlashCommandController } from '@/renderer/hooks/chat/useSlashCommandController';
+import {
+  getActiveSlashQuery,
+  getFuzzyMatchIndices,
+  useSlashCommandController,
+} from '@/renderer/hooks/chat/useSlashCommandController';
 import { openExternalUrl } from '@/renderer/utils/platform';
 import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
 import AssistantSelectionArea from './components/AssistantSelectionArea';
@@ -44,6 +48,8 @@ import { Button, ConfigProvider } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useProjectSkills } from '@/renderer/hooks/chat/useProjectSkills';
+import useSWRImmutable from 'swr/immutable';
 import useSWR from 'swr';
 import styles from './index.module.css';
 
@@ -160,7 +166,15 @@ const GuidPage: React.FC = () => {
   const guidInput = useGuidInput({
     locationState: location.state as { workspace?: string } | null,
   });
+  const [pickedWorkspace, setPickedWorkspace] = useState('');
+  const workspace = guidInput.dir;
+  const { data: skillProjectId } = useSWRImmutable(
+    workspace ? (['guid-workspace-project', workspace, pickedWorkspace === workspace] as const) : null,
+    ([, dir, picked]) =>
+      (picked ? ipcBridge.project.selectWorkspace : ipcBridge.project.workspaceProject).invoke({ workspace: dir })
+  );
   const [caretPosition, setCaretPosition] = useState(guidInput.input.length);
+  const projectSkills = useProjectSkills(skillProjectId, Boolean(getActiveSlashQuery(guidInput.input, caretPosition)));
   const [caretRequest, setCaretRequest] = useState<{ value: string; position: number }>();
   // The `/open` builtin + attach picker browse the backend machine's filesystem
   // (native dialog / server-fs) → `local` refs, not uploads.
@@ -204,9 +218,13 @@ const GuidPage: React.FC = () => {
     resolvedAssistantDefaults.disabledBuiltinSkillIds,
     resolvedAssistantDefaults.skillIds,
   ]);
+  const commandSkillNames = useMemo(
+    () => [...new Set([...selectedSkillNames, ...(projectSkills ?? []).map((s) => s.name)])],
+    [selectedSkillNames, projectSkills]
+  );
   const skillDescriptionByName = useMemo(
-    () => new Map(allSkills.map((skill) => [skill.name, skill.description])),
-    [allSkills]
+    () => new Map([...allSkills, ...(projectSkills ?? [])].map((skill) => [skill.name, skill.description])),
+    [allSkills, projectSkills]
   );
   const guidBuiltinSlashCommands = useMemo<SlashCommandItem[]>(
     () => [
@@ -224,14 +242,14 @@ const GuidPage: React.FC = () => {
       buildGuidSlashCommands({
         builtinCommands: guidBuiltinSlashCommands,
         agentCommands: agentSelection.currentAgentAvailableCommands,
-        selectedSkills: selectedSkillNames,
+        selectedSkills: commandSkillNames,
         descriptionByName: skillDescriptionByName,
         skillFallbackDescription: t('conversation.skills.slashHint', { defaultValue: 'Skill' }),
       }),
     [
       agentSelection.currentAgentAvailableCommands,
       guidBuiltinSlashCommands,
-      selectedSkillNames,
+      commandSkillNames,
       skillDescriptionByName,
       t,
     ]
@@ -728,7 +746,7 @@ const GuidPage: React.FC = () => {
             onInputChange={handleInputChange}
             onCaretChange={setCaretPosition}
             caretRequest={caretRequest}
-            skillNames={selectedSkillNames}
+            skillNames={commandSkillNames}
             onKeyDown={handleInputKeyDown}
             onPaste={guidInput.onPaste}
             onFocus={() => {
@@ -748,7 +766,10 @@ const GuidPage: React.FC = () => {
             actionRow={actionRowNode}
             slashCommandMenu={slashCommandMenuNode}
             workspaceDir={guidInput.dir}
-            onSelectWorkspace={(dir) => guidInput.setDir(dir)}
+            onSelectWorkspace={(dir) => {
+              setPickedWorkspace(dir);
+              guidInput.setDir(dir);
+            }}
             onClearWorkspace={() => guidInput.setDir('')}
           />
 

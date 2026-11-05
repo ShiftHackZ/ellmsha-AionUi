@@ -68,7 +68,7 @@ export const ProjectPanelMobileOverlay: React.FC<ProjectPanelMobileOverlayProps>
           borderLeft: '1px solid var(--bg-3)',
         }}
       >
-        <ExplorerContainer projectId={projectId} />
+        <ExplorerContainer projectId={projectId} onOpenRules={onCollapse} />
       </div>
 
       {/* Floating collapse handle */}

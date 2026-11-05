@@ -80,5 +80,14 @@
     "errorPointUnsupported": "该智能体仅支持从最新消息分叉",
     "errorUnsupported": "该智能体不支持会话分叉",
     "errorGeneric": "分叉失败：{{message}}"
+  },
+  "questions": {
+    "submit": "发送回答",
+    "other": "自定义回答",
+    "answered": "回答已发送。",
+    "dismissed": "问题已关闭。",
+    "failed": "无法发送回答，请重试。",
+    "notification": "有一个对话正在等待你的回答。",
+    "decline": "拒绝"
   }
 }

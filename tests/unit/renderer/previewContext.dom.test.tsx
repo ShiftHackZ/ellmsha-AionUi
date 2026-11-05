@@ -117,3 +117,19 @@ describe('PreviewContext scope isolation (closePreviewIfScopeChanged)', () => {
     expect(ctx.tabs[0].title).toBe('A.md');
   });
 });
+
+it('keeps a single live Rules tab per preview and never restores an old chat’s rules', () => {
+  mount();
+  act(() => ctx.closePreviewIfScopeChanged('project-a'));
+  act(() => ctx.openPreview('', 'rules', { title: 'Rules' }));
+  act(() => ctx.openPreview('', 'rules', { title: 'Regeln' }));
+  expect(ctx.tabs).toHaveLength(1);
+  expect(ctx.activeTab?.content_type).toBe('rules');
+  act(() => ctx.openPreview('example', 'code', { title: 'a.ts' }, { replace: true }));
+  act(() => ctx.openPreview('', 'rules', { title: 'Rules' }));
+  expect(new Set(ctx.tabs.map((tab) => tab.id)).size).toBe(2);
+  expect(ctx.activeTab?.content_type).toBe('rules');
+  act(() => ctx.closePreviewIfScopeChanged('project-b'));
+  act(() => ctx.closePreviewIfScopeChanged('project-a'));
+  expect(ctx.tabs.some((tab) => tab.content_type === 'rules')).toBe(false);
+});

@@ -9,7 +9,7 @@ import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 const { layoutState } = vi.hoisted(() => ({
-  layoutState: { isMobile: false },
+  layoutState: { isMobile: false, skillProjectId: '' },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -20,6 +20,17 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    project: {
+      skills: {
+        invoke: async ({ project_id }: { project_id: string }) => [
+          {
+            name: 'repo-' + project_id,
+            description: 'Skill from ' + project_id,
+            source: './.agents/skills/skill/SKILL.md',
+          },
+        ],
+      },
+    },
     fs: {
       listAvailableSkills: { invoke: vi.fn().mockResolvedValue([]) },
       listWorkspaceFiles: { invoke: vi.fn().mockResolvedValue([]) },
@@ -40,6 +51,7 @@ vi.mock('@/renderer/hooks/context/ConversationContext', () => ({
     conversation_id: 'sendbox-prefill-conversation',
     type: 'acp',
     loadedSkills: ['review', 'skills:edit'],
+    skillProjectId: layoutState.skillProjectId,
   }),
 }));
 
@@ -218,6 +230,24 @@ describe('SendBox scheduled-task prefill', () => {
 });
 
 describe('SendBox slash editing', () => {
+  it('inserts the owning project’s skill and drops commands from a previous project', async () => {
+    layoutState.skillProjectId = 'first';
+    try {
+      const view = render(<SendBoxHarness initialValue='/repo-' />);
+      const textarea = screen.getByTestId('sendbox-input') as HTMLTextAreaElement;
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      fireEvent.select(textarea);
+      fireEvent.click(await screen.findByRole('option', { name: /repo-first/ }));
+      await waitFor(() => expect(textarea).toHaveValue('/repo-first '));
+      layoutState.skillProjectId = 'second';
+      view.rerender(<SendBoxHarness key='second' initialValue='/repo-' />);
+      await waitFor(() => expect(screen.getByRole('option', { name: /repo-second/ })).toBeVisible());
+      expect(screen.queryByText('Skill from first')).toBeNull();
+    } finally {
+      layoutState.skillProjectId = '';
+    }
+  });
+
   it('preserves surrounding text and restores the caret after selecting a skill', async () => {
     layoutState.isMobile = false;
     const { container } = render(<SendBoxHarness initialValue='Before /rev after' />);

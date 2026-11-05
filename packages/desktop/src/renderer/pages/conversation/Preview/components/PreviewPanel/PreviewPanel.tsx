@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { RulesPanel } from '../RulesPanel';
+import { useCurrentConversation } from '../../../explorer/currentConversationStore';
 import TerminalViewer from '../Terminal';
 import Usage from '@/renderer/components/Usage';
 import { ipcBridge } from '@/common';
@@ -58,7 +60,9 @@ import './preview.css';
  * 支持多 Tab 切换，每个 Tab 可以显示不同类型的内容
  * Supports multiple tabs, each tab can display different types of content
  */
-const PreviewPanel: React.FC = () => {
+const PreviewPanel: React.FC<{ conversationId?: string }> = ({ conversationId }) => {
+  const activeConversationId = useCurrentConversation();
+  const rulesConversationId = conversationId ?? activeConversationId;
   const { t } = useTranslation();
   const {
     isOpen,
@@ -458,6 +462,9 @@ const PreviewPanel: React.FC = () => {
     if (content_type === 'browser') return null;
     if (content_type === 'terminal' && metadata?.backgroundProcess)
       return <TerminalViewer key={displayTab?.id} {...metadata.backgroundProcess} />;
+    if (content_type === 'rules') {
+      return rulesConversationId ? <RulesPanel key={rulesConversationId} conversationId={rulesConversationId} /> : null;
+    }
     if (content_type === 'usage') return <Usage key={content} conversationId={content} />;
 
     // Markdown 模式 / Markdown mode

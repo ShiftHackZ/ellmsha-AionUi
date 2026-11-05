@@ -90,6 +90,7 @@ vi.mock('@/common', () => ({
       list: { invoke: vi.fn(async () => []) },
     },
     conversation: {
+      responseStream: makeTeamEventChannel('responseStream'),
       listChanged: makeTeamEventChannel('conversationListChanged'),
       confirmation: {
         list: { invoke: vi.fn(async () => []) },

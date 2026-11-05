@@ -48,7 +48,7 @@ export type BrowserNotificationDeps = {
    */
   shouldShow: () => boolean;
   show: (payload: NotificationPayload) => void;
-  bodyFor: (kind: NotificationKind) => string;
+  bodyFor: (kind: NotificationKind | 'question') => string;
 };
 
 /**
@@ -85,6 +85,12 @@ export const getPermissionRequestId = (message: StreamMessage): string | undefin
   return nonEmptyString(toolCall?.tool_call_id) ?? nonEmptyString(data?.id) ?? nonEmptyString(data?.call_id);
 };
 
+const isQuestionMessage = (message: StreamMessage): boolean => {
+  const data = asRecord(message.data);
+  const questions = data?.questions ?? asRecord(data?.tool_call)?.questions;
+  return Array.isArray(questions) && questions.length > 0;
+};
+
 export const getConfirmationNotificationId = (conversationId: string, requestId: string): string =>
   JSON.stringify([conversationId, requestId]);
 
@@ -107,7 +113,7 @@ export const createBrowserNotificationController = (deps: BrowserNotificationDep
       if (!deps.shouldShow()) return;
       notifiedConfirmationIds.add(notificationId);
       deps.show({
-        body: deps.bodyFor('confirmation'),
+        body: deps.bodyFor(isQuestionMessage(message) ? 'question' : 'confirmation'),
         conversationId,
         kind: 'confirmation',
         notificationId,

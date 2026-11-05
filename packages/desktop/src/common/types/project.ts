@@ -59,3 +59,6 @@ export type AttachFolderRequest = {
  */
 export const PROJECT_ERROR_DUPLICATE = 'project_explorer_duplicate';
 export const PROJECT_ERROR_OVERLAP = 'project_explorer_overlap';
+
+/** A user-invocable skill in an owned project root or nested repository. */
+export type ProjectSkillSummary = { name: string; description: string; source: string };

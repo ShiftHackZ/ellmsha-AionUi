@@ -266,11 +266,25 @@ export interface AcpPermissionOption {
   kind: 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always';
 }
 
+export interface AgentQuestion {
+  id: string;
+  header: string;
+  question: string;
+  options: Array<{ label: string; description?: string }>;
+  multiSelect: boolean;
+  isOther: boolean;
+  isSecret: boolean;
+  optional?: boolean;
+  allowEmpty?: boolean;
+  defaultLabels?: string[];
+}
+
 export interface AcpPermissionRequest {
   session_id: string;
   options: Array<AcpPermissionOption>;
   tool_call: {
     tool_call_id: string;
+    questions?: AgentQuestion[];
     raw_input?: {
       command?: string;
       description?: string;

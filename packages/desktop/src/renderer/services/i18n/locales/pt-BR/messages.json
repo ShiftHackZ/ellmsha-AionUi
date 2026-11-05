@@ -80,5 +80,14 @@
     "errorPointUnsupported": "Este agente só pode bifurcar a partir da mensagem mais recente",
     "errorUnsupported": "Este agente não oferece suporte a bifurcação",
     "errorGeneric": "Falha ao bifurcar: {{message}}"
+  },
+  "questions": {
+    "submit": "Enviar respostas",
+    "other": "Sua própria resposta",
+    "answered": "Respostas enviadas.",
+    "dismissed": "Pergunta dispensada.",
+    "failed": "Não foi possível enviar a resposta. Tente novamente.",
+    "notification": "Uma conversa está aguardando sua resposta.",
+    "decline": "Recusar"
   }
 }

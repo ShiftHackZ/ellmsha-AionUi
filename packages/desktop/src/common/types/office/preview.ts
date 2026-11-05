@@ -17,7 +17,8 @@ export type PreviewContentType =
   | 'url'
   | 'browser'
   | 'terminal'
-  | 'usage';
+  | 'usage'
+  | 'rules';
 
 export interface PreviewHistoryTarget {
   contentType: PreviewContentType;

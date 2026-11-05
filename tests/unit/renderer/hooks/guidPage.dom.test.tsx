@@ -141,6 +141,12 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    project: {
+      workspaceProject: {
+        invoke: async ({ workspace }: { workspace: string }) => (workspace === '/work/selected' ? 'project-a' : null),
+      },
+      selectWorkspace: { invoke: async () => 'project-a' },
+    },
     fs: {
       listAvailableSkills: { invoke: listAvailableSkillsMock },
     },
@@ -580,6 +586,36 @@ describe('GuidPage', () => {
       expect(capturedGuidSendDeps.at(-1)?.guidEnabledSkills).toEqual(['bmad-prd', 'ponytail']);
     });
     expect(capturedGuidActionRowProps.at(-1)?.enabledSkills).toEqual(['bmad-prd', 'ponytail']);
+  });
+
+  it('surfaces project skills in the new chat slash menu and drops them as soon as the workspace is cleared', async () => {
+    guidInputMock.dir = '/work/selected';
+    guidInputMock.input = '/repo';
+    swrMock.useSWRMock.mockImplementation((key) => ({
+      data:
+        Array.isArray(key) && key[0] === 'project-skills' && key[1] === 'project-a'
+          ? [
+              {
+                name: 'repo-review',
+                description: 'Review this repo',
+                source: './repo/.agents/skills/repo-review/SKILL.md',
+              },
+            ]
+          : null,
+    }));
+    try {
+      const view = render(<GuidPage />);
+      await waitFor(() => expect(capturedGuidInputCardProps.at(-1)?.skillNames).toContain('repo-review'));
+      expect(await screen.findByText('Review this repo')).toBeVisible();
+      fireEvent.click(screen.getByText('Review this repo'));
+      expect(guidInputMock.setInput).toHaveBeenCalledWith('/repo-review ');
+      guidInputMock.dir = '';
+      view.rerender(<GuidPage />);
+      await waitFor(() => expect(capturedGuidInputCardProps.at(-1)?.skillNames).not.toContain('repo-review'));
+    } finally {
+      guidInputMock.dir = '';
+      guidInputMock.input = '';
+    }
   });
 
   it('completes a skill at the reported caret while preserving the draft', async () => {

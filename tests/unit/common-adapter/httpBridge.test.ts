@@ -150,6 +150,24 @@ describe('httpBridge', () => {
   });
 
   describe('httpPost', () => {
+    it('sends a private rule body with browser CSRF protection while omitting it from logs', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.stubGlobal('window', {});
+      vi.stubGlobal('document', { cookie: 'aionui-csrf-token=browser-token' });
+      const debug = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const content = 'private test instruction';
+      await httpPost<void, { content: string }>('/api/conversations/chat/rules', undefined, {
+        omitBodyFromLogs: true,
+      }).invoke({ content });
+      expect(fetchSpy.mock.calls[0][1]).toMatchObject({
+        body: JSON.stringify({ content }),
+        credentials: 'include',
+        headers: { 'x-csrf-token': 'browser-token' },
+      });
+      expect(JSON.stringify(debug.mock.calls)).not.toContain(content);
+    });
+
     it('invoke serializes body and sends content-type header', async () => {
       const fetchSpy = vi.fn().mockResolvedValue(
         new Response(JSON.stringify({ data: { created: true } }), {

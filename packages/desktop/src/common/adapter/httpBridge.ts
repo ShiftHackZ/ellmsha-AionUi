@@ -169,6 +169,8 @@ export function isBackendHttpError(error: unknown): error is BackendHttpError {
  */
 export type HttpRequestOptions = {
   silentStatuses?: number[];
+  /** Free-form rule text may contain sensitive user instructions. */
+  omitBodyFromLogs?: boolean;
   /** Extra request headers merged on top of the default `Content-Type`. */
   headers?: Record<string, string>;
 };
@@ -215,7 +217,11 @@ export async function httpRequest<T>(
 
   console.debug(
     `[httpBridge] ${method} ${path}`,
-    body !== undefined ? JSON.stringify(redactForLog(body)).slice(0, 500) : '(no body)'
+    options?.omitBodyFromLogs
+      ? '(body omitted)'
+      : body !== undefined
+        ? JSON.stringify(redactForLog(body)).slice(0, 500)
+        : '(no body)'
   );
 
   const request: RequestInit = {
@@ -296,14 +302,15 @@ export function httpGet<Data, Params = undefined>(
 
 export function httpPost<Data, Params = undefined>(
   path: string | ((params: Params) => string),
-  mapBody?: (params: Params) => unknown
+  mapBody?: (params: Params) => unknown,
+  options?: HttpRequestOptions
 ): ProviderLike<Data, Params> {
   return {
     provider: () => {},
     invoke: (async (params?: Params) => {
       const resolvedPath = typeof path === 'function' ? path(params!) : path;
       const body = mapBody ? mapBody(params!) : params;
-      return httpRequest<Data>('POST', resolvedPath, body);
+      return httpRequest<Data>('POST', resolvedPath, body, options);
     }) as ProviderLike<Data, Params>['invoke'],
   };
 }

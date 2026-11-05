@@ -55,9 +55,11 @@ export const useDesktopTurnNotification = (): void => {
       // process applies the window-focus policy after this check.
       shouldShow: () => configService.get('system.notificationEnabled') !== false,
       bodyFor: (kind) =>
-        kind === 'confirmation'
-          ? t('settings.browserNotification.bodyConfirmation')
-          : t('settings.browserNotification.bodyTurnCompleted'),
+        kind === 'question'
+          ? t('messages.questions.notification')
+          : kind === 'confirmation'
+            ? t('settings.browserNotification.bodyConfirmation')
+            : t('settings.browserNotification.bodyTurnCompleted'),
       show: ({ body, conversationId, kind, notificationId }) => show(body, conversationId, kind, notificationId),
     });
 

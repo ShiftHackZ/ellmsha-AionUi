@@ -80,5 +80,14 @@
     "errorPointUnsupported": "Este agente solo puede bifurcar desde el último mensaje",
     "errorUnsupported": "Este agente no admite bifurcaciones",
     "errorGeneric": "Error al bifurcar: {{message}}"
+  },
+  "questions": {
+    "submit": "Enviar respuestas",
+    "other": "Tu propia respuesta",
+    "answered": "Respuestas enviadas.",
+    "dismissed": "Pregunta descartada.",
+    "failed": "No se pudo enviar la respuesta. Inténtalo de nuevo.",
+    "notification": "Un chat espera tu respuesta.",
+    "decline": "Rechazar"
   }
 }

@@ -14,7 +14,8 @@ import type { ProjectDetailDto, ProjectEntryDto } from '@/common/types/project';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
-vi.mock('@/renderer/pages/conversation/Preview', () => ({ usePreviewContext: () => ({ openPreview: () => {} }) }));
+const openPreview = vi.hoisted(() => vi.fn());
+vi.mock('@/renderer/pages/conversation/Preview', () => ({ usePreviewContext: () => ({ openPreview }) }));
 
 // Isolate the container from the real WS runtime.
 const initExplorerRuntime = vi.fn(() => ({}));
@@ -29,6 +30,7 @@ vi.mock('@/common', () => ({
 }));
 
 import { ExplorerContainer } from '@/renderer/pages/conversation/explorer/ExplorerContainer';
+import { setCurrentConversation } from '@/renderer/pages/conversation/explorer/currentConversationStore';
 import { resetExplorerStoreForTest } from '@/renderer/pages/conversation/explorer/explorerStore';
 
 const entry = (over: Partial<ProjectEntryDto>): ProjectEntryDto => ({
@@ -57,6 +59,8 @@ const renderContainer = (projectId: string) =>
 
 beforeEach(() => {
   resetExplorerStoreForTest();
+  setCurrentConversation(null);
+  openPreview.mockClear();
   initExplorerRuntime.mockClear();
   projectGet.mockReset();
   try {
@@ -100,6 +104,21 @@ describe('ExplorerContainer data integration', () => {
     expect(button).toHaveAttribute('aria-pressed', 'true');
 
     window.electronAPI = electronAPI;
+  });
+
+  it('opens Rules for the active chat beside Usage and reveals the tab on mobile', async () => {
+    projectGet.mockResolvedValue(detail([]));
+    const closeOverlay = vi.fn();
+    setCurrentConversation('chat-one');
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <ExplorerContainer projectId='p1' onOpenRules={closeOverlay} />
+      </SWRConfig>
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'conversation.rules.title' }));
+    expect(openPreview).toHaveBeenCalledWith('', 'rules', { title: 'conversation.rules.title' });
+    expect(closeOverlay).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'settings.usage.title' })).toBeInTheDocument();
   });
 
   it('fetches GET /projects/{id} and projects the returned roots into the tree', async () => {

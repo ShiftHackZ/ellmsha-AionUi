@@ -167,6 +167,21 @@ describe('TencentDB shared memory client', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('requires the active-rule editor in a bound chat and uses the protected route for other documents', async () => {
+    vi.stubEnv('AIONUI_TDAI_MEMORY_WORKSPACE', '/tmp/fixture-project');
+    vi.stubEnv('AIONUI_CONVERSATION_ID', 'chat');
+    vi.stubEnv('AIONUI_GENERATION_TOKEN', 'fixture');
+    vi.stubEnv('AIONUI_GENERATION_CONTEXT_URL', 'http://fixture/');
+    const fetchMock = vi.fn(async (_url: string) => response({ memory_id: 'document' }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(
+      client.writeMemory({ subject: 'new-rule', content: 'Instruction', kind: 'instruction' })
+    ).rejects.toThrow('tdai_project_rule_write');
+    expect(fetchMock).not.toHaveBeenCalled();
+    await client.writeScenario('knowledge/global/note.md', 'A fact');
+    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/v3\/scenario\/document-write$/);
+  });
+
   it('requires synchronous indexing and sends full content separately from its bounded excerpt', async () => {
     let request: Record<string, unknown> = {};
     vi.stubGlobal(

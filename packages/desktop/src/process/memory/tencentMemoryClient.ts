@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { resolveTencentGenerationContext } from './tencentGenerationContext';
-import type { ProjectContext } from './project';
+import { hasMemoryChatBinding, type ProjectContext } from './project';
 
 export type MemoryConfig = {
   gatewayUrl: string;
@@ -260,7 +260,10 @@ export class TencentMemoryClient {
     summary?: string,
     kind: 'episodic' | 'persona' | 'instruction' = 'episodic'
   ) {
-    const saved = await this.call<ScenarioWrite>('scenario/write', {
+    const bound = hasMemoryChatBinding();
+    if (bound && kind !== 'episodic')
+      throw new Error('Use tdai_global_rule_write or tdai_project_rule_write to save standing rules in this chat.');
+    const saved = await this.call<ScenarioWrite>(bound ? 'scenario/document-write' : 'scenario/write', {
       path: documentPath,
       content,
       summary,

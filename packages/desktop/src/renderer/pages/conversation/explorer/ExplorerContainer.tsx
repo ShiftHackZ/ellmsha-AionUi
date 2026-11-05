@@ -31,6 +31,7 @@ import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import { PROJECT_ERROR_DUPLICATE, PROJECT_ERROR_OVERLAP } from '@/common/types/project';
 import { ChartPie } from '@icon-park/react';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
+import { RulesTabButton } from '../components/ChatLayout/RulesTabButton';
 import WorkspaceOpenButton from '@/renderer/pages/conversation/components/ChatLayout/WorkspaceOpenButton';
 import { getContentTypeByExtension } from '@/renderer/pages/conversation/Preview/fileUtils';
 import { classifyPreviewError, previewErrorToI18nKey } from '@/renderer/utils/previewError';
@@ -54,6 +55,7 @@ import type { SearchHit } from './search/searchModel';
 export type ExplorerContainerProps = {
   /** Owning project id — scopes the store's fact cache + localStorage UI state. */
   projectId: string;
+  onOpenRules?: () => void;
 };
 
 /** A local absolute path → `file://` URI (normalize `\`, ensure leading slash, encode). */
@@ -117,7 +119,7 @@ export const buildExplorerPreviewPayload = async (
   };
 };
 
-export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId }) => {
+export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId, onOpenRules }) => {
   const { t } = useTranslation();
   const { openPreview } = usePreviewContext();
   const activeConversationId = useCurrentConversation();
@@ -427,6 +429,7 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
               />
             </Tooltip>
           )}
+          {activeConversationId && <RulesTabButton onOpen={onOpenRules} />}
           {activeConversationId && (
             <Tooltip content={t('settings.usage.title')} mini>
               <Button

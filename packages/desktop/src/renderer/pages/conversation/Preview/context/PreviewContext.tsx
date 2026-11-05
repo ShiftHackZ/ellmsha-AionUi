@@ -482,6 +482,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (type === 'browser') return null;
       if (type === 'terminal')
         return tabList.find((tab) => tab.content_type === 'terminal' && tab.content === content) ?? null;
+      if (type === 'rules') return tabList.find((tab) => tab.content_type === 'rules') ?? null;
       if (type === 'usage')
         return tabList.find((tab) => tab.content_type === 'usage' && tab.content === content) ?? null;
 

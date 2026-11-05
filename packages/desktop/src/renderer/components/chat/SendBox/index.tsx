@@ -11,6 +11,7 @@ import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
 import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
 import { useBtwCommand } from '@/renderer/components/chat/BtwOverlay/useBtwCommand';
 import {
+  getActiveSlashQuery,
   getFuzzyMatchIndices,
   getSkillTokenRanges,
   useSlashCommandController,
@@ -37,6 +38,7 @@ import { blurActiveElement, shouldBlockMobileInputFocus } from '@/renderer/utils
 import { Button, Input, Message, Tag } from '@arco-design/web-react';
 import { ArrowUp, CloseSmall, Plus, Quote } from '@icon-park/react';
 import type { SlashCommandItem } from '@/common/chat/slash/types';
+import { useProjectSkills } from '@/renderer/hooks/chat/useProjectSkills';
 import { buildSkillSlashCommands, mergeSlashCommands } from '@/common/chat/slash/mergeSlashCommands';
 import React, { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -485,14 +487,24 @@ const SendBox: React.FC<{
   const { data: skillIndex } = useSWR(loadedSkills && loadedSkills.length > 0 ? 'skills-index' : null, () =>
     ipcBridge.fs.listAvailableSkills.invoke()
   );
+  const projectSkills = useProjectSkills(
+    conversationContext?.skillProjectId,
+    Boolean(getActiveSlashQuery(input, caretPosition))
+  );
+  const commandSkillNames = useMemo(
+    () => [...new Set([...(loadedSkills ?? []), ...(projectSkills ?? []).map((s) => s.name)])],
+    [loadedSkills, projectSkills]
+  );
   const skillSlashCommands = useMemo<SlashCommandItem[]>(() => {
-    const descriptionByName = new Map((skillIndex ?? []).map((s) => [s.name, s.description]));
+    const descriptionByName = new Map(
+      [...(skillIndex ?? []), ...(projectSkills ?? [])].map((s) => [s.name, s.description])
+    );
     return buildSkillSlashCommands(
-      loadedSkills,
+      commandSkillNames,
       descriptionByName,
       t('conversation.skills.slashHint', { defaultValue: 'Skill' })
     );
-  }, [loadedSkills, skillIndex, t]);
+  }, [commandSkillNames, skillIndex, projectSkills, t]);
 
   // Priority on name collisions: builtin > ACP agent commands > session skills.
   const mergedSlashCommands = useMemo(
@@ -1369,13 +1381,13 @@ const SendBox: React.FC<{
     () =>
       [
         ...allAtFileQueries.map(({ start, end, query }) => ({ start, end, query, kind: 'mention' })),
-        ...getSkillTokenRanges(input, loadedSkills)
+        ...getSkillTokenRanges(input, commandSkillNames)
           .filter(
             (token) => !allAtFileQueries.some((mention) => token.start < mention.end && token.end > mention.start)
           )
           .map(({ start, end, query }) => ({ start, end, query, kind: 'skill' })),
       ].sort((left, right) => left.start - right.start),
-    [allAtFileQueries, input, loadedSkills]
+    [allAtFileQueries, input, commandSkillNames]
   );
   const shouldUseHighlightOverlay = !isComposingState && highlightedTokens.length > 0;
 

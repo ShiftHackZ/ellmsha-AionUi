@@ -25,6 +25,18 @@ const ChatConversationIndex: React.FC = () => {
     return getConversationOrNull(id!);
   });
 
+  // Notifications and other chat links all arrive here. A Team member must
+  // render under its owning Team's permission/send context.
+  const extra = data?.extra as { teamId?: unknown; team_id?: unknown } | undefined;
+  const teamId = [extra?.teamId, extra?.team_id].find(
+    (value): value is string => typeof value === 'string' && Boolean(value.trim())
+  );
+  useEffect(() => {
+    if (teamId && data?.id === id) {
+      void navigate(`/team/${encodeURIComponent(teamId)}`, { replace: true, state: { teamConversationId: id } });
+    }
+  }, [teamId, data?.id, id, navigate]);
+
   // Close preview only when the isolation scope changes, not on every
   // conversation switch. Same-scope conversations keep the preview open. The
   // scope is `previewScopeKey` = project (falling back to workspace until the
@@ -71,12 +83,12 @@ const ChatConversationIndex: React.FC = () => {
   }, [id, mutate]);
 
   useEffect(() => {
-    if (!data || data.name !== defaultConversationTitle) {
+    if (teamId || !data || data.name !== defaultConversationTitle) {
       return;
     }
 
     void syncTitleFromHistory(data.id);
-  }, [data, defaultConversationTitle, syncTitleFromHistory]);
+  }, [data, defaultConversationTitle, syncTitleFromHistory, teamId]);
 
   // 会话不存在（例如从历史栈回到已删除会话）时，提示并替换路由到首页，
   // 避免渲染空骨架。每个 id 只触发一次。
@@ -90,7 +102,7 @@ const ChatConversationIndex: React.FC = () => {
     navigate('/', { replace: true });
   }, [id, isLoading, data, navigate, t]);
 
-  if (isLoading) return <Spin loading></Spin>;
+  if (isLoading || teamId) return <Spin loading></Spin>;
   return <ChatConversation conversation={data ?? undefined}></ChatConversation>;
 };
 

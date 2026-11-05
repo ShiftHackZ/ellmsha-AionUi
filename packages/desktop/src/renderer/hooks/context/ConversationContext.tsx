@@ -23,6 +23,7 @@ export interface ConversationContextValue {
    * 工作空间目录路径
    */
   workspace?: string;
+  skillProjectId?: string;
 
   /**
    * Conversation type

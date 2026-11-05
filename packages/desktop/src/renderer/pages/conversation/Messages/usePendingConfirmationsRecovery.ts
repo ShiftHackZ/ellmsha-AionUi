@@ -27,11 +27,17 @@ export function buildPendingConfirmationMessage(
 }
 
 export function hasPermissionMessageForCallId(list: TMessage[], callId: string): boolean {
-  return list.some((message) => message.type === 'permission' && message.content?.call_id === callId);
+  return list.some(
+    (message) =>
+      (message.type === 'permission' && message.content?.call_id === callId) ||
+      (message.type === 'acp_permission' && message.content.tool_call?.tool_call_id === callId)
+  );
 }
 
 export function removePermissionMessage(list: TMessage[], target: { id?: string; call_id?: string }): TMessage[] {
   return list.filter((message) => {
+    if (message.type === 'acp_permission' && message.content.tool_call?.questions?.length)
+      return message.content.tool_call.tool_call_id !== (target.call_id ?? target.id);
     if (message.type !== 'permission') return true;
     if (target.id && message.content.id === target.id) return false;
     if (target.call_id && message.content.call_id === target.call_id) return false;
@@ -49,6 +55,7 @@ export function usePendingConfirmationsRecovery(conversation_id: string) {
   useEffect(() => {
     if (!conversation_id) return;
     let cancelled = false;
+    const removed = new Set<string>();
 
     void ipcBridge.conversation.confirmation.list
       .invoke({ conversation_id })
@@ -57,7 +64,12 @@ export function usePendingConfirmationsRecovery(conversation_id: string) {
         updateMessageList((list) => {
           let next = list;
           for (const confirmation of confirmations ?? []) {
-            if (hasPermissionMessageForCallId(next, confirmation.call_id)) continue;
+            if (
+              removed.has(confirmation.id) ||
+              removed.has(confirmation.call_id) ||
+              hasPermissionMessageForCallId(next, confirmation.call_id)
+            )
+              continue;
             next = next.concat(buildPendingConfirmationMessage(conversation_id, confirmation));
           }
           return next;
@@ -72,6 +84,7 @@ export function usePendingConfirmationsRecovery(conversation_id: string) {
 
     const off = ipcBridge.conversation.confirmation.remove.on((event) => {
       if (event.conversation_id !== conversation_id) return;
+      removed.add(event.id);
       updateMessageList((list) => removePermissionMessage(list, { id: event.id, call_id: event.id }));
     });
 

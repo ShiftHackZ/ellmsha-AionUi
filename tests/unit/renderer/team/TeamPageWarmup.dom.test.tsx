@@ -81,6 +81,7 @@ vi.mock('@/common', () => ({
     cron: { removeJob: { invoke: vi.fn() } },
     assistant: { list: { invoke: vi.fn(async () => []) } },
     conversation: {
+      responseStream: makeTeamEventChannel('responseStream'),
       update: { invoke: vi.fn(async () => undefined) },
       // TeamPage subscribes to conversation.listChanged on mount to refetch the
       // leader's dispatch conversation; stub it so the passive effect can run.
@@ -157,6 +158,20 @@ describe('TeamPage teammate warmup wiring', () => {
     for (const key of Object.keys(teamEventHandlers)) delete teamEventHandlers[key];
     getConversationOrNullMock.mockImplementation(async (id: string) => conversation({ id, name: id }));
     localStorage.clear();
+  });
+
+  it.each([
+    ['member-conv', 'member-slot'],
+    ['foreign-conv', 'leader-slot'],
+  ])('focuses only an owned member linked from a notification: %s', async (target, expected) => {
+    localStorage.setItem('team-active-slot-team-1', 'leader-slot');
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/team/team-1', state: { teamConversationId: target } }]}>
+        <TeamPage team={team()} />
+      </MemoryRouter>
+    );
+    await screen.findByTestId('acp-model-selector-member-conv');
+    await waitFor(() => expect(localStorage.getItem('team-active-slot-team-1')).toBe(expected));
   });
 
   it('withholds the trigger while the team is warming (isWarmingUp)', async () => {

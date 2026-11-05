@@ -49,9 +49,11 @@ export const useBrowserNotification = (): void => {
           documentHidden: document.hidden,
         }),
       bodyFor: (kind) =>
-        kind === 'confirmation'
-          ? t('settings.browserNotification.bodyConfirmation')
-          : t('settings.browserNotification.bodyTurnCompleted'),
+        kind === 'question'
+          ? t('messages.questions.notification')
+          : kind === 'confirmation'
+            ? t('settings.browserNotification.bodyConfirmation')
+            : t('settings.browserNotification.bodyTurnCompleted'),
       show: ({ body, conversationId }) => {
         try {
           const notification = new Notification('eLLMsha', { body });

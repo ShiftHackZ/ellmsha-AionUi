@@ -84,6 +84,27 @@ describe('useDesktopTurnNotification', () => {
     });
   });
 
+  it.each(['permission', 'acp_permission'])(
+    'routes a structured %s question to a private desktop notification',
+    (type) => {
+      renderHook(() => useDesktopTurnNotification());
+      const questions = [{ id: 'q', question: 'confidential question text', isSecret: true }];
+      emitStream({
+        type,
+        conversation_id: 'inactive-chat',
+        data: type === 'permission' ? { id: 'call', questions } : { tool_call: { tool_call_id: 'call', questions } },
+      });
+      expect(showInvoke).toHaveBeenCalledWith({
+        title: 'eLLMsha',
+        body: 'messages.questions.notification',
+        conversation_id: 'inactive-chat',
+        notification_id: JSON.stringify(['inactive-chat', 'call']),
+        kind: 'confirmation',
+      });
+      expect(JSON.stringify(showInvoke.mock.calls)).not.toContain('confidential');
+    }
+  );
+
   it('notifies from a real ACP permission stream frame and targets its conversation', () => {
     renderHook(() => useDesktopTurnNotification());
     emitStream({

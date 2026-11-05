@@ -80,5 +80,14 @@
     "errorPointUnsupported": "このエージェントは最新メッセージからのみ分岐できます",
     "errorUnsupported": "このエージェントは分岐をサポートしていません",
     "errorGeneric": "分岐に失敗しました：{{message}}"
+  },
+  "questions": {
+    "submit": "回答を送信",
+    "other": "自由入力",
+    "answered": "回答を送信しました。",
+    "dismissed": "質問を閉じました。",
+    "failed": "回答を送信できませんでした。もう一度お試しください。",
+    "notification": "チャットが回答を待っています。",
+    "decline": "辞退"
   }
 }

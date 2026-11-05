@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { AcpPermissionRequest, PlanUpdate, ToolCallUpdate } from '@/common/types/platform/acpTypes';
+import type { AgentQuestion, AcpPermissionRequest, PlanUpdate, ToolCallUpdate } from '@/common/types/platform/acpTypes';
 import type { AcpAvailableCommand } from '@/common/chat/slash/types';
 import type { IResponseMessage } from '../adapter/ipcBridge';
 import { uuid } from '../utils';
@@ -384,6 +384,7 @@ export type TMessage =
 
 // 统一所有需要用户交互的用户类型
 export interface IConfirmation<Option extends any = any> {
+  questions?: AgentQuestion[];
   title?: string;
   id: string;
   action?: string;

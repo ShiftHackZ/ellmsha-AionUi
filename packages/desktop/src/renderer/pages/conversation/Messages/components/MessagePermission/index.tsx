@@ -15,6 +15,8 @@ import {
   type PermissionPanelOption,
 } from './permissionOptions';
 
+import AgentQuestionForm from './AgentQuestionForm';
+
 type MessagePermissionProps = {
   message: IMessagePermission;
 };
@@ -55,6 +57,18 @@ const MessagePermission: React.FC<MessagePermissionProps> = React.memo(({ messag
     },
     [call_id, message.conversation_id, message.msg_id]
   );
+
+  const questions = content.questions;
+  if (questions?.length)
+    return (
+      <AgentQuestionForm
+        key={JSON.stringify([call_id, questions])}
+        conversationId={message.conversation_id}
+        msgId={message.msg_id || message.id}
+        callId={call_id}
+        questions={questions}
+      />
+    );
 
   return (
     <PermissionRequestPanel

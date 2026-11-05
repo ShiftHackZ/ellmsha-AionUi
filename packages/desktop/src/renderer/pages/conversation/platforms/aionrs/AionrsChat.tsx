@@ -34,6 +34,7 @@ import type { AionrsModelSelection } from './useAionrsModelSelection';
 
 const AionrsChat: React.FC<{
   conversation_id: string;
+  skillProjectId?: string;
   workspace: string;
   modelSelection: AionrsModelSelection;
   session_mode?: string;
@@ -49,6 +50,7 @@ const AionrsChat: React.FC<{
   hideSendBox?: boolean;
 }> = ({
   conversation_id,
+  skillProjectId,
   workspace,
   modelSelection,
   session_mode,
@@ -72,6 +74,7 @@ const AionrsChat: React.FC<{
   const conversationValue = useMemo<ConversationContextValue>(() => {
     return {
       conversation_id: conversation_id,
+      skillProjectId,
       workspace,
       type: 'aionrs',
       cron_job_id,
@@ -83,6 +86,7 @@ const AionrsChat: React.FC<{
     };
   }, [
     conversation_id,
+    skillProjectId,
     workspace,
     cron_job_id,
     loadedSkills,

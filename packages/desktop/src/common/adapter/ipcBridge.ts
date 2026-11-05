@@ -89,8 +89,19 @@ import type {
 } from '../update/updateTypes';
 import type { AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import type { Theme } from '@/common/theme/types';
-import type { AttachFolderRequest, ProjectDetailDto, ProjectEntryDto } from '@/common/types/project';
+import type {
+  AttachFolderRequest,
+  ProjectDetailDto,
+  ProjectEntryDto,
+  ProjectSkillSummary,
+} from '@/common/types/project';
 import type { ChatFileRef, ContentEncoding } from '@/common/types/chatFile';
+import type {
+  ChatRules,
+  ChatRuleMutation,
+  ProjectRuleFiles,
+  ProjectFileMutation,
+} from '@/common/types/agent/chatRules';
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import {
   buildCreateConversationBody,
@@ -179,6 +190,22 @@ export const assistants = {
 // ---------------------------------------------------------------------------
 
 export const conversation = {
+  getRules: httpGet<ChatRules, { conversation_id: string }>(
+    (p) => `/api/conversations/${encodeURIComponent(p.conversation_id)}/rules`
+  ),
+  mutateRule: httpPost<void, { conversation_id: string; mutation: ChatRuleMutation }>(
+    (p) => `/api/conversations/${encodeURIComponent(p.conversation_id)}/rules`,
+    (p) => p.mutation,
+    { omitBodyFromLogs: true }
+  ),
+  getProjectRuleFiles: httpGet<ProjectRuleFiles, { conversation_id: string }>(
+    (p) => `/api/conversations/${encodeURIComponent(p.conversation_id)}/project-rule-files`
+  ),
+  mutateProjectRuleFile: httpPost<void, { conversation_id: string; mutation: ProjectFileMutation }>(
+    (p) => `/api/conversations/${encodeURIComponent(p.conversation_id)}/project-rule-files`,
+    (p) => p.mutation,
+    { omitBodyFromLogs: true }
+  ),
   readMemoryArtifact: httpGet<
     { path: string; title: string; content: string },
     { conversation_id: string; path: string }
@@ -388,7 +415,8 @@ export const conversation = {
       { conversation_id: string; msg_id: string; data: unknown; call_id: string; always_allow?: boolean }
     >(
       (p) => `/api/conversations/${p.conversation_id}/confirmations/${encodeURIComponent(p.call_id)}/confirm`,
-      (p) => ({ msg_id: p.msg_id, data: p.data, always_allow: p.always_allow ?? false })
+      (p) => ({ msg_id: p.msg_id, data: p.data, always_allow: p.always_allow ?? false }),
+      { omitBodyFromLogs: true }
     ),
     list: httpGet<IConfirmation<unknown>[], { conversation_id: string }>(
       (p) => `/api/conversations/${p.conversation_id}/confirmations`
@@ -476,6 +504,14 @@ export const runtime = {
 // ---------------------------------------------------------------------------
 
 export const project = {
+  skills: httpGet<ProjectSkillSummary[], { project_id: string }>(
+    (p) => `/api/projects/${encodeURIComponent(p.project_id)}/skills`
+  ),
+  workspaceProject: httpGet<string | null, { workspace: string }>(
+    (p) => `/api/projects/selected-workspace?workspace=${encodeURIComponent(p.workspace)}`
+  ),
+  selectWorkspace: httpPost<string | null, { workspace: string }>('/api/projects/selected-workspace'),
+
   /** GET /api/projects/{id} → full project detail incl. all pe roots (entries). */
   get: httpGet<ProjectDetailDto, { project_id: string }>((p) => `/api/projects/${encodeURIComponent(p.project_id)}`),
   /**

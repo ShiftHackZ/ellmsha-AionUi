@@ -2,6 +2,7 @@ import { Message, Modal, Spin } from '@arco-design/web-react';
 import { FullScreen, Left, OffScreen, Peoples, Right } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -247,6 +248,19 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const { t } = useTranslation();
   useActiveLease({ type: 'team', id: team.id });
   const { assistants, activeSlotId, switchTab, colorOf, colorOfConversation } = useTeamTabs();
+  const location = useLocation();
+  const requestedConversationId = (location.state as { teamConversationId?: string } | null)?.teamConversationId;
+  const requestedSlotId = requestedConversationId
+    ? assistants.find((member) => member.conversation_id === requestedConversationId)?.slot_id
+    : undefined;
+  const openedLink = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (requestedSlotId && openedLink.current !== location.key) {
+      openedLink.current = location.key;
+      switchTab(requestedSlotId);
+    }
+  }, [location.key, requestedSlotId, switchTab]);
+
   const [, messageContext] = Message.useMessage({ maxCount: 1 });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);

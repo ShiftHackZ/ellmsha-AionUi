@@ -86,4 +86,17 @@ describe('ipcBridge conversation adapter', () => {
       body: undefined,
     });
   });
+
+  it('binds rule changes to the encoded chat and forwards the source revision', async () => {
+    const { conversation } = await import('@/common/adapter/ipcBridge');
+    const mutation = { action: 'delete', scope: 'project', path: 'old/rule.md', revision: 'snapshot' } as const;
+
+    await conversation.getRules.invoke({ conversation_id: 'a/b' });
+    await conversation.mutateRule.invoke({ conversation_id: 'a/b', mutation });
+
+    expect(httpBridgeMocks.calls).toEqual([
+      { method: 'GET', path: '/api/conversations/a%2Fb/rules', body: undefined },
+      { method: 'POST', path: '/api/conversations/a%2Fb/rules', body: mutation },
+    ]);
+  });
 });

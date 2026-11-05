@@ -23,9 +23,10 @@ import type { IConversationListChangedEvent } from '@/common/adapter/ipcBridge';
 import type { TChatConversation } from '@/common/config/storage';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ id: 'c1' }),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigate,
 }));
 vi.mock('@/renderer/pages/conversation/components/ChatConversation', () => ({
   default: () => <div data-testid='chat' />,
@@ -75,6 +76,7 @@ const renderIndex = () =>
   );
 
 beforeEach(() => {
+  navigate.mockClear();
   resetCurrentProjectForTest();
   getConversationOrNull.mockReset();
   listChangedCb = null;
@@ -82,6 +84,15 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('conversation project_id backfill — responsive refetch on listChanged', () => {
+  it.each(['teamId', 'team_id'])('opens the Team-member chat linked from a notification (%s)', async (key) => {
+    getConversationOrNull.mockResolvedValue({ ...conv('p1'), extra: { [key]: 'team-a' } } as TChatConversation);
+    const view = renderIndex();
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/team/team-a', { replace: true, state: { teamConversationId: 'c1' } })
+    );
+    expect(view.queryByTestId('chat')).not.toBeInTheDocument();
+  });
+
   it('refetches on the backfill event and publishes the populated project_id (no poll)', async () => {
     // First GET → pre-backfill (null); after the event, GET → backfilled.
     getConversationOrNull.mockResolvedValueOnce(conv(null)).mockResolvedValue(conv('p1'));

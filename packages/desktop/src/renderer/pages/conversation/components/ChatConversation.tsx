@@ -271,6 +271,7 @@ const AionrsConversationPanel: React.FC<{
     <ChatLayout {...chatLayoutProps} conversation_id={conversation.id}>
       <AionrsChat
         conversation_id={conversation.id}
+        skillProjectId={conversation.extra?.tool_scope === 'session_only' ? undefined : conversation.project_id}
         workspace={conversation.extra.workspace}
         modelSelection={modelSelection}
         hideSendBox={hideSendBox || Boolean(managedChild)}
@@ -343,6 +344,7 @@ const ChatConversation: React.FC<{
           <AcpChat
             key={conversation.id}
             conversation_id={conversation.id}
+            skillProjectId={conversation.extra?.tool_scope === 'session_only' ? undefined : conversation.project_id}
             workspace={conversation.extra?.workspace}
             backend={resolvedConversationBackend || 'claude'}
             session_mode={conversation.extra?.session_mode}

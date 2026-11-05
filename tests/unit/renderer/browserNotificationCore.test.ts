@@ -135,3 +135,18 @@ describe('createBrowserNotificationController.onStreamMessage', () => {
     expect(show).not.toHaveBeenCalled();
   });
 });
+
+it('notifies once for a structured question without exposing the question or answers', () => {
+  const show = vi.fn();
+  const controller = createBrowserNotificationController({ show, shouldShow: () => true, bodyFor: (kind) => kind });
+  const msg = {
+    type: 'acp_permission',
+    conversation_id: 'conv',
+    data: { tool_call: { tool_call_id: 'q', questions: [{ question: 'SECRET PROMPT' }] } },
+  };
+  controller.onStreamMessage(msg);
+  controller.onStreamMessage(msg);
+  expect(show).toHaveBeenCalledTimes(1);
+  expect(show.mock.calls[0][0]).toMatchObject({ body: 'question', kind: 'confirmation', conversationId: 'conv' });
+  expect(JSON.stringify(show.mock.calls)).not.toContain('SECRET');
+});

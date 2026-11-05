@@ -44,3 +44,20 @@ describe('pending confirmations recovery', () => {
     expect(result[0].type).toBe('text');
   });
 });
+
+it('does not duplicate a live agent question on recovery and removes it on completion', () => {
+  const question = {
+    id: 'scope',
+    header: '',
+    question: 'Which project?',
+    options: [],
+    multiSelect: false,
+    isOther: true,
+    isSecret: false,
+  };
+  const list = [
+    { id: 'row', type: 'acp_permission', content: { tool_call: { tool_call_id: 'call', questions: [question] } } },
+  ] as TMessage[];
+  expect(hasPermissionMessageForCallId(list, 'call')).toBe(true);
+  expect(removePermissionMessage(list, { call_id: 'call' })).toEqual([]);
+});

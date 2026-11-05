@@ -80,5 +80,14 @@
     "errorPointUnsupported": "이 에이전트는 최신 메시지에서만 분기할 수 있습니다",
     "errorUnsupported": "이 에이전트는 분기를 지원하지 않습니다",
     "errorGeneric": "분기 실패: {{message}}"
+  },
+  "questions": {
+    "submit": "답변 보내기",
+    "other": "직접 입력",
+    "answered": "답변을 보냈습니다.",
+    "dismissed": "질문을 닫았습니다.",
+    "failed": "응답을 보낼 수 없습니다. 다시 시도하세요.",
+    "notification": "채팅이 답변을 기다리고 있습니다.",
+    "decline": "거절"
   }
 }

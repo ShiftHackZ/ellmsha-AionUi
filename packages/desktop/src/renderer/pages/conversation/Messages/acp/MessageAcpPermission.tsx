@@ -14,6 +14,8 @@ import {
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentQuestionForm from '../components/MessagePermission/AgentQuestionForm';
+
 type MessageAcpPermissionProps = {
   message: IMessageAcpPermission;
 };
@@ -60,6 +62,18 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
   const title = tool_call.title || tool_call.raw_input?.description || t('messages.permissionRequest');
   const detail = tool_call.raw_input?.command || tool_call.title;
   const description = tool_call.raw_input?.description;
+
+  const questions = tool_call?.questions;
+  if (questions?.length)
+    return (
+      <AgentQuestionForm
+        key={JSON.stringify([toolCallId || message.id, questions])}
+        conversationId={message.conversation_id}
+        msgId={message.msg_id || message.id}
+        callId={toolCallId || message.id}
+        questions={questions}
+      />
+    );
 
   return (
     <PermissionRequestPanel

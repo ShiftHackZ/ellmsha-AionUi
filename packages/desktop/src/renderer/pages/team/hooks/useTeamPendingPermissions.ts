@@ -1,108 +1,37 @@
-import { ipcBridge } from '@/common';
-import { useCallback, useEffect, useState } from 'react';
-import { removeStack } from '@/renderer/utils/common';
+import { useCallback, useEffect, useMemo } from 'react';
+import { usePendingConfirmationCounts } from './usePendingConfirmationCounts';
 
-const STORAGE_KEY_PREFIX = 'team-pending-permissions-';
-
-/**
- * Track pending permission confirmation counts per conversation (agent slot).
- *
- * - Loads initial counts from localStorage for instant render
- * - Syncs with live IPC events for real-time accuracy
- * - Persists counts back to localStorage after each change
- */
 export function useTeamPendingPermissions(team_id: string, conversation_ids: string[]) {
-  const storageKey = `${STORAGE_KEY_PREFIX}${team_id}`;
-
-  const readFromStorage = (): Record<string, number> => {
+  const storageKey = `team-pending-permissions-${team_id}`;
+  const cached = useMemo(() => {
     try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+      return JSON.parse(localStorage.getItem(storageKey) || '{}') as Record<string, number>;
     } catch {
       return {};
     }
-  };
-
-  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>(() => readFromStorage());
-
-  // Write to localStorage whenever counts change
+  }, [storageKey]);
+  const live = usePendingConfirmationCounts(
+    Object.fromEntries(conversation_ids.map((id): [string, null] => [id, null]))
+  );
+  const pendingCounts = Object.fromEntries(conversation_ids.map((id) => [id, live[id] ?? cached?.[id] ?? 0]));
+  const serialized = JSON.stringify(pendingCounts);
   useEffect(() => {
     try {
-      // Only persist entries for current conversations; prune stale ones
-      const pruned: Record<string, number> = {};
-      for (const cid of conversation_ids) {
-        const count = pendingCounts[cid];
-        if (count !== undefined && count > 0) {
-          pruned[cid] = count;
-        }
-      }
-      localStorage.setItem(storageKey, JSON.stringify(pruned));
+      localStorage.setItem(storageKey, serialized);
     } catch {
-      // Storage quota exceeded — silent ignore
+      /* Storage is optional. */
     }
-  }, [storageKey, pendingCounts, conversation_ids]);
-
-  // Initial load from backend + live subscription
-  useEffect(() => {
-    if (conversation_ids.length === 0) return;
-
-    const idSet = new Set(conversation_ids);
-
-    // Fetch initial counts from backend
-    const fetchInitial = async () => {
-      const results = await Promise.allSettled(
-        conversation_ids.map(async (cid) => {
-          try {
-            const data = await ipcBridge.conversation.confirmation.list.invoke({ conversation_id: cid });
-            return { cid, count: data.length };
-          } catch {
-            return { cid, count: 0 };
-          }
-        })
-      );
-      const counts: Record<string, number> = {};
-      for (const r of results) {
-        if (r.status === 'fulfilled') {
-          counts[r.value.cid] = r.value.count;
-        }
-      }
-      setPendingCounts((prev) => ({ ...prev, ...counts }));
-    };
-
-    void fetchInitial();
-
-    // Subscribe to real-time events
-    const unsub = removeStack(
-      ipcBridge.conversation.confirmation.add.on((data) => {
-        if (!idSet.has(data.conversation_id)) return;
-        setPendingCounts((prev) => ({
-          ...prev,
-          [data.conversation_id]: (prev[data.conversation_id] ?? 0) + 1,
-        }));
-      }),
-      ipcBridge.conversation.confirmation.remove.on((data) => {
-        if (!idSet.has(data.conversation_id)) return;
-        setPendingCounts((prev) => ({
-          ...prev,
-          [data.conversation_id]: Math.max(0, (prev[data.conversation_id] ?? 0) - 1),
-        }));
-      })
-    );
-
-    return unsub;
-  }, [conversation_ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /** Total pending confirmations across all agents in this team */
-  const totalPending = conversation_ids.reduce((sum, cid) => sum + (pendingCounts[cid] ?? 0), 0);
-
-  /** Clear persisted storage for this team (call when team is deleted) */
+  }, [storageKey, serialized]);
   const clearStorage = useCallback(() => {
     try {
       localStorage.removeItem(storageKey);
     } catch {
-      // ignore
+      /* Storage is optional. */
     }
   }, [storageKey]);
-
-  return { pendingCounts, totalPending, clearStorage };
+  return {
+    pendingCounts,
+    totalPending: Object.values(pendingCounts).reduce((sum, count) => sum + count, 0),
+    clearStorage,
+  };
 }
