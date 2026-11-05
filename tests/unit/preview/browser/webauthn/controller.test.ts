@@ -121,7 +121,9 @@ const event = () => {
   });
   return { sender, senderFrame: frame };
 };
+const hostPlatform = process.platform;
 beforeEach(() => {
+  Object.defineProperty(process, 'platform', { value: 'darwin' });
   f.operations = [];
   f.workers = [];
   f.dialogs = [];
@@ -149,6 +151,7 @@ beforeEach(() => {
   };
 });
 afterEach(() => {
+  Object.defineProperty(process, 'platform', { value: hostPlatform });
   cancelSecurityKey(1, request.requestId);
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -158,6 +161,12 @@ const act = async (step: string, action: 'continue' | 'select' | 'pin', value?: 
   respondToSecurityKey(55, { action, value });
 };
 describe('trusted security-key ceremony', () => {
+  it('reports unsupported platforms before starting a ceremony', async () => {
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    expect(await beginSecurityKey(event() as never, request)).toEqual({ ok: false, error: 'NotSupportedError' });
+    expect(f.dialogs).toEqual([]);
+    expect(f.workers).toEqual([]);
+  });
   it('keeps a failed module graph hidden and releases the global slot after bounded startup', async () => {
     vi.useFakeTimers();
     f.autoReady = false;
