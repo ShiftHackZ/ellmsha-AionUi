@@ -1,3 +1,4 @@
+import { SecretsPanel } from '@/renderer/components/secrets/SecretsPanel';
 import { ipcBridge } from '@/common';
 import { isBackendHttpError, isWebUiBrowserMode } from '@/common/adapter/httpBridge';
 import type {
@@ -362,6 +363,7 @@ const PluginsContent: React.FC<PluginsContentProps> = ({
           <span className='text-t-primary'>{selectedPlugin.display_name || selectedPlugin.name}</span>
         </div>
 
+        {selectedPlugin.name === 'secrets' && <SecretsPanel key={`secrets-${selectedPlugin.enabled}`} />}
         <section className='bg-2 border border-border-2 rd-16px p-20px flex flex-col gap-16px'>
           <div className='flex items-start justify-between gap-16px'>
             <div className='flex min-w-0 items-center gap-12px'>

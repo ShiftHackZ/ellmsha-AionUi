@@ -1810,5 +1810,73 @@
       "reconnect_required": "需要重新连接",
       "error": "错误"
     }
+  },
+  "secrets": {
+    "title": "密钥管理",
+    "global": "全局密钥",
+    "disclosure": "仅用于自动化凭据。获准的代理读取会将明文密钥发送给所选模型和工具。请勿存储重要的个人密码或双重验证代码。",
+    "operationFailed": "操作失败。请解锁保险库或刷新后重试。",
+    "locked": "保险库已锁定。请解锁后管理密钥。",
+    "search": "搜索密钥标题",
+    "retained": "保留的项目",
+    "add": "添加密钥",
+    "empty": "此范围内没有密钥。",
+    "reveal": "显示",
+    "hide": "隐藏",
+    "more": "更多密钥",
+    "deleteTitle": "删除密钥？",
+    "deleteWarning": "确定从此保险库中永久删除“{{title}}”？",
+    "recordTitle": "标题",
+    "kind": "类型",
+    "fields": "密钥字段",
+    "fieldName": "字段名称",
+    "fieldKind": "字段类型",
+    "addField": "添加字段",
+    "bindings": "服务与环境",
+    "addBinding": "添加环境",
+    "mfa": "双重验证",
+    "mfaWarning": "请勿存储一次性代码、验证器种子、通行密钥或恢复代码。代理必须请您完成所需的验证。",
+    "initialize": "创建保险库",
+    "unlock": "解锁保险库",
+    "lock": "锁定保险库",
+    "changePassphrase": "更改密码短语",
+    "backup": "导出加密备份",
+    "restore": "恢复加密备份",
+    "restoreWarning": "这将替换当前保险库。请先备份。项目记录将保留原有范围。",
+    "passphrase": "保险库密码短语（至少 12 个字符）",
+    "newPassphrase": "新密码短语",
+    "acknowledge": "我了解获准的工具可能会将明文密钥提供给模型供应商和外部服务。",
+    "remember": "在此设备上使用操作系统安全解锁",
+    "osUnlock": "使用此设备解锁",
+    "forgetDevice": "忘记设备解锁",
+    "conflict": "此密钥已更改。请关闭对话框并重新打开后再编辑。",
+    "forbidden": "密钥功能已禁用或此范围已不可用。",
+    "kindLabels": {
+      "login": "登录",
+      "api_key": "API 密钥",
+      "secure_note": "安全备注",
+      "structured": "结构化密钥"
+    },
+    "fieldKinds": {
+      "text": "文本",
+      "password": "密码",
+      "secret": "密钥",
+      "note": "多行备注"
+    },
+    "mfaLabels": {
+      "unknown": "MFA 状态未知",
+      "required": "需要 MFA",
+      "none": "无需 MFA"
+    },
+    "bindingLabels": {
+      "service": "服务或应用",
+      "environment": "环境",
+      "tenant": "租户",
+      "role": "角色",
+      "target": "准确的 URL 或应用标识符",
+      "mfa_method": "验证方式",
+      "mfa_instructions": "不含密钥的验证说明"
+    },
+    "retentionDisclosure": "即使删除保险库中的内容或遮蔽聊天记录，服务提供商保存的对话记录和智能体后续撰写的消息仍可能保留或重复明文秘密。"
   }
 }

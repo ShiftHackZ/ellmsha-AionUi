@@ -16,7 +16,7 @@ import { isPrimaryApplicationShortcut } from '@/renderer/utils/ui/keyboardShortc
 import { Empty, Spin, Typography } from '@arco-design/web-react';
 import { Close, MessageOne, Robot, Search } from '@icon-park/react';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -139,6 +139,30 @@ const ConversationSearchPopover: React.FC<ConversationSearchPopoverProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const searchEpoch = useRef(0);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  useEffect(() => {
+    const invalidate = () => {
+      searchEpoch.current++;
+      setItems([]);
+      setLoading(false);
+      setLoadingMore(false);
+      setHasMore(false);
+      setHistoryRevision((v) => v + 1);
+    };
+    const off = ipcBridge.conversation.historyChanged.on(invalidate);
+    const offReconnect = ipcBridge.realtime.reconnected.on(invalidate);
+    return () => {
+      off();
+      offReconnect();
+    };
+  }, []);
+  useEffect(
+    () => () => {
+      searchEpoch.current++;
+    },
+    []
+  );
   const [visible, setVisible] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
@@ -173,6 +197,7 @@ const ConversationSearchPopover: React.FC<ConversationSearchPopoverProps> = ({
 
   const runSearch = useCallback(
     async (pageToLoad: number, append: boolean) => {
+      const current = ++searchEpoch.current;
       if (!debouncedKeyword) {
         setItems([]);
         setPage(0);
@@ -193,10 +218,12 @@ const ConversationSearchPopover: React.FC<ConversationSearchPopoverProps> = ({
           page_size: PAGE_SIZE,
         });
 
+        if (current !== searchEpoch.current) return;
         setItems((prev) => (append ? [...prev, ...result.items] : result.items));
         setPage(pageToLoad);
         setHasMore(result.has_more);
       } catch (error) {
+        if (current !== searchEpoch.current) return;
         console.error('[ConversationSearchPopover] Search failed:', error);
         if (!append) {
           setItems([]);
@@ -204,11 +231,13 @@ const ConversationSearchPopover: React.FC<ConversationSearchPopoverProps> = ({
           setHasMore(false);
         }
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (current === searchEpoch.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
-    [debouncedKeyword]
+    [debouncedKeyword, historyRevision]
   );
 
   useEffect(() => {

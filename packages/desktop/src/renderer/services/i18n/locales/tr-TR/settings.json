@@ -1809,5 +1809,73 @@
       "reconnect_required": "Yeniden bağlantı gerekli",
       "error": "Hata"
     }
+  },
+  "secrets": {
+    "title": "Sırlar",
+    "global": "Genel sırlar",
+    "disclosure": "Yalnızca otomasyon kimlik bilgileri içindir. Onaylanan aracı okumaları sırları açık metin olarak seçilen modele ve araçlara gönderir. Önemli kişisel parolaları veya iki faktörlü doğrulama kodlarını saklamayın.",
+    "operationFailed": "İşlem başarısız oldu. Kasanın kilidini açın veya yenileyip tekrar deneyin.",
+    "locked": "Kasa kilitli. Sırları yönetmek için kilidini açın.",
+    "search": "Sır başlıklarında ara",
+    "retained": "Saklanan proje",
+    "add": "Sır ekle",
+    "empty": "Bu kapsamda sır yok.",
+    "reveal": "Göster",
+    "hide": "Gizle",
+    "more": "Daha fazla sır",
+    "deleteTitle": "Sır silinsin mi?",
+    "deleteWarning": "“{{title}}” bu kasadan kalıcı olarak silinsin mi?",
+    "recordTitle": "Başlık",
+    "kind": "Tür",
+    "fields": "Sır alanları",
+    "fieldName": "Alan adı",
+    "fieldKind": "Alan türü",
+    "addField": "Alan ekle",
+    "bindings": "Hizmetler ve ortamlar",
+    "addBinding": "Ortam ekle",
+    "mfa": "İki faktörlü doğrulama",
+    "mfaWarning": "Tek kullanımlık kodları, doğrulayıcı başlangıç anahtarlarını, geçiş anahtarlarını veya kurtarma kodlarını asla saklamayın. Aracı gerekli doğrulamayı tamamlamanızı istemelidir.",
+    "initialize": "Kasa oluştur",
+    "unlock": "Kasanın kilidini aç",
+    "lock": "Kasayı kilitle",
+    "changePassphrase": "Parola cümlesini değiştir",
+    "backup": "Şifreli yedeği dışa aktar",
+    "restore": "Şifreli yedeği geri yükle",
+    "restoreWarning": "Mevcut kasa değiştirilecek. Önce yedek alın. Proje kayıtları özgün kapsamlarını korur.",
+    "passphrase": "Kasa parola cümlesi (en az 12 karakter)",
+    "newPassphrase": "Yeni parola cümlesi",
+    "acknowledge": "Onaylanan araçların sırları açık metin olarak model sağlayıcılarına ve harici hizmetlere aktarabileceğini anlıyorum.",
+    "remember": "Bu cihazda güvenli işletim sistemi kilit açmasını kullan",
+    "osUnlock": "Bu cihazla kilidi aç",
+    "forgetDevice": "Cihazla kilit açmayı unut",
+    "conflict": "Bu sır değişti. Düzenlemeden önce iletişim kutusunu kapatıp yeniden açın.",
+    "forbidden": "Sırlar devre dışı veya bu kapsam artık kullanılamıyor.",
+    "kindLabels": {
+      "login": "Giriş",
+      "api_key": "API anahtarı",
+      "secure_note": "Güvenli not",
+      "structured": "Yapılandırılmış sır"
+    },
+    "fieldKinds": {
+      "text": "Metin",
+      "password": "Parola",
+      "secret": "Sır",
+      "note": "Çok satırlı not"
+    },
+    "mfaLabels": {
+      "unknown": "MFA bilinmiyor",
+      "required": "MFA gerekli",
+      "none": "MFA yok"
+    },
+    "bindingLabels": {
+      "service": "Hizmet veya uygulama",
+      "environment": "Ortam",
+      "tenant": "Kiracı",
+      "role": "Rol",
+      "target": "Tam URL veya uygulama kimliği",
+      "mfa_method": "Doğrulama yöntemi",
+      "mfa_instructions": "Sır içermeyen doğrulama talimatları"
+    },
+    "retentionDisclosure": "Kasadan silme veya sohbeti maskeleme sonrasında bile sağlayıcının tuttuğu konuşma kayıtları ve aracının daha sonra yazdığı mesajlar sırları düz metin olarak saklayabilir veya tekrar edebilir."
   }
 }

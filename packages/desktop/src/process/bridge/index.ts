@@ -1,3 +1,4 @@
+import { initSecretsBridge } from '../services/secrets/vaultLifecycle';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -18,6 +19,7 @@ export type BridgeDependencies = Record<string, never>;
 
 export function initAllBridges(_deps: BridgeDependencies = {}): void {
   initBrowserWebAuthnBridge();
+  initSecretsBridge();
   initDialogBridge();
   initApplicationBridge();
   initWindowControlsBridge();

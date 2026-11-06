@@ -338,6 +338,9 @@ export const conversation = {
     (p) => ({ status: p.status })
   ),
   responseStream: wsEmitter<IResponseMessage>('message.stream'),
+  historyChanged: wsEmitter<{ conversation_ids: string[]; revisions: Record<string, number> }>(
+    'message.historyChanged'
+  ),
   userCreated: wsEmitter<{
     conversation_id: string;
     msg_id: string;
@@ -2571,4 +2574,9 @@ export const team = {
   childTurnCompleted: wsEmitter<ITeamChildTurnEvent>('team.childTurnCompleted'),
   childTurnCancelled: wsEmitter<ITeamChildTurnEvent>('team.childTurnCancelled'),
   slotWorkChanged: wsEmitter<ITeamSlotWorkChangedEvent>('team.slotWorkChanged'),
+};
+
+export const secrets = {
+  request: bridge.buildProvider<unknown, import('../types/secrets').SecretBridgeRequest>('secrets.request'),
+  locked: bridge.buildEmitter<void>('secrets.locked'),
 };

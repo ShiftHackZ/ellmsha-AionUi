@@ -1809,5 +1809,73 @@
       "reconnect_required": "Reconnexion nécessaire",
       "error": "Erreur"
     }
+  },
+  "secrets": {
+    "title": "Secrets",
+    "global": "Secrets globaux",
+    "disclosure": "Réservé aux identifiants d’automatisation. Les lectures autorisées transmettent les secrets en clair au modèle et aux outils choisis. Ne stockez pas de mots de passe personnels importants ni de codes à deux facteurs.",
+    "operationFailed": "Échec de l’opération. Déverrouillez le coffre ou actualisez, puis réessayez.",
+    "locked": "Le coffre est verrouillé. Déverrouillez-le pour gérer les secrets.",
+    "search": "Rechercher dans les titres",
+    "retained": "Projet conservé",
+    "add": "Ajouter un secret",
+    "empty": "Aucun secret dans ce périmètre.",
+    "reveal": "Afficher",
+    "hide": "Masquer",
+    "more": "Plus de secrets",
+    "deleteTitle": "Supprimer le secret ?",
+    "deleteWarning": "Supprimer définitivement « {{title}} » de ce coffre ?",
+    "recordTitle": "Titre",
+    "kind": "Type",
+    "fields": "Champs du secret",
+    "fieldName": "Nom du champ",
+    "fieldKind": "Type de champ",
+    "addField": "Ajouter un champ",
+    "bindings": "Services et environnements",
+    "addBinding": "Ajouter un environnement",
+    "mfa": "Authentification à deux facteurs",
+    "mfaWarning": "Ne stockez jamais de codes temporaires, de graines d’authentification, de clés d’accès ou de codes de récupération. L’agent doit vous demander d’effectuer la vérification requise.",
+    "initialize": "Créer un coffre",
+    "unlock": "Déverrouiller le coffre",
+    "lock": "Verrouiller le coffre",
+    "changePassphrase": "Modifier la phrase secrète",
+    "backup": "Exporter une sauvegarde chiffrée",
+    "restore": "Restaurer une sauvegarde chiffrée",
+    "restoreWarning": "Le coffre actuel sera remplacé. Faites d’abord une sauvegarde. Les entrées des projets conservent leur périmètre d’origine.",
+    "passphrase": "Phrase secrète du coffre (au moins 12 caractères)",
+    "newPassphrase": "Nouvelle phrase secrète",
+    "acknowledge": "Je comprends que les outils autorisés peuvent transmettre les secrets en clair aux fournisseurs de modèles et aux services externes.",
+    "remember": "Utiliser le déverrouillage sécurisé du système sur cet appareil",
+    "osUnlock": "Déverrouiller avec cet appareil",
+    "forgetDevice": "Oublier le déverrouillage de l’appareil",
+    "conflict": "Ce secret a changé. Fermez puis rouvrez la boîte de dialogue avant de le modifier.",
+    "forbidden": "Les secrets sont désactivés ou ce périmètre n’est plus accessible.",
+    "kindLabels": {
+      "login": "Connexion",
+      "api_key": "Clé API",
+      "secure_note": "Note sécurisée",
+      "structured": "Secret structuré"
+    },
+    "fieldKinds": {
+      "text": "Texte",
+      "password": "Mot de passe",
+      "secret": "Secret",
+      "note": "Note multiligne"
+    },
+    "mfaLabels": {
+      "unknown": "MFA inconnue",
+      "required": "MFA requise",
+      "none": "Sans MFA"
+    },
+    "bindingLabels": {
+      "service": "Service ou application",
+      "environment": "Environnement",
+      "tenant": "Organisation",
+      "role": "Rôle",
+      "target": "URL exacte ou identifiant d’application",
+      "mfa_method": "Méthode de vérification",
+      "mfa_instructions": "Instructions de vérification sans secrets"
+    },
+    "retentionDisclosure": "Même après une suppression du coffre ou un masquage du chat, les transcriptions conservées par le fournisseur et les messages ultérieurs de l’agent peuvent conserver ou répéter des secrets en clair."
   }
 }

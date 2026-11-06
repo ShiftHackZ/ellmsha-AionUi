@@ -17,6 +17,7 @@ import {
 import { copyText } from '@/renderer/utils/ui/clipboard';
 import React, {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -62,6 +63,7 @@ export function useConversationExport(options: UseConversationExportOptions): Us
   const [activeIndex, setActiveIndex] = useState(0);
   const [filename, setFilename] = useState('');
   const [loading, setLoading] = useState(false);
+  const historyEpoch = useRef(0);
   const conversationRef = useRef<TChatConversation | null>(null);
   const baseDirectoryRef = useRef('');
   const messagesRef = useRef<TMessage[] | null>(null);
@@ -86,6 +88,26 @@ export function useConversationExport(options: UseConversationExportOptions): Us
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const invalidate = () => {
+      historyEpoch.current++;
+      messagesRef.current = null;
+      transcriptRef.current = null;
+      conversationRef.current = null;
+      closeExportFlow();
+    };
+    invalidate();
+    const off = ipcBridge.conversation.historyChanged.on(({ conversation_ids }) => {
+      if (conversation_id && conversation_ids.includes(conversation_id)) invalidate();
+    });
+    const offReconnect = ipcBridge.realtime.reconnected.on(invalidate);
+    return () => {
+      historyEpoch.current++;
+      offReconnect();
+      off();
+    };
+  }, [conversation_id, closeExportFlow]);
+
   const showMenu = useCallback(() => {
     setStep('menu');
     setActiveIndex(0);
@@ -109,16 +131,14 @@ export function useConversationExport(options: UseConversationExportOptions): Us
     if (!conversation_id) {
       return null;
     }
-    if (transcriptRef.current) {
-      return transcriptRef.current;
-    }
-
+    const epoch = historyEpoch.current;
     const conversation = await loadConversation();
     if (!conversation) {
       return null;
     }
 
-    const messages = messagesRef.current ?? (await loadAllConversationMessagesPaged(conversation_id));
+    const messages = await loadAllConversationMessagesPaged(conversation_id);
+    if (epoch !== historyEpoch.current) return null;
     messagesRef.current = messages;
     const transcript = buildConversationExportText(conversation, messages, transcriptLabels);
     transcriptRef.current = transcript;
@@ -131,6 +151,7 @@ export function useConversationExport(options: UseConversationExportOptions): Us
       return;
     }
 
+    const epoch = historyEpoch.current;
     try {
       conversationRef.current = null;
       messagesRef.current = null;
@@ -152,6 +173,7 @@ export function useConversationExport(options: UseConversationExportOptions): Us
 
       baseDirectoryRef.current = resolveExportBaseDirectory(workspace, desktopPath);
       const messages = await loadAllConversationMessagesPaged(conversation_id);
+      if (epoch !== historyEpoch.current) return;
       messagesRef.current = messages;
       setFilename(buildDefaultExportFileName(conversation.id, getDefaultExportFileNameSource(conversation, messages)));
       setActiveIndex(0);

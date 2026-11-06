@@ -13,6 +13,7 @@ import type { PreviewContentType } from '@/common/types/office/preview';
 export const FILE_EXTENSION_MAP: Record<PreviewContentType, readonly string[]> = {
   usage: [],
   rules: [],
+  secrets: [],
   terminal: [],
   markdown: ['md', 'markdown', 'mdown', 'mkd'],
   html: ['html', 'htm'],

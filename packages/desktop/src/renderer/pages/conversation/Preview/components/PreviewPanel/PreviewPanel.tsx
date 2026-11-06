@@ -1,3 +1,4 @@
+import { SecretsPanel } from '@/renderer/components/secrets/SecretsPanel';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -462,6 +463,10 @@ const PreviewPanel: React.FC<{ conversationId?: string }> = ({ conversationId })
     if (content_type === 'browser') return null;
     if (content_type === 'terminal' && metadata?.backgroundProcess)
       return <TerminalViewer key={displayTab?.id} {...metadata.backgroundProcess} />;
+    if (content_type === 'secrets')
+      return rulesConversationId ? (
+        <SecretsPanel key={rulesConversationId} conversationId={rulesConversationId} />
+      ) : null;
     if (content_type === 'rules') {
       return rulesConversationId ? <RulesPanel key={rulesConversationId} conversationId={rulesConversationId} /> : null;
     }

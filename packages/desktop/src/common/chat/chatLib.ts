@@ -70,6 +70,8 @@ type TMessageType =
   | 'available_commands';
 
 interface IMessage<T extends TMessageType, Content extends Record<string, any>> {
+  revision?: number;
+  redacted?: boolean;
   /**
    * 唯一ID
    */
@@ -330,6 +332,10 @@ export const mergeTextMessageContent = (
 };
 
 export const preferTextMessageVersion = (primary: IMessageText, secondary: IMessageText): IMessageText => {
+  if (primary.redacted || secondary.redacted) {
+    const difference = (secondary.revision ?? 0) - (primary.revision ?? 0);
+    return difference > 0 || (difference === 0 && secondary.redacted && !primary.redacted) ? secondary : primary;
+  }
   const primaryIsReplace = isTextContentReplacement(primary.content);
   const secondaryIsReplace = isTextContentReplacement(secondary.content);
 

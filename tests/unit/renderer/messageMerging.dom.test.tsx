@@ -30,6 +30,7 @@ const realtimeMocks = vi.hoisted(() => ({
 vi.mock('@/common', () => ({
   ipcBridge: {
     conversation: {
+      historyChanged: { on: vi.fn().mockReturnValue(() => {}) },
       userCreated: {
         on: vi.fn().mockReturnValue(() => {}),
       },

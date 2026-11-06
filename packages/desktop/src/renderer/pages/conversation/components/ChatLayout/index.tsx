@@ -18,6 +18,7 @@ import {
   DEFAULT_WORKSPACE_PANEL_PX,
   MAX_WORKSPACE_PANEL_PX,
   MIN_WORKSPACE_PANEL_PX,
+  WORKSPACE_ICON_RAIL_PX,
   WORKSPACE_HEADER_HEIGHT,
   calcLayoutMetrics,
 } from '@/renderer/pages/conversation/utils/layoutCalc';
@@ -323,29 +324,34 @@ const ChatLayout: React.FC<{
         {workspaceEnabled && !layout?.isMobile && (
           <div
             className={classNames('!bg-1 relative chat-layout-right-sider layout-sider')}
+            data-workspace-collapsed={rightSiderCollapsed ? 'true' : 'false'}
             style={{
               flexGrow: 0,
               flexShrink: 0,
-              flexBasis: rightSiderCollapsed ? '0px' : `${Math.round(workspaceWidthPx)}px`,
-              width: rightSiderCollapsed ? '0px' : `${Math.round(workspaceWidthPx)}px`,
-              minWidth: rightSiderCollapsed ? '0px' : `${MIN_WORKSPACE_PANEL_PX}px`,
+              flexBasis: rightSiderCollapsed ? `${WORKSPACE_ICON_RAIL_PX}px` : `${Math.round(workspaceWidthPx)}px`,
+              width: rightSiderCollapsed ? `${WORKSPACE_ICON_RAIL_PX}px` : `${Math.round(workspaceWidthPx)}px`,
+              minWidth: rightSiderCollapsed ? `${WORKSPACE_ICON_RAIL_PX}px` : `${MIN_WORKSPACE_PANEL_PX}px`,
               overflow: 'hidden',
               borderLeft: rightSiderCollapsed ? 'none' : '1px solid var(--bg-3)',
             }}
           >
             {isDesktop &&
               !rightSiderCollapsed &&
-              createWorkspaceDragHandle({ className: 'absolute left-0 top-0 bottom-0', style: {}, reverse: true })}
-            <WorkspacePanelHeader
-              collapsed={rightSiderCollapsed}
-              onToggle={() => dispatchWorkspaceToggleEvent()}
-              togglePlacement={layout?.isMobile ? 'left' : 'right'}
-              workspacePath={workspacePath}
-              isTemporaryWorkspace={isTemporaryWorkspace}
+              createWorkspaceDragHandle({ className: 'absolute -left-6px top-0 bottom-0', style: {}, reverse: true })}
+            {!rightSiderCollapsed && (
+              <WorkspacePanelHeader
+                collapsed={rightSiderCollapsed}
+                onToggle={() => dispatchWorkspaceToggleEvent()}
+                togglePlacement={layout?.isMobile ? 'left' : 'right'}
+                workspacePath={workspacePath}
+                isTemporaryWorkspace={isTemporaryWorkspace}
+              >
+                {siderTitle}
+              </WorkspacePanelHeader>
+            )}
+            <ArcoLayout.Content
+              style={{ height: rightSiderCollapsed ? '100%' : `calc(100% - ${WORKSPACE_HEADER_HEIGHT}px)` }}
             >
-              {siderTitle}
-            </WorkspacePanelHeader>
-            <ArcoLayout.Content style={{ height: `calc(100% - ${WORKSPACE_HEADER_HEIGHT}px)` }}>
               {props.sider}
             </ArcoLayout.Content>
           </div>

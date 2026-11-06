@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import {
   composeMessage,
+  preferTextMessageVersion,
   normalizeAgentStreamError,
   normalizeTextMessageContent,
   transformMessage,
@@ -514,5 +515,22 @@ describe('transformMessage', () => {
         command_count: 3,
       },
     });
+  });
+});
+
+describe('canonical history masking revisions', () => {
+  it('prefers a shorter mask over longer stale content, including equal-revision merges', () => {
+    const raw = {
+      id: 'm',
+      type: 'text',
+      conversation_id: 'c',
+      position: 'right',
+      revision: 1,
+      content: { content: 'long synthetic credential before masking' },
+    } as IMessageText;
+    const masked = { ...raw, revision: 2, redacted: true, content: { content: '<masked>' } };
+    expect(preferTextMessageVersion(raw, masked)).toBe(masked);
+    expect(preferTextMessageVersion(masked, raw)).toBe(masked);
+    expect(preferTextMessageVersion({ ...raw, revision: 2 }, masked)).toBe(masked);
   });
 });

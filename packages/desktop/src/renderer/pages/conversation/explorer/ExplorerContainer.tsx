@@ -19,19 +19,22 @@
 import selectedTabStyles from '@/renderer/components/base/SelectedTab.module.css';
 import { Button, Input, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
 import type { ProjectIndexCatalog } from '@/common/types/platform/electron';
-import { DatabaseCode, FolderPlus } from '@icon-park/react';
+import { DatabaseCode, FolderPlus, FolderOpen, Branch } from '@icon-park/react';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
-import { dispatchWorkspaceHasFilesEvent } from '@/renderer/utils/workspace/workspaceEvents';
+import {
+  dispatchWorkspaceHasFilesEvent,
+  dispatchWorkspaceToggleEvent,
+} from '@/renderer/utils/workspace/workspaceEvents';
 
 import { ipcBridge } from '@/common';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import { PROJECT_ERROR_DUPLICATE, PROJECT_ERROR_OVERLAP } from '@/common/types/project';
 import { ChartPie } from '@icon-park/react';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
-import { RulesTabButton } from '../components/ChatLayout/RulesTabButton';
+import { RulesTabButton, SecretsTabButton } from '../components/ChatLayout/RulesTabButton';
 import WorkspaceOpenButton from '@/renderer/pages/conversation/components/ChatLayout/WorkspaceOpenButton';
 import { getContentTypeByExtension } from '@/renderer/pages/conversation/Preview/fileUtils';
 import { classifyPreviewError, previewErrorToI18nKey } from '@/renderer/utils/previewError';
@@ -376,39 +379,27 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId,
       size='small'
       role='tab'
       aria-selected={activeTab === key}
+      aria-label={label}
+      title={label}
+      icon={key === 'files' ? <FolderOpen size={16} /> : <Branch size={16} />}
       className={`${selectedTabStyles.tab} flex-shrink-0 !px-8px ${activeTab === key ? '!text-t-primary !font-medium !bg-2' : '!text-t-secondary'}`}
-      onClick={() => setActiveTab(key)}
-    >
-      {label}
-    </Button>
+      onClick={(event) => {
+        setActiveTab(key);
+        const host = (event.currentTarget as HTMLElement).closest('[data-workspace-collapsed]');
+        if (host && (host.getAttribute('data-workspace-collapsed') === 'true' || activeTab === key))
+          dispatchWorkspaceToggleEvent();
+      }}
+    ></Button>
   );
 
   return (
-    <div className='h-full flex flex-col min-h-0'>
-      {/* Host component-switcher tab bar: 文件 = explorer, 变更 = source-control
-          placeholder (that lane isn't built — tab present, empty state only).
-          Tabs are left-aligned and scroll horizontally when they overflow; the
-          attach + open-externally cluster is pinned right (flex-shrink-0) with
-          container padding, so it never scrolls with the tabs nor clips at narrow
-          widths.
-
-          左内边距 12px 是本面板的对齐基准线，三处必须一致（见下方 SearchPanel 与
-          arco-override.css 的 .workspace-tree 规则）：外框一律从 12px 起，框内内容
-          （tab 文字 / 搜索图标 / 树箭头）一律从 20px 起。12px 不是随手取的——侧栏
-          的拖宽把手正好盖住最左 12px 且层级更高，任何落在其左侧的东西都点不到。
-
-          The 12px left padding is this panel's alignment baseline and must match in
-          all three places (see SearchPanel below and the .workspace-tree rules in
-          arco-override.css): outer boxes start at 12px, their inner content (tab
-          text / search icon / tree arrow) starts at 20px. 12px is not arbitrary —
-          the sider's resize handle covers the leftmost 12px and sits above this
-          content, so anything placed to its left cannot be clicked. */}
-      <div className='flex items-center gap-4px pl-12px pr-8px py-4px flex-shrink-0 border-b border-[var(--bg-3)]'>
-        <div role='tablist' className='flex items-center gap-2px overflow-x-auto flex-1 min-w-0'>
+    <div className='h-full flex min-h-0 workspace-icon-layout'>
+      <div className='workspace-icon-rail flex flex-col items-center gap-8px py-8px flex-shrink-0 border-r border-[var(--bg-3)]'>
+        <div role='tablist' aria-orientation='vertical' className='flex flex-col items-center gap-8px'>
           {tabButton('files', t('conversation.explorer.tabs.files'))}
           {tabButton('changes', t('conversation.explorer.tabs.changes'))}
         </div>
-        <div className='flex items-center gap-2px flex-shrink-0'>
+        <div className='flex flex-col items-center gap-8px flex-shrink-0'>
           {/* Tooltip 与右侧「打开工作区」按钮保持同一形态（mini），让相邻按钮的
               悬浮提示观感一致。注意：Arco 的 Tooltip 不能包裹 Dropdown（会取到
               非 DOM 节点而崩），这里包的是普通 Button，安全。
@@ -429,7 +420,12 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId,
               />
             </Tooltip>
           )}
-          {activeConversationId && <RulesTabButton onOpen={onOpenRules} />}
+          {activeConversationId && (
+            <>
+              <RulesTabButton onOpen={onOpenRules} />
+              <SecretsTabButton onOpen={onOpenRules} />
+            </>
+          )}
           {activeConversationId && (
             <Tooltip content={t('settings.usage.title')} mini>
               <Button
@@ -462,64 +458,65 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId,
           {workspacePath && <WorkspaceOpenButton workspacePath={workspacePath} isTemporary={false} />}
         </div>
       </div>
-      <Modal
-        title={t('conversation.explorer.codeIndex.title')}
-        visible={indexOpen}
-        onCancel={() => setIndexOpen(false)}
-        footer={null}
-        style={{ width: 720 }}
-      >
-        <p className='text-t-secondary'>{t('conversation.explorer.codeIndex.description')}</p>
-        <div className='flex gap-8px mb-16px'>
-          <Button
-            type='primary'
-            loading={indexBusy}
-            disabled={!indexCatalog?.repositories.length}
-            onClick={() => void indexRepositories()}
-          >
-            {t('conversation.explorer.codeIndex.indexAll')}
-          </Button>
-          <Button onClick={() => void refreshIndexes()}>{t('conversation.explorer.codeIndex.refresh')}</Button>
-        </div>
-        {indexError && (
-          <p role='alert' className='text-[var(--color-danger-6)]'>
-            {indexError}
-          </p>
-        )}
-        {!indexCatalog && !indexError && <Spin />}
-        {indexCatalog?.errors.map((item) => (
-          <p role='alert' key={item.path}>
-            {item.path}: {item.error}
-          </p>
-        ))}
-        {indexCatalog?.repositories.length === 0 && <p>{t('conversation.explorer.codeIndex.empty')}</p>}
-        <div className='max-h-400px overflow-auto'>
-          {indexCatalog?.repositories.map((repo) => (
-            <div key={repo.path} className='py-12px border-b border-[var(--bg-3)]'>
-              <div className='flex items-center justify-between gap-8px'>
-                <strong>{repo.name}</strong>
-                <Button
-                  size='small'
-                  disabled={indexBusy || ['pending', 'processing'].includes(repo.status)}
-                  onClick={() => void indexRepositories(repo.path)}
-                >
-                  {t('conversation.explorer.codeIndex.index')}
-                </Button>
-              </div>
-              <div className='text-t-secondary break-all'>{repo.path}</div>
-              <div>
-                {indexStatuses[repo.status] || repo.status}
-                {repo.stats ? ` · ${t('conversation.explorer.codeIndex.files', { count: repo.stats.files })}` : ''}
-                {repo.indexed_at ? ` · ${new Date(repo.indexed_at).toLocaleString()}` : ''}
-              </div>
-              {repo.error && <div role='alert'>{repo.error}</div>}
-            </div>
+      <div className='workspace-panel-body flex flex-col flex-1 min-w-0 min-h-0'>
+        <Modal
+          title={t('conversation.explorer.codeIndex.title')}
+          visible={indexOpen}
+          onCancel={() => setIndexOpen(false)}
+          footer={null}
+          style={{ width: 720 }}
+        >
+          <p className='text-t-secondary'>{t('conversation.explorer.codeIndex.description')}</p>
+          <div className='flex gap-8px mb-16px'>
+            <Button
+              type='primary'
+              loading={indexBusy}
+              disabled={!indexCatalog?.repositories.length}
+              onClick={() => void indexRepositories()}
+            >
+              {t('conversation.explorer.codeIndex.indexAll')}
+            </Button>
+            <Button onClick={() => void refreshIndexes()}>{t('conversation.explorer.codeIndex.refresh')}</Button>
+          </div>
+          {indexError && (
+            <p role='alert' className='text-[var(--color-danger-6)]'>
+              {indexError}
+            </p>
+          )}
+          {!indexCatalog && !indexError && <Spin />}
+          {indexCatalog?.errors.map((item) => (
+            <p role='alert' key={item.path}>
+              {item.path}: {item.error}
+            </p>
           ))}
-        </div>
-      </Modal>
-      {/* Files tab (explorer): kept mounted across tab switches so the tree + WS
+          {indexCatalog?.repositories.length === 0 && <p>{t('conversation.explorer.codeIndex.empty')}</p>}
+          <div className='max-h-400px overflow-auto'>
+            {indexCatalog?.repositories.map((repo) => (
+              <div key={repo.path} className='py-12px border-b border-[var(--bg-3)]'>
+                <div className='flex items-center justify-between gap-8px'>
+                  <strong>{repo.name}</strong>
+                  <Button
+                    size='small'
+                    disabled={indexBusy || ['pending', 'processing'].includes(repo.status)}
+                    onClick={() => void indexRepositories(repo.path)}
+                  >
+                    {t('conversation.explorer.codeIndex.index')}
+                  </Button>
+                </div>
+                <div className='text-t-secondary break-all'>{repo.path}</div>
+                <div>
+                  {indexStatuses[repo.status] || repo.status}
+                  {repo.stats ? ` · ${t('conversation.explorer.codeIndex.files', { count: repo.stats.files })}` : ''}
+                  {repo.indexed_at ? ` · ${new Date(repo.indexed_at).toLocaleString()}` : ''}
+                </div>
+                {repo.error && <div role='alert'>{repo.error}</div>}
+              </div>
+            ))}
+          </div>
+        </Modal>
+        {/* Files tab (explorer): kept mounted across tab switches so the tree + WS
           state survive (only hidden when the changes tab is active). */}
-      {/* Search area is persistent at the top of the files tab; the tree renders
+        {/* Search area is persistent at the top of the files tab; the tree renders
           underneath (children slot) and stays mounted while searching so its WS
           subscriptions never thrash. SearchPanel owns the scroll region, so this
           container no longer sets overflow.
@@ -531,51 +528,52 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId,
           the 12px baseline on their own (the former via its own padding, the latter
           via the .workspace-tree rules in arco-override.css). Adding a layer here
           would push both off that baseline. */}
-      <div className='flex-1 min-h-0' style={activeTab === 'files' ? undefined : { display: 'none' }}>
-        <SearchPanel
-          roots={searchRoots}
-          peNames={searchPeNames}
-          onRevealHit={handleRevealHit}
-          onAddHit={activeConversationId ? handleAddHit : undefined}
-        >
-          <ExplorerPanel
-            projectId={projectId}
-            roots={roots}
-            workspacePeId={workspacePeId}
-            onRemoveRoot={handleRemoveFolder}
-            onOpenFile={handleOpenFile}
-            onRename={handleRename}
-            onDelete={handleDelete}
-            onAddToChat={activeConversationId ? handleAddToChat : undefined}
-            onRevealInFolder={handleRevealInFolder}
-            onImportFiles={handleImportFiles}
-          />
-        </SearchPanel>
-      </div>
-      {activeTab === 'changes' && (
-        <div className='flex-1 min-h-0 flex items-center justify-center px-16px text-center text-t-secondary text-13px'>
-          {t('conversation.explorer.changesPlaceholder')}
+        <div className='flex-1 min-h-0' style={activeTab === 'files' ? undefined : { display: 'none' }}>
+          <SearchPanel
+            roots={searchRoots}
+            peNames={searchPeNames}
+            onRevealHit={handleRevealHit}
+            onAddHit={activeConversationId ? handleAddHit : undefined}
+          >
+            <ExplorerPanel
+              projectId={projectId}
+              roots={roots}
+              workspacePeId={workspacePeId}
+              onRemoveRoot={handleRemoveFolder}
+              onOpenFile={handleOpenFile}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              onAddToChat={activeConversationId ? handleAddToChat : undefined}
+              onRevealInFolder={handleRevealInFolder}
+              onImportFiles={handleImportFiles}
+            />
+          </SearchPanel>
         </div>
-      )}
-      <Modal
-        title={t('conversation.explorer.contextMenu.rename')}
-        visible={renameDialog !== null}
-        onCancel={() => setRenameDialog(null)}
-        onOk={submitRenameDialog}
-        okText={t('common.save')}
-        cancelText={t('common.cancel')}
-        confirmLoading={nameSubmitting}
-        autoFocus
-        focusLock
-      >
-        <Input
+        {activeTab === 'changes' && (
+          <div className='flex-1 min-h-0 flex items-center justify-center px-16px text-center text-t-secondary text-13px'>
+            {t('conversation.explorer.changesPlaceholder')}
+          </div>
+        )}
+        <Modal
+          title={t('conversation.explorer.contextMenu.rename')}
+          visible={renameDialog !== null}
+          onCancel={() => setRenameDialog(null)}
+          onOk={submitRenameDialog}
+          okText={t('common.save')}
+          cancelText={t('common.cancel')}
+          confirmLoading={nameSubmitting}
           autoFocus
-          value={nameValue}
-          onChange={setNameValue}
-          onPressEnter={submitRenameDialog}
-          placeholder={t('conversation.explorer.namePlaceholder')}
-        />
-      </Modal>
+          focusLock
+        >
+          <Input
+            autoFocus
+            value={nameValue}
+            onChange={setNameValue}
+            onPressEnter={submitRenameDialog}
+            placeholder={t('conversation.explorer.namePlaceholder')}
+          />
+        </Modal>
+      </div>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { getSecretsHumanCapability } from './process/services/secrets/vaultLifecycle';
 import {
   registerCopilotBridge,
   initializeCopilotProvider,
@@ -223,6 +224,7 @@ const backendManager = new BackendLifecycleManager(
     identityMode: isWebUIMode ? 'webui' : 'local',
     bootstrapSecret: backendBootstrapSecret,
     browserScopeKey: getBrowserScopeKey,
+    secretsHumanCapability: getSecretsHumanCapability,
   }
 );
 let disposeCronResumeListener: (() => void) | null = null;

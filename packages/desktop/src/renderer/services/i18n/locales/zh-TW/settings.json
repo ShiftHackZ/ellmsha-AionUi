@@ -1811,5 +1811,73 @@
       "reconnect_required": "需要重新連接",
       "error": "錯誤"
     }
+  },
+  "secrets": {
+    "title": "機密管理",
+    "global": "全域機密",
+    "disclosure": "僅用於自動化憑證。獲准的代理讀取會將明文機密傳送給所選模型與工具。請勿儲存重要的個人密碼或雙重驗證代碼。",
+    "operationFailed": "操作失敗。請解鎖保險庫或重新整理後再試。",
+    "locked": "保險庫已鎖定。請解鎖後管理機密。",
+    "search": "搜尋機密標題",
+    "retained": "保留的專案",
+    "add": "新增機密",
+    "empty": "此範圍內沒有機密。",
+    "reveal": "顯示",
+    "hide": "隱藏",
+    "more": "更多機密",
+    "deleteTitle": "刪除機密？",
+    "deleteWarning": "確定從此保險庫永久刪除「{{title}}」？",
+    "recordTitle": "標題",
+    "kind": "類型",
+    "fields": "機密欄位",
+    "fieldName": "欄位名稱",
+    "fieldKind": "欄位類型",
+    "addField": "新增欄位",
+    "bindings": "服務與環境",
+    "addBinding": "新增環境",
+    "mfa": "雙重驗證",
+    "mfaWarning": "請勿儲存一次性代碼、驗證器種子、通行密鑰或復原代碼。代理必須請您完成所需驗證。",
+    "initialize": "建立保險庫",
+    "unlock": "解鎖保險庫",
+    "lock": "鎖定保險庫",
+    "changePassphrase": "變更密碼片語",
+    "backup": "匯出加密備份",
+    "restore": "還原加密備份",
+    "restoreWarning": "這將取代目前的保險庫。請先備份。專案記錄將保留原有範圍。",
+    "passphrase": "保險庫密碼片語（至少 12 個字元）",
+    "newPassphrase": "新密碼片語",
+    "acknowledge": "我了解獲准的工具可能將明文機密提供給模型供應商與外部服務。",
+    "remember": "在此裝置使用作業系統安全解鎖",
+    "osUnlock": "使用此裝置解鎖",
+    "forgetDevice": "忘記裝置解鎖",
+    "conflict": "此機密已變更。請關閉對話框並重新開啟後再編輯。",
+    "forbidden": "機密功能已停用或此範圍已無法使用。",
+    "kindLabels": {
+      "login": "登入",
+      "api_key": "API 金鑰",
+      "secure_note": "安全備註",
+      "structured": "結構化機密"
+    },
+    "fieldKinds": {
+      "text": "文字",
+      "password": "密碼",
+      "secret": "機密",
+      "note": "多行備註"
+    },
+    "mfaLabels": {
+      "unknown": "MFA 狀態未知",
+      "required": "需要 MFA",
+      "none": "不需要 MFA"
+    },
+    "bindingLabels": {
+      "service": "服務或應用程式",
+      "environment": "環境",
+      "tenant": "租用戶",
+      "role": "角色",
+      "target": "確切的 URL 或應用程式識別碼",
+      "mfa_method": "驗證方式",
+      "mfa_instructions": "不含機密的驗證說明"
+    },
+    "retentionDisclosure": "即使刪除保管庫中的內容或遮蔽聊天記錄，服務提供者保存的對話記錄和代理程式後續撰寫的訊息仍可能保留或重複明文機密。"
   }
 }

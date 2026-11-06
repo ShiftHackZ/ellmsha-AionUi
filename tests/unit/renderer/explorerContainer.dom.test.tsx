@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -75,6 +76,27 @@ afterEach(() => {
 });
 
 describe('ExplorerContainer data integration', () => {
+  it('opens a collapsed rail and closes the active tab with pointer or keyboard', async () => {
+    projectGet.mockResolvedValue(detail([entry({ pe_id: 'peA', display_name: 'Fixture' })]));
+    const view = renderContainer('p1');
+    const host = view.container;
+    host.setAttribute('data-workspace-collapsed', 'true');
+    const toggled = vi.fn();
+    window.addEventListener('aionui-workspace-toggle', toggled);
+    try {
+      const files = await screen.findByRole('tab', { name: 'conversation.explorer.tabs.files' });
+      fireEvent.click(files);
+      expect(toggled).toHaveBeenCalledTimes(1);
+      host.setAttribute('data-workspace-collapsed', 'false');
+      files.focus();
+      await userEvent.keyboard('{Enter}');
+      expect(toggled).toHaveBeenCalledTimes(2);
+      fireEvent.click(screen.getByRole('tab', { name: 'conversation.explorer.tabs.changes' }));
+      expect(toggled).toHaveBeenCalledTimes(2);
+    } finally {
+      window.removeEventListener('aionui-workspace-toggle', toggled);
+    }
+  });
   it('marks the selected Files/Changes tab explicitly independently of hover', async () => {
     projectGet.mockResolvedValue(detail([entry({ pe_id: 'peA', display_name: 'Fixture' })]));
     renderContainer('p1');
@@ -188,14 +210,14 @@ describe('ExplorerContainer data integration', () => {
     expect(await screen.findByText('Root Alpha')).toBeInTheDocument();
 
     // Component-switcher tabs present (t returns the raw key here).
-    fireEvent.click(screen.getByText('conversation.explorer.tabs.changes'));
+    fireEvent.click(screen.getByRole('tab', { name: 'conversation.explorer.tabs.changes' }));
     // Changes tab shows the placeholder…
     expect(screen.getByText('conversation.explorer.changesPlaceholder')).toBeInTheDocument();
     // …and the explorer stays mounted (root still in the DOM, just hidden) — no rebuild.
     expect(screen.getByText('Root Alpha')).toBeInTheDocument();
 
     // Switching back hides the placeholder and keeps the tree.
-    fireEvent.click(screen.getByText('conversation.explorer.tabs.files'));
+    fireEvent.click(screen.getByRole('tab', { name: 'conversation.explorer.tabs.files' }));
     expect(screen.queryByText('conversation.explorer.changesPlaceholder')).not.toBeInTheDocument();
     expect(screen.getByText('Root Alpha')).toBeInTheDocument();
   });

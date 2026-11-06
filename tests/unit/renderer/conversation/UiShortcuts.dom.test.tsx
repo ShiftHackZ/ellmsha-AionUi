@@ -36,6 +36,8 @@ vi.mock('@/renderer/utils/chat/messagePagination', () => ({
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    realtime: { reconnected: { on: () => () => {} } },
+    conversation: { historyChanged: { on: () => () => {} } },
     database: {
       searchConversationMessages: { invoke: serviceMocks.searchMessages },
     },

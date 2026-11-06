@@ -1833,5 +1833,73 @@
       "reconnect_required": "Reconnect required",
       "error": "Error"
     }
+  },
+  "secrets": {
+    "title": "Secrets",
+    "global": "Global secrets",
+    "disclosure": "For automation credentials only. Approved agent reads send raw secrets to the selected model and tools. Do not store important personal passwords or two-factor codes.",
+    "operationFailed": "The operation failed. Unlock the vault or refresh and try again.",
+    "locked": "Your vault is locked. Unlock it to manage secrets.",
+    "search": "Search secret titles",
+    "retained": "Retained project",
+    "add": "Add secret",
+    "empty": "No secrets in this scope.",
+    "reveal": "Reveal",
+    "hide": "Hide",
+    "more": "More secrets",
+    "deleteTitle": "Delete secret?",
+    "deleteWarning": "Permanently delete “{{title}}” from this vault?",
+    "recordTitle": "Title",
+    "kind": "Type",
+    "fields": "Secret fields",
+    "fieldName": "Field name",
+    "fieldKind": "Field type",
+    "addField": "Add field",
+    "bindings": "Services and environments",
+    "addBinding": "Add environment",
+    "mfa": "Two-factor authentication",
+    "mfaWarning": "Never store one-time codes, authenticator seeds, passkeys, or recovery codes. Agents must ask you to complete required verification.",
+    "initialize": "Create vault",
+    "unlock": "Unlock vault",
+    "lock": "Lock vault",
+    "changePassphrase": "Change passphrase",
+    "backup": "Export encrypted backup",
+    "restore": "Restore encrypted backup",
+    "restoreWarning": "This replaces the current vault. Keep a backup first. Project records retain their original scope.",
+    "passphrase": "Vault passphrase (at least 12 characters)",
+    "newPassphrase": "New passphrase",
+    "acknowledge": "I understand that approved tools can disclose raw secrets to model providers and external services.",
+    "remember": "Use secure operating-system unlock on this device",
+    "osUnlock": "Unlock with this device",
+    "forgetDevice": "Forget device unlock",
+    "conflict": "This secret changed. Close the dialog and reopen it before editing.",
+    "forbidden": "Secrets are disabled or this scope is no longer available.",
+    "kindLabels": {
+      "login": "Login",
+      "api_key": "API key",
+      "secure_note": "Secure note",
+      "structured": "Structured secret"
+    },
+    "fieldKinds": {
+      "text": "Text",
+      "password": "Password",
+      "secret": "Secret",
+      "note": "Multiline note"
+    },
+    "mfaLabels": {
+      "unknown": "MFA unknown",
+      "required": "MFA required",
+      "none": "No MFA"
+    },
+    "bindingLabels": {
+      "service": "Service or app",
+      "environment": "Environment",
+      "tenant": "Tenant",
+      "role": "Role",
+      "target": "Exact URL or application identifier",
+      "mfa_method": "Verification method",
+      "mfa_instructions": "Non-secret verification instructions"
+    },
+    "retentionDisclosure": "Provider-owned transcripts and later messages written by the agent may retain or repeat plaintext secrets, even after vault deletion or chat masking."
   }
 }

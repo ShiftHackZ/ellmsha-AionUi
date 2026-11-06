@@ -1809,5 +1809,73 @@
       "reconnect_required": "Erneute Verbindung erforderlich",
       "error": "Fehler"
     }
+  },
+  "secrets": {
+    "title": "Geheimnisse",
+    "global": "Globale Geheimnisse",
+    "disclosure": "Nur für Automatisierungszugänge. Genehmigte Agentenzugriffe senden Geheimnisse im Klartext an das gewählte Modell und die Werkzeuge. Keine wichtigen persönlichen Passwörter oder Zwei-Faktor-Codes speichern.",
+    "operationFailed": "Vorgang fehlgeschlagen. Tresor entsperren oder aktualisieren und erneut versuchen.",
+    "locked": "Der Tresor ist gesperrt. Zum Verwalten der Geheimnisse entsperren.",
+    "search": "Geheimnistitel durchsuchen",
+    "retained": "Aufbewahrtes Projekt",
+    "add": "Geheimnis hinzufügen",
+    "empty": "Keine Geheimnisse in diesem Bereich.",
+    "reveal": "Anzeigen",
+    "hide": "Verbergen",
+    "more": "Weitere Geheimnisse",
+    "deleteTitle": "Geheimnis löschen?",
+    "deleteWarning": "„{{title}}“ dauerhaft aus diesem Tresor löschen?",
+    "recordTitle": "Titel",
+    "kind": "Typ",
+    "fields": "Geheimnisfelder",
+    "fieldName": "Feldname",
+    "fieldKind": "Feldtyp",
+    "addField": "Feld hinzufügen",
+    "bindings": "Dienste und Umgebungen",
+    "addBinding": "Umgebung hinzufügen",
+    "mfa": "Zwei-Faktor-Authentifizierung",
+    "mfaWarning": "Niemals Einmalcodes, Authentifikator-Startschlüssel, Passkeys oder Wiederherstellungscodes speichern. Agenten müssen Sie bitten, die erforderliche Prüfung selbst durchzuführen.",
+    "initialize": "Tresor erstellen",
+    "unlock": "Tresor entsperren",
+    "lock": "Tresor sperren",
+    "changePassphrase": "Passphrase ändern",
+    "backup": "Verschlüsselte Sicherung exportieren",
+    "restore": "Verschlüsselte Sicherung wiederherstellen",
+    "restoreWarning": "Der aktuelle Tresor wird ersetzt. Zuerst eine Sicherung erstellen. Projekteinträge behalten ihren ursprünglichen Bereich.",
+    "passphrase": "Tresor-Passphrase (mindestens 12 Zeichen)",
+    "newPassphrase": "Neue Passphrase",
+    "acknowledge": "Ich verstehe, dass genehmigte Werkzeuge Geheimnisse im Klartext an Modellanbieter und externe Dienste weitergeben können.",
+    "remember": "Sicheres Entsperren über das Betriebssystem auf diesem Gerät verwenden",
+    "osUnlock": "Mit diesem Gerät entsperren",
+    "forgetDevice": "Geräteentsperrung vergessen",
+    "conflict": "Dieses Geheimnis wurde geändert. Dialog vor dem Bearbeiten schließen und erneut öffnen.",
+    "forbidden": "Geheimnisse sind deaktiviert oder dieser Bereich ist nicht mehr verfügbar.",
+    "kindLabels": {
+      "login": "Anmeldung",
+      "api_key": "API-Schlüssel",
+      "secure_note": "Geschützte Notiz",
+      "structured": "Strukturiertes Geheimnis"
+    },
+    "fieldKinds": {
+      "text": "Text",
+      "password": "Passwort",
+      "secret": "Geheimnis",
+      "note": "Mehrzeilige Notiz"
+    },
+    "mfaLabels": {
+      "unknown": "MFA unbekannt",
+      "required": "MFA erforderlich",
+      "none": "Keine MFA"
+    },
+    "bindingLabels": {
+      "service": "Dienst oder Anwendung",
+      "environment": "Umgebung",
+      "tenant": "Mandant",
+      "role": "Rolle",
+      "target": "Genaue URL oder Anwendungskennung",
+      "mfa_method": "Prüfmethode",
+      "mfa_instructions": "Prüfanweisungen ohne Geheimnisse"
+    },
+    "retentionDisclosure": "Auch nach dem Löschen aus dem Tresor oder dem Maskieren des Chats können beim Anbieter gespeicherte Gesprächsprotokolle und spätere Nachrichten des Agenten Geheimnisse im Klartext behalten oder wiederholen."
   }
 }

@@ -15,7 +15,7 @@ import {
   preferTextMessageVersion,
   sanitizeAcpToolCallContent,
 } from '@/common/chat/chatLib';
-import { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { createContext } from '@renderer/utils/ui/createContext';
 import {
   DEFAULT_MESSAGE_PAGE_LIMIT,
@@ -24,7 +24,54 @@ import {
   loadLatestConversationMessages,
 } from '@/renderer/utils/chat/messagePagination';
 
-const [useMessageList, MessageListProvider, useUpdateMessageList] = createContext([] as TMessage[]);
+const [useMessageList, BaseMessageListProvider, useRawUpdateMessageList] = createContext([] as TMessage[]);
+type RevisionFence = { revision: number; canonical?: TMessage };
+const redactionPlaceholders = new WeakSet<TMessage>();
+const HistoryRequests = React.createContext<React.MutableRefObject<number> | null>(null);
+const RevisionFences = React.createContext<Map<string, RevisionFence> | null>(null);
+const MessageListProvider: React.FC<React.ComponentProps<typeof BaseMessageListProvider>> = (props) => {
+  const fences = useRef(new Map<string, RevisionFence>());
+  const requests = useRef(0);
+  return React.createElement(
+    HistoryRequests.Provider,
+    { value: requests },
+    React.createElement(
+      RevisionFences.Provider,
+      { value: fences.current },
+      React.createElement(BaseMessageListProvider, props)
+    )
+  );
+};
+const fencedMessage = (message: TMessage, fences: Map<string, RevisionFence> | null): TMessage => {
+  const fence = fences?.get(message.id);
+  if (!fence) return message;
+  if (message.redacted && (message.revision ?? 0) >= fence.revision && !redactionPlaceholders.has(message)) {
+    fence.revision = message.revision ?? fence.revision;
+    fence.canonical = message;
+    return message;
+  }
+  if (fence.canonical) return fence.canonical;
+  const placeholder = {
+    ...message,
+    revision: fence.revision,
+    redacted: true,
+    content: message.type === 'text' ? { content: '<masked>', replace: true } : {},
+  } as TMessage;
+  redactionPlaceholders.add(placeholder);
+  return placeholder;
+};
+const useUpdateMessageList = () => {
+  const update = useRawUpdateMessageList();
+  const fences = React.useContext(RevisionFences);
+  return useCallback(
+    (value: TMessage[] | ((list: TMessage[]) => TMessage[])) => {
+      update((list) =>
+        (typeof value === 'function' ? value(list) : value).map((message) => fencedMessage(message, fences))
+      );
+    },
+    [update, fences]
+  );
+};
 const [useMessageListLoading, MessageListLoadingProvider, useUpdateMessageListLoading] = createContext(false);
 
 const [useChatKey, ChatKeyProvider] = createContext('');
@@ -129,6 +176,10 @@ const sanitizeMessageForList = (message: TMessage): TMessage =>
 // Index-optimized message compose function
 function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[], index: MessageIndex): TMessage[] {
   if (!message) return list || [];
+  const authoritative = list.find(
+    (item) => item.redacted && (item.id === message.id || (item.msg_id && item.msg_id === message.msg_id))
+  );
+  if (authoritative && (message.revision ?? 0) <= (authoritative.revision ?? 0)) return list;
 
   if (logDroppedToolCallWithoutCallId(message)) {
     return list || [];
@@ -365,8 +416,9 @@ function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[]
 }
 
 export const useMergeLiveMessage = () => {
+  const requests = React.useContext(HistoryRequests);
   const update = useUpdateMessageList();
-  const pendingRef = useRef<Array<{ message: TMessage; add: boolean }>>([]);
+  const pendingRef = useRef<Array<{ message: TMessage; add: boolean; epoch?: number }>>([]);
   const rafRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flush = useCallback(() => {
@@ -382,7 +434,7 @@ export const useMergeLiveMessage = () => {
       let newList = list;
 
       for (const item of pending) {
-        if (!item.message) {
+        if (!item.message || item.epoch !== requests?.current) {
           continue;
         }
 
@@ -436,7 +488,7 @@ export const useMergeLiveMessage = () => {
       if (!message) {
         return;
       }
-      pendingRef.current.push({ message, add });
+      pendingRef.current.push({ message, add, epoch: requests?.current });
       if (rafRef.current === null) {
         rafRef.current = setTimeout(flush);
       }
@@ -683,6 +735,10 @@ const getMessageMergeKey = (message: TMessage): string => {
 };
 
 const preferPersistedOrLiveMessage = (persisted: TMessage, live: TMessage): TMessage => {
+  if (persisted.redacted || live.redacted) {
+    const difference = (live.revision ?? 0) - (persisted.revision ?? 0);
+    return difference > 0 || (difference === 0 && live.redacted && !persisted.redacted) ? live : persisted;
+  }
   if (persisted.type === 'text' && live.type === 'text') {
     return preferTextMessageVersion(persisted, live);
   }
@@ -743,6 +799,7 @@ export const useReplaceWithAnchorWindow = () => {
 };
 
 export const useLoadPreviousMessagePage = (conversationId?: string) => {
+  const requests = React.useContext(HistoryRequests);
   const pagination = useMessagePaginationState();
   const setPagination = useUpdateMessagePaginationState();
   const prependHistoryPage = usePrependHistoryPage();
@@ -752,6 +809,7 @@ export const useLoadPreviousMessagePage = (conversationId?: string) => {
       return false;
     }
 
+    const epoch = requests?.current;
     setPagination((current) => ({ ...current, isLoadingBefore: true }));
     try {
       const page = await loadConversationMessagePage(conversationId, {
@@ -759,6 +817,7 @@ export const useLoadPreviousMessagePage = (conversationId?: string) => {
         before: pagination.oldestCursor,
         contentMode: 'compact',
       });
+      if (epoch !== requests?.current) return false;
       const messages = page.items.map(normalizeDbMessage);
       prependHistoryPage(messages);
       setPagination((current) => ({
@@ -771,6 +830,7 @@ export const useLoadPreviousMessagePage = (conversationId?: string) => {
       }));
       return true;
     } catch (error) {
+      if (epoch !== requests?.current) return false;
       console.error('[useLoadPreviousMessagePage] Failed to load previous messages:', error);
       setPagination((current) => ({ ...current, isLoadingBefore: false }));
       return false;
@@ -781,11 +841,13 @@ export const useLoadPreviousMessagePage = (conversationId?: string) => {
     pagination.isLoadingBefore,
     pagination.oldestCursor,
     prependHistoryPage,
+    requests,
     setPagination,
   ]);
 };
 
 export const useLoadAnchorMessageWindow = (conversationId?: string) => {
+  const requests = React.useContext(HistoryRequests);
   const setPagination = useUpdateMessagePaginationState();
   const replaceWithAnchorWindow = useReplaceWithAnchorWindow();
 
@@ -793,12 +855,14 @@ export const useLoadAnchorMessageWindow = (conversationId?: string) => {
     async (messageId: string) => {
       if (!conversationId || !messageId) return false;
 
+      const epoch = requests?.current;
       setPagination((current) => ({ ...current, isLoadingAnchor: true }));
       try {
         const page = await loadConversationAnchorWindow(conversationId, messageId, {
           limit: DEFAULT_MESSAGE_PAGE_LIMIT,
           contentMode: 'compact',
         });
+        if (epoch !== requests?.current) return false;
         replaceWithAnchorWindow(conversationId, page.items.map(normalizeDbMessage));
         setPagination({
           oldestCursor: page.oldest_cursor ?? undefined,
@@ -810,16 +874,19 @@ export const useLoadAnchorMessageWindow = (conversationId?: string) => {
         });
         return true;
       } catch (error) {
+        if (epoch !== requests?.current) return false;
         console.error('[useLoadAnchorMessageWindow] Failed to load anchor messages:', error);
         setPagination((current) => ({ ...current, isLoadingAnchor: false }));
         return false;
       }
     },
-    [conversationId, replaceWithAnchorWindow, setPagination]
+    [conversationId, replaceWithAnchorWindow, requests, setPagination]
   );
 };
 
 export const useMessageLstCache = (key: string) => {
+  const requests = React.useContext(HistoryRequests);
+  const fences = React.useContext(RevisionFences);
   const update = useUpdateMessageList();
   const setLoading = useUpdateMessageListLoading();
   const setPagination = useUpdateMessagePaginationState();
@@ -884,9 +951,52 @@ export const useMessageLstCache = (key: string) => {
     }
 
     return ipcBridge.realtime.reconnected.on(() => {
+      // A missed mask event makes every previously loaded row untrusted. Drop
+      // old pages immediately; only live frames arriving after this boundary
+      // may merge with the freshly loaded canonical latest page.
+      if (requests) requests.current++;
+      if (fences) for (const fence of fences.values()) fence.canonical = undefined;
+      update([]);
+      setPagination({ ...EMPTY_MESSAGE_PAGINATION_STATE });
       void loadMessages('[useMessageLstCache] Failed to recover messages after reconnect:');
     });
-  }, [key, loadMessages]);
+  }, [key, loadMessages, requests, fences, setPagination, update]);
+
+  useEffect(() => {
+    if (!key) return;
+    let active = true;
+    const off = ipcBridge.conversation.historyChanged.on(({ conversation_ids, revisions }) => {
+      if (!conversation_ids.includes(key) || !fences) return;
+      // Tombstones outlive loaded rows, so older pages and stream frames cannot restore content.
+      // This has its own lifetime; it never cancels an initial/reconnect request's loading cleanup.
+      for (const [id, revision] of Object.entries(revisions)) {
+        if ((fences.get(id)?.revision ?? -1) < revision) fences.set(id, { revision });
+      }
+      update((list) => list);
+      const historyEpoch = requests?.current;
+      for (const [id, revision] of Object.entries(revisions)) {
+        void loadConversationAnchorWindow(key, id, { limit: 1, contentMode: 'full' })
+          .then((page) => {
+            if (!active || requestStateRef.current.key !== key || historyEpoch !== requests?.current) return;
+            const row = page.items.find(
+              (item) =>
+                item.id === id && item.conversation_id === key && (item.revision ?? 0) >= revision && item.redacted
+            );
+            const current = fences.get(id);
+            if (!row || !current || (row.revision ?? 0) < current.revision) return;
+            fences.set(id, { revision: row.revision ?? revision, canonical: normalizeDbMessage(row) });
+            update((list) => list);
+          })
+          .catch(() => {
+            /* Keep the tombstone until a canonical fetch succeeds. */
+          });
+      }
+    });
+    return () => {
+      active = false;
+      off();
+    };
+  }, [key, update, fences, requests]);
 
   useEffect(() => {
     if (!key) {

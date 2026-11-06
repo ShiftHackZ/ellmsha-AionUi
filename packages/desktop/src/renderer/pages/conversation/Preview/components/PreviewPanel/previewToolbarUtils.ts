@@ -16,7 +16,7 @@
  * @param hasFilePath - Whether the tab is backed by a file on disk
  */
 export const shouldShowDownload = (contentType: string, hasFilePath: boolean): boolean => {
-  if (contentType === 'usage' || contentType === 'rules') return false;
+  if (contentType === 'usage' || contentType === 'rules' || contentType === 'secrets') return false;
   if ((contentType === 'code' || contentType === 'markdown') && hasFilePath) {
     return false;
   }

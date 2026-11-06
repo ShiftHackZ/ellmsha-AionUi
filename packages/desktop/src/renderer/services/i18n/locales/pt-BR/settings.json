@@ -1812,5 +1812,73 @@
       "reconnect_required": "Reconexão necessária",
       "error": "Erro"
     }
+  },
+  "secrets": {
+    "title": "Segredos",
+    "global": "Segredos globais",
+    "disclosure": "Apenas para credenciais de automação. Leituras autorizadas enviam os segredos em texto simples ao modelo e às ferramentas escolhidos. Não armazene senhas pessoais importantes nem códigos de dois fatores.",
+    "operationFailed": "A operação falhou. Desbloqueie o cofre ou atualize e tente novamente.",
+    "locked": "O cofre está bloqueado. Desbloqueie-o para gerenciar segredos.",
+    "search": "Pesquisar títulos de segredos",
+    "retained": "Projeto mantido",
+    "add": "Adicionar segredo",
+    "empty": "Nenhum segredo neste escopo.",
+    "reveal": "Mostrar",
+    "hide": "Ocultar",
+    "more": "Mais segredos",
+    "deleteTitle": "Excluir segredo?",
+    "deleteWarning": "Excluir permanentemente “{{title}}” deste cofre?",
+    "recordTitle": "Título",
+    "kind": "Tipo",
+    "fields": "Campos do segredo",
+    "fieldName": "Nome do campo",
+    "fieldKind": "Tipo de campo",
+    "addField": "Adicionar campo",
+    "bindings": "Serviços e ambientes",
+    "addBinding": "Adicionar ambiente",
+    "mfa": "Autenticação de dois fatores",
+    "mfaWarning": "Nunca armazene códigos temporários, sementes de autenticadores, chaves de acesso ou códigos de recuperação. O agente deve pedir que você conclua a verificação necessária.",
+    "initialize": "Criar cofre",
+    "unlock": "Desbloquear cofre",
+    "lock": "Bloquear cofre",
+    "changePassphrase": "Alterar frase secreta",
+    "backup": "Exportar backup criptografado",
+    "restore": "Restaurar backup criptografado",
+    "restoreWarning": "Isso substituirá o cofre atual. Faça um backup primeiro. Os registros dos projetos mantêm o escopo original.",
+    "passphrase": "Frase secreta do cofre (pelo menos 12 caracteres)",
+    "newPassphrase": "Nova frase secreta",
+    "acknowledge": "Entendo que ferramentas autorizadas podem revelar segredos em texto simples a provedores de modelos e serviços externos.",
+    "remember": "Usar o desbloqueio seguro do sistema neste dispositivo",
+    "osUnlock": "Desbloquear com este dispositivo",
+    "forgetDevice": "Esquecer desbloqueio do dispositivo",
+    "conflict": "Este segredo foi alterado. Feche o diálogo e abra-o novamente antes de editar.",
+    "forbidden": "Os segredos estão desativados ou este escopo não está mais disponível.",
+    "kindLabels": {
+      "login": "Login",
+      "api_key": "Chave de API",
+      "secure_note": "Nota segura",
+      "structured": "Segredo estruturado"
+    },
+    "fieldKinds": {
+      "text": "Texto",
+      "password": "Senha",
+      "secret": "Segredo",
+      "note": "Nota multilinha"
+    },
+    "mfaLabels": {
+      "unknown": "MFA desconhecida",
+      "required": "MFA obrigatória",
+      "none": "Sem MFA"
+    },
+    "bindingLabels": {
+      "service": "Serviço ou aplicativo",
+      "environment": "Ambiente",
+      "tenant": "Organização",
+      "role": "Função",
+      "target": "URL exata ou identificador do aplicativo",
+      "mfa_method": "Método de verificação",
+      "mfa_instructions": "Instruções de verificação sem segredos"
+    },
+    "retentionDisclosure": "Mesmo após excluir do cofre ou mascarar o chat, os registros de conversa do provedor e as mensagens posteriores do agente podem reter ou repetir segredos em texto simples."
   }
 }

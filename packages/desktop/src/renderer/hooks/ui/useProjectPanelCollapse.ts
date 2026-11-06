@@ -33,13 +33,13 @@ const COLLAPSE_KEY_PREFIX = 'project-panel-collapse:';
 
 const collapseKey = (projectId: string): string => `${COLLAPSE_KEY_PREFIX}${projectId}`;
 
-/** Read the persisted desktop preference for a project (default: expanded). */
+/** Read the persisted desktop preference for a project (default: icon rail). */
 const readStoredCollapsed = (projectId: string | null): boolean => {
-  if (!projectId || typeof window === 'undefined') return false;
+  if (!projectId || typeof window === 'undefined') return true;
   try {
-    return localStorage.getItem(collapseKey(projectId)) === 'collapsed';
+    return localStorage.getItem(collapseKey(projectId)) !== 'expanded';
   } catch {
-    return false;
+    return true;
   }
 };
 

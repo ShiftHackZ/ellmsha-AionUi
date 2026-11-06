@@ -1809,5 +1809,73 @@
       "reconnect_required": "Requiere reconexión",
       "error": "Error"
     }
+  },
+  "secrets": {
+    "title": "Secretos",
+    "global": "Secretos globales",
+    "disclosure": "Solo para credenciales de automatización. Las lecturas autorizadas envían los secretos en texto claro al modelo y las herramientas elegidos. No guarde contraseñas personales importantes ni códigos de doble factor.",
+    "operationFailed": "La operación falló. Desbloquee la bóveda o actualice e inténtelo de nuevo.",
+    "locked": "La bóveda está bloqueada. Desbloquéela para gestionar secretos.",
+    "search": "Buscar títulos de secretos",
+    "retained": "Proyecto conservado",
+    "add": "Añadir secreto",
+    "empty": "No hay secretos en este ámbito.",
+    "reveal": "Mostrar",
+    "hide": "Ocultar",
+    "more": "Más secretos",
+    "deleteTitle": "¿Eliminar secreto?",
+    "deleteWarning": "¿Eliminar permanentemente «{{title}}» de esta bóveda?",
+    "recordTitle": "Título",
+    "kind": "Tipo",
+    "fields": "Campos del secreto",
+    "fieldName": "Nombre del campo",
+    "fieldKind": "Tipo de campo",
+    "addField": "Añadir campo",
+    "bindings": "Servicios y entornos",
+    "addBinding": "Añadir entorno",
+    "mfa": "Autenticación de doble factor",
+    "mfaWarning": "Nunca guarde códigos de un solo uso, semillas de autenticadores, claves de acceso ni códigos de recuperación. El agente debe pedirle que complete la verificación requerida.",
+    "initialize": "Crear bóveda",
+    "unlock": "Desbloquear bóveda",
+    "lock": "Bloquear bóveda",
+    "changePassphrase": "Cambiar frase de contraseña",
+    "backup": "Exportar copia cifrada",
+    "restore": "Restaurar copia cifrada",
+    "restoreWarning": "Esto sustituirá la bóveda actual. Haga primero una copia. Los registros de proyectos conservan su ámbito original.",
+    "passphrase": "Frase de contraseña de la bóveda (al menos 12 caracteres)",
+    "newPassphrase": "Nueva frase de contraseña",
+    "acknowledge": "Entiendo que las herramientas autorizadas pueden revelar secretos en texto claro a proveedores de modelos y servicios externos.",
+    "remember": "Usar el desbloqueo seguro del sistema en este dispositivo",
+    "osUnlock": "Desbloquear con este dispositivo",
+    "forgetDevice": "Olvidar desbloqueo del dispositivo",
+    "conflict": "Este secreto ha cambiado. Cierre el diálogo y vuelva a abrirlo antes de editar.",
+    "forbidden": "Los secretos están desactivados o este ámbito ya no está disponible.",
+    "kindLabels": {
+      "login": "Inicio de sesión",
+      "api_key": "Clave API",
+      "secure_note": "Nota segura",
+      "structured": "Secreto estructurado"
+    },
+    "fieldKinds": {
+      "text": "Texto",
+      "password": "Contraseña",
+      "secret": "Secreto",
+      "note": "Nota multilínea"
+    },
+    "mfaLabels": {
+      "unknown": "MFA desconocida",
+      "required": "MFA obligatoria",
+      "none": "Sin MFA"
+    },
+    "bindingLabels": {
+      "service": "Servicio o aplicación",
+      "environment": "Entorno",
+      "tenant": "Organización",
+      "role": "Rol",
+      "target": "URL exacta o identificador de aplicación",
+      "mfa_method": "Método de verificación",
+      "mfa_instructions": "Instrucciones de verificación sin secretos"
+    },
+    "retentionDisclosure": "Incluso después de eliminar del almacén o enmascarar el chat, los registros de conversación del proveedor y los mensajes posteriores del agente pueden conservar o repetir secretos en texto sin cifrar."
   }
 }

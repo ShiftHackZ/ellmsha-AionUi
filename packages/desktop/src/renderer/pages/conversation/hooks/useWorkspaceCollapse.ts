@@ -3,7 +3,6 @@ import {
   WORKSPACE_HAS_FILES_EVENT,
   WORKSPACE_TOGGLE_EVENT,
   dispatchWorkspaceStateEvent,
-  type WorkspaceHasFilesDetail,
 } from '@/renderer/utils/workspace/workspaceEvents';
 import { useEffect, useRef, useState } from 'react';
 
@@ -107,7 +106,7 @@ export function useWorkspaceCollapse({
       return undefined;
     }
     const handleHasFiles = (event: Event) => {
-      const detail = (event as CustomEvent<WorkspaceHasFilesDetail>).detail;
+      void event;
 
       // Mobile: always keep workspace collapsed to avoid covering main chat area
       if (isMobile) {
@@ -137,20 +136,8 @@ export function useWorkspaceCollapse({
           setRightSiderCollapsed(shouldCollapse);
         }
       } else {
-        // No user preference: decide by workspace kind + when the files appeared.
-        // - User-picked workspace: expand on any hasFiles (initial seed is the
-        //   user's own files, worth showing).
-        // - Temporary workspace: ignore the initial seed (backend may inject
-        //   rules/skills the user never asked for) and only expand when files
-        //   show up mid-session.
-        const isUserPicked = !isTemporaryWorkspace;
-        const isMidSession = !detail.isInitial;
-        const allowAutoExpand = isUserPicked || isMidSession;
-        if (allowAutoExpand && detail.hasFiles && rightSiderCollapsed) {
-          setRightSiderCollapsed(false);
-        } else if (!detail.hasFiles && !rightSiderCollapsed) {
-          setRightSiderCollapsed(true);
-        }
+        // The icon rail is the default. Only an explicit user preference opens the file pane.
+        if (!rightSiderCollapsed) setRightSiderCollapsed(true);
       }
     };
     window.addEventListener(WORKSPACE_HAS_FILES_EVENT, handleHasFiles);

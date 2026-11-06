@@ -227,11 +227,14 @@ export function buildSpawnArgs(config: SpawnConfig): string[] {
 export function buildSpawnEnv(
   dirs?: BackendDirConfig,
   bootstrapSecret?: string,
-  browserScopeKey?: string
+  browserScopeKey?: string,
+  secretsHumanCapability?: string
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   delete env.AIONCORE_BOOTSTRAP_SECRET;
   delete env.AIONUI_BROWSER_SCOPE_KEY;
+  delete env.AIONUI_SECRETS_HUMAN_CAPABILITY;
+  if (secretsHumanCapability) env.AIONUI_SECRETS_HUMAN_CAPABILITY = secretsHumanCapability;
   if (browserScopeKey) env.AIONUI_BROWSER_SCOPE_KEY = browserScopeKey;
   if (dirs) {
     env.AIONUI_CACHE_DIR = dirs.cacheDir;
@@ -537,6 +540,7 @@ export class BackendLifecycleManager {
       identityMode: BackendIdentityMode;
       bootstrapSecret?: string;
       browserScopeKey?: () => string | undefined;
+      secretsHumanCapability?: () => string;
     } = {
       identityMode: 'local',
     }
@@ -701,7 +705,12 @@ export class BackendLifecycleManager {
     try {
       this.childProcess = spawn(binaryPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: buildSpawnEnv(dirs, this.runtime.bootstrapSecret, this.runtime.browserScopeKey?.()),
+        env: buildSpawnEnv(
+          dirs,
+          this.runtime.bootstrapSecret,
+          this.runtime.browserScopeKey?.(),
+          this.runtime.secretsHumanCapability?.()
+        ),
         cwd: dirs?.workDir ?? dbPath,
         detached: process.platform !== 'win32',
       });

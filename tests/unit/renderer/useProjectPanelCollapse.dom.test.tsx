@@ -24,15 +24,15 @@ beforeEach(() => localStorage.clear());
 afterEach(() => vi.restoreAllMocks());
 
 describe('useProjectPanelCollapse (P3 host collapse)', () => {
-  it('desktop defaults to expanded and toggles + persists per project', () => {
+  it('desktop defaults to the icon rail and preserves explicit expanded preference', () => {
     const { result } = renderHook(() => useProjectPanelCollapse({ projectId: 'p1', isMobile: false, active: true }));
-    expect(result.current.collapsed).toBe(false);
-    fireToggle();
     expect(result.current.collapsed).toBe(true);
-    expect(localStorage.getItem('project-panel-collapse:p1')).toBe('collapsed');
     fireToggle();
     expect(result.current.collapsed).toBe(false);
     expect(localStorage.getItem('project-panel-collapse:p1')).toBe('expanded');
+    fireToggle();
+    expect(result.current.collapsed).toBe(true);
+    expect(localStorage.getItem('project-panel-collapse:p1')).toBe('collapsed');
   });
 
   it('restores the persisted per-project preference on mount', () => {
@@ -43,7 +43,7 @@ describe('useProjectPanelCollapse (P3 host collapse)', () => {
 
   it('re-reads the preference when the project changes (switch away and back)', () => {
     localStorage.setItem('project-panel-collapse:pA', 'collapsed'); // pA collapsed
-    // pB has no pref → expanded
+    localStorage.setItem('project-panel-collapse:pB', 'expanded'); // preserve an explicit prior preference
     const { result, rerender } = renderHook(
       ({ id }) => useProjectPanelCollapse({ projectId: id, isMobile: false, active: true }),
       {
@@ -68,7 +68,7 @@ describe('useProjectPanelCollapse (P3 host collapse)', () => {
   it('ignores the toggle when not active (non-project conversation → ChatLayout owns it)', () => {
     const { result } = renderHook(() => useProjectPanelCollapse({ projectId: null, isMobile: false, active: false }));
     fireToggle();
-    expect(result.current.collapsed).toBe(false); // unchanged
+    expect(result.current.collapsed).toBe(true); // unchanged
   });
 
   it('broadcasts WORKSPACE_STATE_EVENT so the mac Titlebar icon syncs', () => {
