@@ -1,7 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SafeStorage } from 'electron';
-import { canWrapVaultKey, wrapVaultKey, unwrapVaultKey } from '@/process/services/secrets/vaultKeyStore';
+import {
+  supportsVaultKeyWrapping,
+  canWrapVaultKey,
+  wrapVaultKey,
+  unwrapVaultKey,
+} from '@/process/services/secrets/vaultKeyStore';
 describe('optional OS vault key wrapping', () => {
+  it('reports platform support without initializing OS encryption', () => {
+    const storage = {
+      isEncryptionAvailable: vi.fn(() => {
+        throw new Error('Unexpected keychain prompt');
+      }),
+      getSelectedStorageBackend: vi.fn(() => 'gnome_libsecret' as const),
+    };
+    for (const platform of ['darwin', 'win32', 'linux'] as const)
+      expect(supportsVaultKeyWrapping(storage, platform)).toBe(true);
+    expect(storage.isEncryptionAvailable).not.toHaveBeenCalled();
+    expect(supportsVaultKeyWrapping({ getSelectedStorageBackend: () => 'basic_text' }, 'linux')).toBe(false);
+  });
+
   it('rejects unavailable and Linux plaintext/unknown storage without fallback', () => {
     const storage = { isEncryptionAvailable: () => true, getSelectedStorageBackend: () => 'basic_text' as const };
     expect(canWrapVaultKey(storage, 'linux')).toBe(false);

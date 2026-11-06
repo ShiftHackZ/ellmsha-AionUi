@@ -6,6 +6,7 @@ import type { SecretBridgeRequest } from '@/common/types/secrets';
 const mocks = vi.hoisted(() => ({
   directory: '',
   available: true,
+  encryptionAvailable: vi.fn(),
   request: undefined as undefined | ((request: SecretBridgeRequest) => Promise<unknown>),
   listeners: new Map<string, () => void>(),
   emit: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock('electron', () => ({
   app: { getPath: () => mocks.directory, on: (event: string, fn: () => void) => mocks.listeners.set(event, fn) },
   powerMonitor: { on: (event: string, fn: () => void) => mocks.listeners.set(event, fn) },
   safeStorage: {
-    isEncryptionAvailable: () => mocks.available,
+    isEncryptionAvailable: mocks.encryptionAvailable,
     getSelectedStorageBackend: () => 'gnome_libsecret',
     encryptString: (value: string) => Buffer.from(Buffer.from(value).toString('base64')),
     decryptString: (value: Buffer) => Buffer.from(value.toString(), 'base64').toString(),
@@ -35,6 +36,7 @@ import { initSecretsBridge } from '@/process/services/secrets/vaultLifecycle';
 beforeEach(async () => {
   mocks.directory = await mkdtemp(path.join(tmpdir(), 'secrets-device-fixture-'));
   mocks.available = true;
+  mocks.encryptionAvailable.mockReset().mockImplementation(() => mocks.available);
   mocks.emit.mockClear();
   mocks.fetch.mockReset();
   mocks.listeners.clear();
@@ -55,6 +57,16 @@ afterEach(async () => {
 });
 const request = (operation: SecretBridgeRequest['operation']) => mocks.request!({ operation });
 describe('desktop vault lifecycle', () => {
+  it('opening Secrets and using a passphrase never probes the operating-system keychain', async () => {
+    mocks.encryptionAvailable.mockImplementation(() => {
+      throw new Error('Unexpected keychain prompt');
+    });
+    expect(await request('device/status')).toEqual({ available: true, remembered: false });
+    await request('vault/initialize');
+    await request('vault/unlock');
+    expect(mocks.encryptionAvailable).not.toHaveBeenCalled();
+  });
+
   it('wraps only in main, restores with private backend operation, and forgets after rotation', async () => {
     await request('device/remember');
     const file = path.join(mocks.directory, 'secrets-device.key');

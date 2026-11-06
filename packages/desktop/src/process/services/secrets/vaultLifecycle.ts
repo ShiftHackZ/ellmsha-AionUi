@@ -4,7 +4,7 @@ import path from 'node:path';
 import { app, powerMonitor, safeStorage } from 'electron';
 import { secrets } from '@/common/adapter/ipcBridge';
 import { SECRET_OPERATIONS, type SecretBridgeRequest } from '@/common/types/secrets';
-import { canWrapVaultKey, wrapVaultKey, unwrapVaultKey } from './vaultKeyStore';
+import { supportsVaultKeyWrapping, canWrapVaultKey, wrapVaultKey, unwrapVaultKey } from './vaultKeyStore';
 
 // Supplied only to the backend spawn environment, which consumes/removes it before starting threads.
 const humanCapability = randomBytes(32).toString('hex');
@@ -53,7 +53,7 @@ async function performRequest({ operation, body }: SecretBridgeRequest): Promise
   if (!SECRET_OPERATIONS.includes(operation)) throw new Error('SECRETS_INVALID_OPERATION');
   if (operation === 'device/status')
     return {
-      available: canWrapVaultKey(safeStorage),
+      available: supportsVaultKeyWrapping(safeStorage),
       remembered: await fs.stat(keyPath()).then(
         () => true,
         () => false
