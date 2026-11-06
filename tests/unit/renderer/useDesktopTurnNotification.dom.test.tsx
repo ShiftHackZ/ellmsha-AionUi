@@ -101,6 +101,8 @@ describe('useDesktopTurnNotification', () => {
         notification_id: JSON.stringify(['inactive-chat', 'call']),
         kind: 'confirmation',
       });
+      emitStream({ type: 'finish', conversation_id: 'inactive-chat', turn_id: 'asking-turn' });
+      expect(showInvoke).toHaveBeenCalledTimes(1);
       expect(JSON.stringify(showInvoke.mock.calls)).not.toContain('confidential');
     }
   );

@@ -69,8 +69,10 @@ export const useBrowserNotification = (): void => {
     });
 
     const disposeStream = streamEmitter.on(controller.onStreamMessage);
+    const disposeConfirmationRemove = ipcBridge.conversation.confirmation.remove.on(controller.onConfirmationRemoved);
     return () => {
       disposeStream();
+      disposeConfirmationRemove();
     };
   }, [navigate, t]);
 };

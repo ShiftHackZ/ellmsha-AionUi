@@ -99,6 +99,7 @@ export const createBrowserNotificationController = (deps: BrowserNotificationDep
   // for the same turn don't fire duplicate notifications.
   let lastNotifiedTurnId: string | null = null;
   const notifiedConfirmationIds = new Set<string>();
+  const pendingQuestions = new Map<string, string>();
 
   const onStreamMessage = (message: StreamMessage): void => {
     if (!message?.type) return;
@@ -109,11 +110,14 @@ export const createBrowserNotificationController = (deps: BrowserNotificationDep
       if (!conversationId || !requestId) return;
 
       const notificationId = getConfirmationNotificationId(conversationId, requestId);
+      const question = isQuestionMessage(message);
+      // Track pending input even while notifications are disabled or the tab is visible.
+      if (question) pendingQuestions.set(notificationId, conversationId);
       if (notifiedConfirmationIds.has(notificationId)) return;
       if (!deps.shouldShow()) return;
       notifiedConfirmationIds.add(notificationId);
       deps.show({
-        body: deps.bodyFor(isQuestionMessage(message) ? 'question' : 'confirmation'),
+        body: deps.bodyFor(question ? 'question' : 'confirmation'),
         conversationId,
         kind: 'confirmation',
         notificationId,
@@ -122,9 +126,16 @@ export const createBrowserNotificationController = (deps: BrowserNotificationDep
     }
 
     if (message.type === 'finish') {
-      if (message.turn_id && message.turn_id === lastNotifiedTurnId) return;
+      const turnKey = message.turn_id ? JSON.stringify([message.conversation_id, message.turn_id]) : null;
+      if (turnKey && turnKey === lastNotifiedTurnId) return;
+      // An asynchronous question can outlive its provider turn. It still needs
+      // an answer; a completion notification would contradict the question.
+      if ([...pendingQuestions.values()].includes(message.conversation_id ?? '')) {
+        lastNotifiedTurnId = turnKey;
+        return;
+      }
       if (!deps.shouldShow()) return;
-      lastNotifiedTurnId = message.turn_id ?? null;
+      lastNotifiedTurnId = turnKey;
       deps.show({
         body: deps.bodyFor('turnCompleted'),
         conversationId: message.conversation_id,
@@ -136,6 +147,7 @@ export const createBrowserNotificationController = (deps: BrowserNotificationDep
   const onConfirmationRemoved = (confirmation: { conversation_id: string; id: string }): string => {
     const notificationId = getConfirmationNotificationId(confirmation.conversation_id, confirmation.id);
     notifiedConfirmationIds.delete(notificationId);
+    pendingQuestions.delete(notificationId);
     return notificationId;
   };
 

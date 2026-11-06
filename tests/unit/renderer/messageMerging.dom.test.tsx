@@ -166,6 +166,24 @@ describe('message merging', () => {
     vi.useRealTimers();
   });
 
+  it('places a delayed accepted answer before resumed output and preserves dedupe and streaming', async () => {
+    const { result } = renderHook(() => useMessageHarness(), { wrapper: TestWrapper });
+    const answer: IMessageText = { ...createTextMessage('answer', 'B'), position: 'right', created_at: 200 };
+    act(() => {
+      result.current.addOrUpdateMessage({ ...createTextMessage('question', 'Choose?'), created_at: 100 });
+      result.current.addOrUpdateMessage({ ...createTextMessage('resumed', 'Chosen'), created_at: 300 });
+    });
+    await flushMessageQueue();
+    act(() => {
+      result.current.addOrUpdateMessage(answer);
+      result.current.addOrUpdateMessage(answer);
+      result.current.addOrUpdateMessage(createTextMessage('resumed', ' B'));
+    });
+    await flushMessageQueue();
+    expect(result.current.messages.map((message) => message.msg_id)).toEqual(['question', 'answer', 'resumed']);
+    expect((result.current.messages[2] as IMessageText).content.content).toBe('Chosen B');
+  });
+
   it('keeps text segments split when tool calls interrupt the same msg_id stream', async () => {
     const { result } = renderHook(() => useMessageHarness(), {
       wrapper: TestWrapper,

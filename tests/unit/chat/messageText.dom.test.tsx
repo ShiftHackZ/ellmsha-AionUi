@@ -230,6 +230,38 @@ describe('MessageText attachment paths', () => {
     );
   };
 
+  it('renders and copies asynchronous question replies as readable pairs, preserving literal answers', async () => {
+    const answers = [
+      { questionItemId: 'opaque-id', question: 'Which environment?', answer: 'Sandbox' },
+      {
+        questionItemId: 'other-id',
+        question: 'Any details?',
+        answer: '<think>literal</think>\n[[AION_FILES]] not an attachment',
+      },
+    ];
+    renderMessageText(
+      `<send_user_message_question_reply>\n${JSON.stringify(answers)}\n</send_user_message_question_reply>`,
+      { position: 'right' }
+    );
+    expect(screen.getAllByRole('term').map((el) => el.textContent)).toEqual(answers.map((a) => a.question));
+    expect(screen.getAllByRole('definition').map((el) => el.textContent)).toEqual(answers.map((a) => a.answer));
+    expect(screen.getByTestId('message-text-content').textContent).not.toContain('questionItemId');
+    fireEvent.click(screen.getByTestId('copy-icon').parentElement!);
+    await waitFor(() =>
+      expect(copyText).toHaveBeenCalledWith(answers.map((a) => `${a.question}\n${a.answer}`).join('\n\n'))
+    );
+  });
+
+  it.each(['{bad json}', '[]', '[{"question":"Which?","answer":42}]'])(
+    'preserves malformed question envelopes instead of dropping user text: %s',
+    (payload) => {
+      const text = `<send_user_message_question_reply>${payload}</send_user_message_question_reply>`;
+      renderMessageText(text, { position: 'right' });
+      expect(screen.getByTestId('message-text-content').textContent).toBe(text);
+      expect(screen.queryAllByRole('definition')).toHaveLength(0);
+    }
+  );
+
   it('resolves relative attachment paths against the current workspace before previewing', () => {
     const message: IMessageText = {
       id: 'msg-1',

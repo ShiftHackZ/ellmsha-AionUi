@@ -57,6 +57,28 @@ import { useTeammateColor } from '@/renderer/pages/team/identity/TeamIdentityCon
 
 const CODE_STYLE = { marginTop: 4, marginBlock: 4 };
 
+type QuestionReply = { question: string; answer: string };
+
+/** Decode the transport envelope without changing the stored/provider message. */
+function parseQuestionReplies(content: string): QuestionReply[] | null {
+  const match = content
+    .trim()
+    .match(/^<send_user_message_question_reply>\s*([\s\S]*)\s*<\/send_user_message_question_reply>$/);
+  if (!match) return null;
+  try {
+    const replies: unknown = JSON.parse(match[1]);
+    if (
+      !Array.isArray(replies) ||
+      replies.length === 0 ||
+      !replies.every((reply) => reply && typeof reply.question === 'string' && typeof reply.answer === 'string')
+    )
+      return null;
+    return replies;
+  } catch {
+    return null;
+  }
+}
+
 type ParsedFileMarker = {
   text: string;
   files: string[];
@@ -156,6 +178,10 @@ const MessageText: React.FC<{
   hasForkAnchor?: boolean;
 }> = ({ message, showCopyRow = true, isLastMessage = false, hasForkAnchor = false }) => {
   const logos = useAgentLogos();
+  const questionReplies = useMemo(
+    () => (message.position === 'right' ? parseQuestionReplies(message.content.content) : null),
+    [message.position, message.content.content]
+  );
   // Filter think tags from content before rendering
   // 在渲染前过滤 think 标签
   const contentToRender = useMemo(() => {
@@ -178,8 +204,11 @@ const MessageText: React.FC<{
   const isUserMessage = message.position === 'right';
   const isTeammateMessage = message.position === 'left' && message.content.teammateMessage === true;
   const { text, files } = useMemo(
-    () => parseFileMarker(contentToRender, isUserMessage),
-    [contentToRender, isUserMessage]
+    () =>
+      questionReplies
+        ? { text: questionReplies.map(({ question, answer }) => `${question}\n${answer}`).join('\n\n'), files: [] }
+        : parseFileMarker(contentToRender, isUserMessage),
+    [contentToRender, isUserMessage, questionReplies]
   );
   const { data, json } = useFormatContent(text);
   const shouldRenderPlainText = isUserMessage;
@@ -305,7 +334,16 @@ const MessageText: React.FC<{
           }}
         >
           {/* JSON 内容使用折叠组件 Use CollapsibleContent for JSON content */}
-          {shouldRenderPlainText ? (
+          {questionReplies ? (
+            <dl className='m-0 flex flex-col gap-12px [overflow-wrap:anywhere]' data-testid='message-text-content'>
+              {questionReplies.map(({ question, answer }, index) => (
+                <div key={index}>
+                  <dt className='text-12px text-t-secondary whitespace-pre-wrap'>{question}</dt>
+                  <dd className='m-0 mt-4px whitespace-pre-wrap'>{answer}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : shouldRenderPlainText ? (
             <div className='whitespace-pre-wrap [overflow-wrap:anywhere]' data-testid='message-text-content'>
               {text}
             </div>

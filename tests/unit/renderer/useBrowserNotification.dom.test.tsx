@@ -7,10 +7,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 const streamHandlers: Array<(e: unknown) => void> = [];
+const removeHandlers: Array<(e: { conversation_id: string; id: string }) => void> = [];
 
 vi.mock('@/common', () => ({
   ipcBridge: {
     conversation: {
+      confirmation: {
+        remove: {
+          on: (h: (e: { conversation_id: string; id: string }) => void) => {
+            removeHandlers.push(h);
+            return () => {};
+          },
+        },
+      },
       responseStream: {
         on: (h: (e: unknown) => void) => {
           streamHandlers.push(h);
@@ -45,6 +54,7 @@ class FakeNotification {
 
 beforeEach(() => {
   streamHandlers.length = 0;
+  removeHandlers.length = 0;
   FakeNotification.instances.length = 0;
   navigate.mockClear();
   (globalThis as unknown as { Notification: unknown }).Notification = FakeNotification;
@@ -84,4 +94,21 @@ describe('useBrowserNotification', () => {
     emitStream({ type: 'text', conversation_id: 's1', turn_id: 't1' });
     expect(FakeNotification.instances).toHaveLength(0);
   });
+});
+
+it('notifies about questions until answered, then allows completion of the resumed turn', () => {
+  renderHook(() => useBrowserNotification());
+  emitStream({
+    type: 'permission',
+    conversation_id: 'c1',
+    data: { id: 'q', questions: [{ question: 'Private question' }] },
+  });
+  emitStream({ type: 'finish', conversation_id: 'c1', turn_id: 'asking' });
+  expect(FakeNotification.instances.map((n) => n.options.body)).toEqual(['messages.questions.notification']);
+  removeHandlers.forEach((h) => h({ conversation_id: 'c1', id: 'q' }));
+  emitStream({ type: 'finish', conversation_id: 'c1', turn_id: 'resumed' });
+  expect(FakeNotification.instances.map((n) => n.options.body)).toEqual([
+    'messages.questions.notification',
+    'settings.browserNotification.bodyTurnCompleted',
+  ]);
 });

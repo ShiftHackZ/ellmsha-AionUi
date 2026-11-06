@@ -240,6 +240,19 @@ function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[]
       }
     }
 
+    // Accepted question replies can arrive after the resumed agent's first chunk.
+    // Keep the server submission time order without moving existing stream segments.
+    const submittedAt = message.created_at;
+    if (message.position === 'right' && submittedAt != null) {
+      const insertionIndex = list.findIndex((item) => item.created_at != null && item.created_at > submittedAt);
+      if (insertionIndex >= 0) {
+        const newList = list.slice();
+        newList.splice(insertionIndex, 0, message);
+        Object.assign(index, buildMessageIndex(newList));
+        return newList;
+      }
+    }
+
     if (last.type === 'text' && last.msg_id === message.msg_id) {
       const newList = list.slice();
       newList[newList.length - 1] = {

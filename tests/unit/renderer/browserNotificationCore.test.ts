@@ -150,3 +150,26 @@ it('notifies once for a structured question without exposing the question or ans
   expect(show.mock.calls[0][0]).toMatchObject({ body: 'question', kind: 'confirmation', conversationId: 'conv' });
   expect(JSON.stringify(show.mock.calls)).not.toContain('SECRET');
 });
+
+it('keeps a pending question notification when that turn finishes, scoped to its chat', () => {
+  const show = vi.fn();
+  let enabled = false;
+  const controller = createBrowserNotificationController({ show, shouldShow: () => enabled, bodyFor: (kind) => kind });
+  const question = (id: string) => ({ type: 'permission', conversation_id: 'chat', data: { id, questions: [{}] } });
+  controller.onStreamMessage(question('first'));
+  enabled = true;
+  controller.onStreamMessage(question('second'));
+  controller.onStreamMessage({ type: 'finish', conversation_id: 'chat', turn_id: 'turn' });
+  expect(show.mock.calls.map(([payload]) => payload.body)).toEqual(['question']);
+  controller.onConfirmationRemoved({ conversation_id: 'chat', id: 'first' });
+  controller.onStreamMessage({ type: 'finish', conversation_id: 'chat', turn_id: 'another-turn' });
+  expect(show).toHaveBeenCalledTimes(1);
+  controller.onStreamMessage({ type: 'finish', conversation_id: 'other-chat', turn_id: 'another-turn' });
+  controller.onConfirmationRemoved({ conversation_id: 'chat', id: 'second' });
+  controller.onStreamMessage({ type: 'finish', conversation_id: 'chat', turn_id: 'resumed-turn' });
+  expect(show.mock.calls.map(([payload]) => [payload.body, payload.conversationId])).toEqual([
+    ['question', 'chat'],
+    ['turnCompleted', 'other-chat'],
+    ['turnCompleted', 'chat'],
+  ]);
+});
