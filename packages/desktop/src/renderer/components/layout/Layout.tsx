@@ -26,7 +26,7 @@ import { useProjectPreviewRegionWidth } from '@renderer/hooks/ui/useProjectPrevi
 import { useProjectPanelCollapse } from '@renderer/hooks/ui/useProjectPanelCollapse';
 import { isMacEnvironment } from '@renderer/pages/conversation/utils/detectPlatform';
 import { dispatchWorkspaceToggleEvent } from '@renderer/utils/workspace/workspaceEvents';
-import { MIN_PREVIEW_PANEL_PX, WORKSPACE_ICON_RAIL_PX } from '@renderer/pages/conversation/utils/layoutCalc';
+import { MIN_PREVIEW_PANEL_PX } from '@renderer/pages/conversation/utils/layoutCalc';
 import { PreviewPanel } from '@renderer/pages/conversation/Preview';
 import { ExpandLeft } from '@icon-park/react';
 import { LayoutContext } from '@renderer/hooks/context/LayoutContext';
@@ -190,7 +190,7 @@ const Layout: React.FC<{
     explorerActive
   );
   // P3: host-level collapse (project-scoped on desktop; overlay on mobile). The
-  // explorer stays mounted (icon-rail width) on collapse, so it is not remounted.
+  // explorer stays mounted (width 0) on collapse, so it is not remounted.
   const { collapsed: explorerCollapsed } = useProjectPanelCollapse({
     projectId: currentProject,
     isMobile,
@@ -214,7 +214,7 @@ const Layout: React.FC<{
     previewTabs.some((tab) => tab.content_type === 'browser');
   const { widthPx: previewWidthPx, createDragHandle: createPreviewRegionDragHandle } = useProjectPreviewRegionWidth(
     mainRowWidth,
-    explorerCollapsed ? (explorerActive ? WORKSPACE_ICON_RAIL_PX : 0) : explorerWidthPx,
+    explorerCollapsed ? 0 : explorerWidthPx,
     previewRegionActive
   );
   const previousWorkspaceAvailableRef = useRef(workspaceAvailable);

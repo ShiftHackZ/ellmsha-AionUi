@@ -562,22 +562,3 @@ body[arco-theme='dark'] .arco-message-error {
   padding-bottom: 2px;
   background-color: var(--color-bg-popup);
 }
-
-/* A permanent 48px icon rail; saved expanded pane widths remain independent. */
-.workspace-icon-rail {
-  width: 48px;
-  min-width: 48px;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-.workspace-icon-rail .arco-btn {
-  min-width: 28px;
-  width: 28px;
-  padding: 0;
-}
-[data-workspace-collapsed='true'] .workspace-panel-body {
-  display: none;
-}
-[data-workspace-collapsed='true'] .workspace-icon-layout {
-  width: 48px;
-}

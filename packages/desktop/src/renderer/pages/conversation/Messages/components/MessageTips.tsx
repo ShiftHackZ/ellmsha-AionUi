@@ -180,7 +180,10 @@ const MessageTips: React.FC<{ message: IMessageTips }> = ({ message }) => {
           </div>
           {shouldShowButler && (
             <div className='flex justify-end'>
-              <ButlerDiagnoseButton errorText={[title, body, ...detailParts].filter(Boolean).join('\n')} />
+              <ButlerDiagnoseButton
+                conversationId={message.conversation_id}
+                errorText={[title, body, ...detailParts].filter(Boolean).join('\n')}
+              />
               {shouldShowFeedback && (
                 <FeedbackButton
                   module='conversation-session'
@@ -219,7 +222,10 @@ const MessageTips: React.FC<{ message: IMessageTips }> = ({ message }) => {
           </div>
           {type === 'error' && (
             <div className='flex justify-end'>
-              <ButlerDiagnoseButton errorText={JSON.stringify(data, null, 2)} />
+              <ButlerDiagnoseButton
+                conversationId={message.conversation_id}
+                errorText={JSON.stringify(data, null, 2)}
+              />
               <FeedbackButton module='conversation-session' />
             </div>
           )}
@@ -239,7 +245,7 @@ const MessageTips: React.FC<{ message: IMessageTips }> = ({ message }) => {
         </div>
         {shouldShowButler && (
           <div className='flex justify-end'>
-            <ButlerDiagnoseButton errorText={displayContent} />
+            <ButlerDiagnoseButton conversationId={message.conversation_id} errorText={displayContent} />
             {shouldShowFeedback && <FeedbackButton module='conversation-session' />}
           </div>
         )}

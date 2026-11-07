@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useProjectExplorerColumnWidth } from '@/renderer/hooks/ui/useProjectExplorerColumnWidth';
 
 // Constants mirrored from layoutCalc for readable expectations.
-const MIN_WS = 220;
+const MIN_WS = 288;
 const RESERVE_CHAT = 360;
 const RESERVE_PREVIEW = 340;
 
@@ -27,7 +27,7 @@ describe('useProjectExplorerColumnWidth (P2 two-level clamp)', () => {
   });
 
   it('clamps down (to the MIN floor) when preview open leaves too little room', () => {
-    // available 900, reserve 700 → maxByContainer=max(220,200)=220 → clamped to MIN
+    // The minimum leaves room for the complete horizontal toolbar.
     const { result } = renderHook(() => useProjectExplorerColumnWidth(900, true, true));
     expect(result.current.widthPx).toBe(MIN_WS);
   });
@@ -39,9 +39,9 @@ describe('useProjectExplorerColumnWidth (P2 two-level clamp)', () => {
   });
 
   it('clamps to leave exactly the reserve (chat + preview + preview chrome) when the row is moderately narrow (preview open)', () => {
-    // available 1000, reserve = 360 + 340 + 24 (preview chrome) = 724 → max=276 → min(400,276)=276
+    // available 1050, reserve = 360 + 340 + 24 (preview chrome) = 724 → max=326 → min(400,326)=326
     const CHROME = 24;
-    const { result } = renderHook(() => useProjectExplorerColumnWidth(1000, true, true));
-    expect(result.current.widthPx).toBe(1000 - (RESERVE_CHAT + RESERVE_PREVIEW + CHROME));
+    const { result } = renderHook(() => useProjectExplorerColumnWidth(1050, true, true));
+    expect(result.current.widthPx).toBe(1050 - (RESERVE_CHAT + RESERVE_PREVIEW + CHROME));
   });
 });

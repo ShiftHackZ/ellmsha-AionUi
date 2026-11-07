@@ -584,6 +584,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
                 {status === 'Error' && (
                   <div className='mt-4px flex justify-end'>
                     <ButlerDiagnoseButton
+                      conversationId={message.conversation_id}
                       errorText={[name, description, typeof result_display === 'string' ? result_display : '']
                         .filter(Boolean)
                         .join('\n')}

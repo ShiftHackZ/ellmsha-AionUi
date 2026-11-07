@@ -73,7 +73,10 @@ const MessageAgentStatus: React.FC<MessageAgentStatusProps> = ({ message }) => {
         {getStatusBadge()}
         {isError && (
           <>
-            <ButlerDiagnoseButton errorText={`${display_name}: ${t('acp.status.error')}`} />
+            <ButlerDiagnoseButton
+              conversationId={message.conversation_id}
+              errorText={`${display_name}: ${t('acp.status.error')}`}
+            />
             <FeedbackButton module='conversation-session' />
           </>
         )}

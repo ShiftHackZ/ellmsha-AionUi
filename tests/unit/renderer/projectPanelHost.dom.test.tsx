@@ -42,12 +42,12 @@ describe('ProjectPanelHost (Layout-level host chrome)', () => {
     expect(screen.getByTestId('explorer')).toHaveTextContent('proj-9');
   });
 
-  it('collapses to the 48px icon rail but keeps the explorer mounted (no remount)', () => {
+  it('collapses to width 0 but keeps the explorer mounted (no remount)', () => {
     setCurrentProject('proj-9');
     render(<ProjectPanelHost widthPx={280} collapsed={true} onToggle={noop} showChevron />);
     const col = document.querySelector('[data-explorer-column]') as HTMLElement;
     expect(col.getAttribute('data-collapsed')).toBe('true');
-    expect(col.style.width).toBe('48px');
+    expect(col.style.width).toBe('0px');
     // Component stays mounted — collapse is width-only, not an unmount.
     expect(screen.getByTestId('explorer')).toHaveTextContent('proj-9');
   });

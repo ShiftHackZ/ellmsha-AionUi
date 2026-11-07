@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 type ButlerDiagnoseButtonProps = {
   /** Error text handed to the Butler as diagnosis context. */
   errorText: string;
+  conversationId: string;
   /** Additional classes appended to the default pill styling. */
   className?: string;
 };
@@ -23,7 +24,7 @@ type ButlerDiagnoseButtonProps = {
  * AionUi Butler selected and a diagnosis prompt (including the error text)
  * pre-filled — the same flow as the report modal's "Solve via chat" action.
  */
-const ButlerDiagnoseButton: React.FC<ButlerDiagnoseButtonProps> = ({ errorText, className }) => {
+const ButlerDiagnoseButton: React.FC<ButlerDiagnoseButtonProps> = ({ errorText, conversationId, className }) => {
   const { t } = useTranslation();
   const talkToButler = useTalkToButler();
 
@@ -33,13 +34,13 @@ const ButlerDiagnoseButton: React.FC<ButlerDiagnoseButtonProps> = ({ errorText, 
       const prompt = t('settings.talkToButler.prompt.diagnoseChatError', {
         defaultValue:
           'I ran into an error during a conversation in AionUi, please help me diagnose it.\n\n[Error] {{error}}\n\nPlease diagnose the cause and tell me how to fix it.',
-        error: errorText.trim(),
+        error: `${errorText.trim()}\nconversation_id: ${conversationId}`,
       });
       talkToButler({ prompt }).catch((err) => {
         console.error('[ButlerDiagnoseButton] Failed to open butler chat:', err);
       });
     },
-    [errorText, t, talkToButler]
+    [errorText, conversationId, t, talkToButler]
   );
 
   return (

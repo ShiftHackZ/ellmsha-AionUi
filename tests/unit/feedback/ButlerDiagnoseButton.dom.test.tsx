@@ -43,17 +43,19 @@ describe('ButlerDiagnoseButton', () => {
   });
 
   it('renders the solveWithButler label', () => {
-    render(<ButlerDiagnoseButton errorText='boom' />);
+    render(<ButlerDiagnoseButton conversationId='failed-chat' errorText='boom' />);
     expect(screen.getByText('settings.talkToButler.solveWithButler')).toBeInTheDocument();
   });
 
   it('hands the error text to talkToButler inside the diagnosis prompt', async () => {
     const user = userEvent.setup();
-    render(<ButlerDiagnoseButton errorText='  connection reset  ' />);
+    render(<ButlerDiagnoseButton conversationId='failed-chat' errorText='  connection reset  ' />);
     await user.click(screen.getByText('settings.talkToButler.solveWithButler'));
 
     expect(talkToButlerMock).toHaveBeenCalledTimes(1);
-    expect(talkToButlerMock).toHaveBeenCalledWith({ prompt: 'diagnose:connection reset' });
+    expect(talkToButlerMock).toHaveBeenCalledWith({
+      prompt: 'diagnose:connection reset\nconversation_id: failed-chat',
+    });
   });
 
   it('stops click propagation so the surrounding bubble does not react', async () => {
@@ -61,7 +63,7 @@ describe('ButlerDiagnoseButton', () => {
     const outerClick = vi.fn();
     render(
       <div onClick={outerClick}>
-        <ButlerDiagnoseButton errorText='boom' />
+        <ButlerDiagnoseButton conversationId='failed-chat' errorText='boom' />
       </div>
     );
     await user.click(screen.getByText('settings.talkToButler.solveWithButler'));

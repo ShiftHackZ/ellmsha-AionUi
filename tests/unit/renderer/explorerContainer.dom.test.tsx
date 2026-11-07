@@ -1,4 +1,3 @@
-import userEvent from '@testing-library/user-event';
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -76,32 +75,14 @@ afterEach(() => {
 });
 
 describe('ExplorerContainer data integration', () => {
-  it('opens a collapsed rail and closes the active tab with pointer or keyboard', async () => {
-    projectGet.mockResolvedValue(detail([entry({ pe_id: 'peA', display_name: 'Fixture' })]));
-    const view = renderContainer('p1');
-    const host = view.container;
-    host.setAttribute('data-workspace-collapsed', 'true');
-    const toggled = vi.fn();
-    window.addEventListener('aionui-workspace-toggle', toggled);
-    try {
-      const files = await screen.findByRole('tab', { name: 'conversation.explorer.tabs.files' });
-      fireEvent.click(files);
-      expect(toggled).toHaveBeenCalledTimes(1);
-      host.setAttribute('data-workspace-collapsed', 'false');
-      files.focus();
-      await userEvent.keyboard('{Enter}');
-      expect(toggled).toHaveBeenCalledTimes(2);
-      fireEvent.click(screen.getByRole('tab', { name: 'conversation.explorer.tabs.changes' }));
-      expect(toggled).toHaveBeenCalledTimes(2);
-    } finally {
-      window.removeEventListener('aionui-workspace-toggle', toggled);
-    }
-  });
   it('marks the selected Files/Changes tab explicitly independently of hover', async () => {
     projectGet.mockResolvedValue(detail([entry({ pe_id: 'peA', display_name: 'Fixture' })]));
     renderContainer('p1');
     const files = await screen.findByRole('tab', { name: 'conversation.explorer.tabs.files' });
     const changes = screen.getByRole('tab', { name: 'conversation.explorer.tabs.changes' });
+    expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'horizontal');
+    expect(files).toHaveTextContent('');
+    expect(changes).toHaveTextContent('');
     expect(files).toHaveAttribute('aria-selected', 'true');
     fireEvent.mouseOver(changes);
     expect(files).toHaveAttribute('aria-selected', 'true');
